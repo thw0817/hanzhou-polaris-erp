@@ -109,7 +109,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: polaris-v2-build-${{ github.sha }}
-          path: .
+          path: dist-v2
 
       - name: Create staging candidate package
         env:
