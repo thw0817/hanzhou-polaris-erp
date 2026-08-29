@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v28
+版本：2026-08-30-v29
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界和官方回读事实落账的隔离验证，ERP-07～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账和单阶段官方回读编排的隔离验证，ERP-07～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -208,6 +208,18 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - 失败保护已验证：scope/版本/Attempt 状态漂移、Inbox/Receipt/Event 冲突、重复事实、敏感字段、缺少安全 projection 和破坏性 SQL 均被拒绝或回滚；事务失败不会留下半条事实。
 - 证据：新回读持久化回归 `8/8`；组合定向回归 `60/60`；全量测试 `1283/1283`；服务端测试 `125/125`；秘密扫描 `scannedFiles=629, findings=[]`；V2 构建、release audit、`node --check`、`git diff --check` 均通过；现有 staging Redis/PostgreSQL/MinIO 仅只读核对，未触碰。
 - 本 Run 状态：`COMPLETE`。ERP-06 整体仍为 `IN_PROGRESS`；repository 尚未接入生产 Worker、真实凭证、生产队列、真实 SHEIN HTTP、正式 migration 或部署。
+
+### 4.9 ERP-06 单阶段官方回读编排隔离事实
+
+- 当前 Run：`RUN-20260830-ERP06-OFFICIAL-READBACK-ORCHESTRATION-15`。
+- 本 Run 新增隔离编排服务：[erp06-official-readback-orchestrator.js](../server/cloud/erp06-official-readback-orchestrator.js)。一次操作必须明确选择 `document_state` 或 `spu_info`，编排层只调用对应的 remote boundary 方法，不隐式补调另一阶段。
+- 关闭态边界：remote boundary 返回 `disabled` 时，编排层返回安全关闭状态，不解析凭证、不发网络请求、不调用 readback repository；成功回读才允许向既有 repository 传递一次安全 projection。
+- 作用域与版本保护：队列任务 contract、tenant/store、Command/Attempt/ProductVersion、source revision、版本指纹、stage、官方 endpoint 和 dry-run projection 均在编排入口校验；版本指纹与队列任务不一致直接拒绝。
+- 失败保护：授权失败、非法输入、stage/endpoint/状态漂移、危险或非 `read` 结果、repository 失败均 fail closed；不自动重试、不自动重发、不把空回读当成功、不把 `submitted` 改成 `completed`。
+- 实际文件：[erp06-official-readback-orchestrator.js](../server/cloud/erp06-official-readback-orchestrator.js)、[erp06-official-readback-orchestrator.test.js](../server/cloud/erp06-official-readback-orchestrator.test.js)。未修改生产 Worker、路由、队列、正式 migration 或现有 staging。
+- 证据：新编排回归 `8/8`；组合定向回归 `68/68`；全量测试 `1291/1291`；服务端测试 `125/125`；秘密扫描 `scannedFiles=631, findings=[]`；V2 构建、release audit、`node --check`、`git diff --check` 均通过。
+- 环境证据：现有 staging Redis/PostgreSQL/MinIO 仅只读核对且均 healthy；测试仅使用 fake remote/repository，未解析真实凭证、未连接生产或 staging、没有真实 SHEIN HTTP。
+- 本 Run 状态：`COMPLETE`。ERP-06 整体仍为 `IN_PROGRESS`；真实 Worker/凭证/生产队列/回读持久化接线、正式 migration、生产部署和 SHEIN 写入仍未开始。
 
 ## 5. 历史已执行工作如何使用
 

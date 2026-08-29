@@ -53,6 +53,8 @@
 - `server/cloud/erp06-shein-remote-boundary.test.js`：验证默认禁网、凭证延迟解析、显式 publishing/readback authorization、上游错误透传、官方单据状态/SPU 请求体、空/部分/版本漂移回读和 `result_unknown` 不解除保护。
 - `server/cloud/erp06-official-readback-repository.js`：隔离官方回读事实落账；在同一事务内写入 OfficialEventInbox、readback Receipt 和 ProductEvent，使用 projection fingerprint 幂等，完整证据才允许解除 `result_unknown`。
 - `server/cloud/erp06-official-readback-repository.test.js`：验证三类事实原子落账、重复回读幂等、空/部分回读保持 unknown、submitted 不伪造成 completed、scope/版本/敏感字段 fail closed 和事务回滚边界。
+- `server/cloud/erp06-official-readback-orchestrator.js`：隔离的单阶段官方回读编排；一次只选择 `document_state` 或 `spu_info`，关闭态不落账，成功回读只向既有 repository 传递一次安全 projection，不自动重试或切换阶段。
+- `server/cloud/erp06-official-readback-orchestrator.test.js`：验证关闭态零网络/零落账、两个阶段单路径、scope/版本指纹、授权/危险结果/空回读和 repository 失败不重试。
 - `048_erp06_publish_result_persistence.sql`、`preflight-048.sql`、`verify-048.sql`、`rollback-048_empty.sql`：只用于一次性隔离数据库的 Command 时间字段与安全校验，未登记为正式 migration。
 - 以上服务及 handoff 的失败回归只使用 fake pool 和本地一次性数据库；没有接入生产路由、生产 Dispatcher、真实 Worker 或 SHEIN 写接口。
 
@@ -66,4 +68,5 @@
 - 没有把 `047`/`048` 草案登记为正式生产迁移，没有把结果 repository 接入生产 Worker，也没有配置真实 sender、凭证读取或官方回读请求；测试中的 sender/pool 仅为内存 fake。
 - 没有把真实 sender/readback boundary 接入生产 Worker，没有开启 `executionEnabled`/`readbackEnabled`，没有配置真实凭证、生产队列或回读持久化；测试中的 request/credential resolver 仅为内存 fake。
 - 已完成隔离回读持久化草案，但没有把 repository 接入生产 Worker，没有配置真实凭证、生产队列或 Webhook，也没有新增正式 migration；测试中的 request/credential resolver/pool 仅为内存 fake。
+- 已完成隔离单阶段官方回读编排草案，但没有把编排服务接入生产 Worker、路由、生产队列或真实回读；测试中的 remote/repository 仅为内存 fake。
 - 下一执行单元：另行评审真实 Worker → sender → 官方回读接入及生产/预发授权；在完成门与单独授权前，不执行生产迁移、生产部署或任何外部写入。

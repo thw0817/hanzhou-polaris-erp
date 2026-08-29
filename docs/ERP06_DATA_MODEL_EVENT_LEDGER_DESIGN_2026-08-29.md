@@ -1,7 +1,7 @@
 # ERP-06 数据模型与事件账本设计
 
-版本：2026-08-30-v10
-状态：`IN_PROGRESS`（非生产设计、版本冻结、原子交接、Outbox claim/lease、Worker dry-run、SHEIN adapter boundary、结果持久化与 Worker 编排隔离验证）
+版本：2026-08-30-v11
+状态：`IN_PROGRESS`（非生产设计、版本冻结、原子交接、Outbox claim/lease、Worker dry-run、SHEIN adapter boundary、结果持久化、官方回读落账与单阶段编排隔离验证）
 适用边界：COS-first；历史数据冻结只读；不执行生产迁移、不修改历史记录、不调用 SHEIN 写接口
 
 ## 0. 本文用途
@@ -253,8 +253,8 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 
 ## 10. 当前状态与下一 Run
 
-- 当前 Run：`RUN-20260830-ERP06-OFFICIAL-READBACK-PERSISTENCE-14`
-- 当前状态：`COMPLETE`（本 Run 隔离结果持久化边界与全量门禁已完成；ERP-06 整体仍为 `IN_PROGRESS`）
+- 当前 Run：`RUN-20260830-ERP06-OFFICIAL-READBACK-ORCHESTRATION-15`
+- 当前状态：`COMPLETE`（本 Run 隔离官方回读单阶段编排与全量门禁已完成；ERP-06 整体仍为 `IN_PROGRESS`）
 - 已完成：COS-first 决策登记、ERP-05 历史映射冻结豁免登记、目标模型 additive migration 草案、preflight/verify/rollback、真实本机 PostgreSQL 隔离 rehearsal、DraftRevision/ProductVersion 版本冻结、ProductVersion → PublishAttempt → PublishCommand → ProductPublishOutbox 原子交接、PublishBatch/BatchItem 显式关联和 legacy read-only adapter 最小实现。
 - 本 Run 实现边界：PublishBatch 服务按租户/店铺和 selection fingerprint 幂等创建 BatchItem；handoff 在同一事务内锁定 Batch/BatchItem，验证 Draft/Version 来源关系，建立 Attempt=`created`、Command=`queued`、Outbox=`pending`、current pointers、Draft=`handed_off`/lockVersion+1、BatchItem=`handed_off` 和 4 类 ProductEvent；不修改旧历史行，不调用远端。
 - 失败保护：同一批次 idempotencyKey 选择指纹冲突拒绝；BatchItem 越界/错版本/已交接拒绝；同一 ProductVersion 已存在任意 Attempt 时阻断新 requestKey；已有 requestKey 只有在 BatchItem、Command、Outbox、current projection 和 Draft 状态完整时才幂等返回；`result_unknown` 仅允许原请求幂等回读，不自动重发。
@@ -282,5 +282,10 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 - 本 Run 实际文件：[erp06-official-readback-repository.js](../server/cloud/erp06-official-readback-repository.js)、[erp06-official-readback-repository.test.js](../server/cloud/erp06-official-readback-repository.test.js)；新回归 `8/8`，覆盖原子三事实、幂等、空回读、SPU 回读、scope/版本漂移、敏感字段和无破坏性 SQL。
 - 本 Run 已验证：组合定向回归 `60/60`；全量测试 `1283/1283`；服务端测试 `125/125`；秘密扫描 `scannedFiles=629, findings=[]`；V2 构建、release audit、`node --check`、`git diff --check` 均通过；现有 staging Redis/PostgreSQL/MinIO 仅只读核对且未触碰。
 - 本 Run 状态：`COMPLETE`。回读 repository 仍未接入生产 Worker、真实凭证、生产队列或真实 SHEIN HTTP；ERP-06 整体仍为 `IN_PROGRESS`。
+- 本 Run 新增隔离官方回读编排：一次操作必须明确选择 `document_state` 或 `spu_info`，只调用对应的远端边界方法；关闭态直接返回 disabled 且不落账，成功回读只向 repository 传递一次安全 projection。
+- 编排契约固定校验队列任务、租户/店铺/Command/Attempt/ProductVersion、版本指纹、官方 stage/endpoint、`read` 状态和 dry-run projection；禁止隐式切换另一个回读阶段、自动重试、重发或把 `submitted` 伪造成 `completed`。
+- 本 Run 实际文件：[erp06-official-readback-orchestrator.js](../server/cloud/erp06-official-readback-orchestrator.js)、[erp06-official-readback-orchestrator.test.js](../server/cloud/erp06-official-readback-orchestrator.test.js)；未接入生产 Worker、路由、队列或正式 migration。
+- 本 Run 已验证：新编排回归 `8/8`；组合定向回归 `68/68`；全量测试 `1291/1291`；服务端测试 `125/125`；秘密扫描 `scannedFiles=631, findings=[]`；V2 构建、release audit、`node --check`、`git diff --check` 均通过；现有 staging Redis/PostgreSQL/MinIO 仅只读核对且未触碰。
+- 本 Run 状态：`COMPLETE`。单阶段官方回读编排仍只存在于隔离模块，未配置真实凭证、生产队列、生产持久化或真实 SHEIN HTTP；ERP-06 整体仍为 `IN_PROGRESS`。
 - 尚未完成：真实 SHEIN sender/签名凭证、生产 Worker/队列、官方 Webhook、回读生产持久化接入、生产切换评估、正式生产迁移、历史数据迁移和 SHEIN 写入均未执行；旧历史继续只读，不因本 Run 自动映射。
 - 下一执行单元：单独评审预发/生产的真实凭证来源、网络出口、Worker/队列接入、回读持久化接线、监控和回滚证据；在 ERP-06 完成门通过且另行批准前，不接入生产、不执行生产迁移、不进入 ERP-07。
