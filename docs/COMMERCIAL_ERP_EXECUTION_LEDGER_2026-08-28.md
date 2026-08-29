@@ -1637,3 +1637,19 @@
 - 部署边界：本 Run 只完成仓库代码修复和验证，未部署生产；现网要生效需后续按发布门执行部署与线上上传/下载验收。
 - 回滚点：恢复本 Run 变更前的代码与台账 commit；不触碰历史媒体记录和对象。
 - 当前状态：`COMPLETE`（代码修复与本地验证完成；生产部署仍待单独授权/发布 Run）。
+
+## 23. ERP-06 COS-first 媒体签名修复生产部署
+
+### RUN-20260829-ERP06-MEDIA-COS-SIGNING-DEPLOY-03
+
+- 类型：ERP-06 COS-first 图片上传/下载签名修复的生产发布与线上验收。
+- 启动依据：用户明确授权先将本次修复部署云端，恢复网页正常使用。
+- 发布版本：代码提交 `7ff06fa`（`fix: sign Tencent COS media URLs natively`）；最终候选 release `shein-cloud-deploy-20260829-cos-media-signing-v3`。
+- 发布包校验：本地与生产归档 SHA-256 均为 `ea27e9a6da4258a5d03670d20a3c1c003480e7921b47d6d52f6e822100e61759`；源码文件 `server/cloud/s3-object-storage.js` 的 SHA-256 为 `df58461d4d7e2b0d636ee0373ab1e0d7768043a56fcd2bcde674047c110a5dca`。
+- 预检：候选包无 `.env`、`.data`、`.git`、`node_modules`、密钥文件、历史压缩包或 macOS `._*` 文件；Compose 配置通过；远端静态 release audit 为 `READY`，14/14 release contracts、V2 web artifact 和 V2 release metadata 全部通过。
+- 部署边界：原子切换 `/opt/shein-console/current` 至 `/opt/shein-console/releases/shein-cloud-deploy-20260829-cos-media-signing-v3`；仅重建 `control`、`product-publish-worker`、`media-cleanup`；未执行数据库迁移，未重启 PostgreSQL/Redis，未改动历史数据、权限策略、SHEIN 数据或密钥。
+- 发布过程修正：候选目录最初因归档顶层目录权限为 `700` 导致 Nginx 无法读取 `dist-web/index.html` 并返回 500；已仅对当前新 release 修正目录为可读可穿越权限（目录 `755`、网页文件 `644`），Nginx 配置测试通过；未回滚代码或扩大服务范围。
+- 线上验收：公网 `app.hanzhou.icu/` HTTP 200；`api.hanzhou.icu/health` HTTP 200；内部 `/health`、`/ready` HTTP 200；`control` healthy；PostgreSQL/Redis healthy；公网 index 内容 SHA-256 与 release `dist-web/index.html` 一致。
+- COS 验收：实际运行中的 `control` 容器回归测试 `6/6`；PUT 上传签名为 COS 原生 `q-signature`/SHA-1，`content-type;host`；GET 下载签名为 COS 原生 `q-signature`/SHA-1，`host`；签名长度 40；未出现 AWS4 `X-Amz-*` 参数。探针未上传、下载、删除或修改任何真实对象。
+- 回滚点：`/opt/shein-console/releases/shein-cloud-deploy-20260829-frontend-restore-v1` 已保留；若线上健康检查或媒体验收失败，应将 `current` 原子切回该 release，并仅重建上述三个受影响服务。
+- 当前状态：`COMPLETE`；网页、API、COS 上传/下载签名链路已通过生产验收。未做真实业务图片上传，建议用户下一步在网页执行一次非敏感测试图片上传与预览，作为业务层最终确认。
