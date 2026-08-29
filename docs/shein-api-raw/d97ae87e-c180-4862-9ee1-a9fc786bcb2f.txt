@@ -1,0 +1,405 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+商品发布/编辑
+/goods/product/publishOrEdit
+商品部分编辑
+/goods/product/partialEdit
+确认店铺是否可发品
+/goods/product/check-publish-permission
+确认商品是否可编辑
+/goods/product/check-edit-permission
+查询商品审核状态
+/goods/query-document-state
+撤回商品审核
+/goods/revoke-product
+商品综合查询
+/goods/searchProduct
+商品列表接口
+/openapi-business-backend/product/query
+商品上下架
+/goods/modify-skc-shelf
+spu商品详情查询
+/goods/spu-info
+sku商品详情查询（即将作废）
+/openapi-business-backend/product/full-detail
+商品发布字段规范
+/goods/query-publish-fill-in-standard
+店铺查商品末级分类
+/goods/query-category-tree
+图文识别推荐类目
+/goods/image-category-suggestion
+查询分类可用属性
+/goods/query-attribute-template
+查询是否支持自定义属性值
+/goods/get-custom-attribute-permission-config
+添加自定义属性值
+/goods/add-custom-attribute-value
+查询关联属性填写规则
+/goods/get-associated-attribute-rules
+查询店铺站点和币种信息（新）
+/goods/query-site-list
+查询店铺站点和站点币种（旧）
+/openapi-business-backend/site/query
+查询可用品牌列表
+/goods/query-brand-list
+查询可用IP列表
+/goods/query-ip-list
+图片链接转换
+/goods/transform-pic
+本地图片上传
+/goods/upload-pic
+获取店铺上架额度
+/goods/query-shelf-quota
+查询商家sku是否已存在
+/goods/product/check-supplierSku-repeated
+商品删除预校验
+/goods/check-deletable
+提交商品删除申请
+/goods/delete/{skcName}
+查询商品删除审核记录
+/goods-delete-logs/search
+查询商品证书要求和审核状态
+/goods/get-certificate-rule
+查询证书所需上传资料（新）
+/goods/certificate/get-all-certificate-type-list-v2
+上传证书文件
+/goods/upload-certificate-file
+商品证书池创建/编辑
+/goods/save-or-update-certificate-pool
+店铺证书池创建/编辑
+/goods/save-or-update-supplier-certificate
+SKC绑定商品证书池
+/goods/save-certificate-pool-skc-bind
+商品接口-根据条码批量获取SKC与尺码
+/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表
+/goods/number-list
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（查询参数）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新记录
+更新时间：2026-07-03 13:41:30
+查询商品删除审核记录
+POST
+/open-api/goods-delete-logs/search
+自运营
+全托管
+半托管
+可查询近一年内，商家发起的商品删除的申请审核记录（平台发起的删除不在此范围内，平台会定期对长期无动销的商品进行删除）
+
+入参查询status_list=2（审核成功）的话，可获取到已删除的SKC列表。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+int64	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+integer	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+
+x-lt-signature
+string	否	
+接口签名
+
+language
+string	否	
+支持返回的多语言报错信息，例如：language:en。默认返回中文多语言信息 英语:en 法语: fr 西班牙语:es 德语:de 中文简体:zh-cn 泰语:th 巴西葡语:pt-br
+
+请求参数（查询参数）
+收起
+参数名称	数据类型	是否必须	描述
+page_num
+integer	是	
+页码，从1开始
+page_size
+integer	是	
+每页条数，最大100
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+apply_no_list
+string[]	否	
+申请单号列表，单次最多10个。
+
+skc_name_list
+string[]	否	
+SKC平台编码列表，单次最多10个。
+
+skc_supplier_code_list
+string[]	否	
+SKC商家货号列表，单次最多10个。
+
+status_list
+integer[]	否	
+删除申请的审核状态列表：0-待审核 1-审核中 2-成功 3-失败
+
+submit_time_end
+datetime	否	
+申请提交时间段，结束时间（东八区），格式：yyyy-MM-dd HH:mm:ss。
+
+最多可查询近一年的审核记录
+
+submit_time_start
+datetime	否	
+申请提交时间段，开始时间（东八区），格式：yyyy-MM-dd HH:mm:ss。
+
+最多可查询近一年的审核记录
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码 成功：0
+msg
+string	否	
+错误描述,成功：OK
+info
+object	否	
+响应结果
+
+data
+object[]	否	
+列表数据
+
+apply_no
+string	否	
+申请单号
+audit_complete_time
+datetime	否	
+审核完成时间。仅status=2（成功）时有值。
+
+fail_reason
+string	否	
+失败原因。支持多语言。
+
+skc_name
+string	否	
+SKC平台编码。
+
+skc_supplier_code
+string	否	
+SKC商家货号。
+
+status
+integer	否	
+审核状态：0-待审核 1-审核中 2-成功 3-失败
+
+submit_time
+datetime	否	
+申请提交时间
+
+meta
+object	否	
+元数据
+count
+integer	否	
+数据记录数
+customObj
+object	否	
+用户自定义扩展
+traceId
+string	否	
+追踪码
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi-test01.sheincorp.cn/open-api/goods-delete-logs/search?page_num=1&page_size=10' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1782801946482' \
+--header 'language: en' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+    "status_list":[0,1,2,3]
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "skc_name": "sd260625185879185501303",
+                "skc_supplier_code": "S7987333",
+                "apply_no": "PD202606301436510001",
+                "status": 3,
+                "submit_time": "2026-06-30 14:36:51",
+                "audit_complete_time": null,
+                "fail_reason": "Please delist the product first"
+            },
+            {
+                "skc_name": "sd260625185879185501303",
+                "skc_supplier_code": "S7987333",
+                "apply_no": "PD202606301420500001",
+                "status": 3,
+                "submit_time": "2026-06-30 14:20:50",
+                "audit_complete_time": null,
+                "fail_reason": "Please delist the product first"
+            },
+            {
+                "skc_name": "sa25070805055561895",
+                "skc_supplier_code": "9813425",
+                "apply_no": "PD202606301018360001",
+                "status": 3,
+                "submit_time": "2026-06-30 10:18:37",
+                "audit_complete_time": null,
+                "fail_reason": "SKC has orders that \"completed less than 1 year ago\" and cannot be deleted.;SKC has \"In-Transit Inventory\" or \"Physical Inventory\" that cannot be deleted."
+            },
+            {
+                "skc_name": "sc25082277519232495",
+                "skc_supplier_code": "sc20241119002s2412100969123",
+                "apply_no": "PD202604290951080001",
+                "status": 2,
+                "submit_time": "2026-04-29 09:51:08",
+                "audit_complete_time": "2026-04-29 09:51:11",
+                "fail_reason": null
+            },
+            {
+                "skc_name": "sa260312205878350217203",
+                "skc_supplier_code": "123456",
+                "apply_no": "PD202604290949590001",
+                "status": 3,
+                "submit_time": "2026-04-29 09:49:59",
+                "audit_complete_time": null,
+                "fail_reason": "SKC has orders that \"completed less than 1 year ago\" and cannot be deleted.;Please delist the product first"
+            },
+            {
+                "skc_name": "sa260312205878350266072",
+                "skc_supplier_code": "123456",
+                "apply_no": "PD202604161113480001",
+                "status": 3,
+                "submit_time": "2026-04-16 11:13:48",
+                "audit_complete_time": null,
+                "fail_reason": "System error, please try again later."
+            },
+            {
+                "skc_name": "sa260312205878350266072",
+                "skc_supplier_code": "123456",
+                "apply_no": "PD202604161112230001",
+                "status": 3,
+                "submit_time": "2026-04-16 11:12:23",
+                "audit_complete_time": null,
+                "fail_reason": "Please delist the product first"
+            },
+            {
+                "skc_name": "ss24120485063300",
+                "skc_supplier_code": "251ecebf2d8c43db8fecd75b92ea3e75",
+                "apply_no": "PD202602091126460001",
+                "status": 2,
+                "submit_time": "2026-02-09 11:26:46",
+                "audit_complete_time": "2026-02-09 11:26:48",
+                "fail_reason": null
+            },
+            {
+                "skc_name": "sa260122170130994088804",
+                "skc_supplier_code": "JN_827176691272",
+                "apply_no": "PD202602091124340001",
+                "status": 2,
+                "submit_time": "2026-02-09 11:24:35",
+                "audit_complete_time": "2026-02-09 11:24:38",
+                "fail_reason": null
+            },
+            {
+                "skc_name": "sa25080598600641821",
+                "skc_supplier_code": "iqeL204054kYm",
+                "apply_no": "PD202602041023460001",
+                "status": 2,
+                "submit_time": "2026-02-04 10:23:46",
+                "audit_complete_time": "2026-02-04 10:23:51",
+                "fail_reason": null
+            }
+        ],
+        "meta": {
+            "count": 10,
+            "customObj": {
+                "scroll_id": null
+            }
+        }
+    },
+    "bbl": null,
+    "traceId": "ca85f7f57151f457"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：20次/秒
+FAQ
+No Data
+暂无数据
+更新记录
+更新时间	更新内容
+2026-07-03	
+新接口上线
+共1条数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

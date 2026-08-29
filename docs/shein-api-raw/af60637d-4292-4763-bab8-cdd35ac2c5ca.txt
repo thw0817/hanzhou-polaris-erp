@@ -1,0 +1,377 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+查询SKC的合规信息要求
+/goods-compliance-requirements/list
+查询资质证书列表
+/goods-certificates/search
+查询资质证书填写规则
+/goods-certificate-schemas/detail
+上传资质证书文件
+/goods-certificate-files/upload
+创建/编辑资质证书
+/goods-certificates/save
+SKC绑定资质证书
+/goods-certificates/bind
+查询代理公司列表
+/goods-compliance/agency-list
+绑定SKC和代理公司
+/goods-compliance/save-skc-agency
+查询SKC的代理公司绑定要求
+/goods-compliance/skc-agency-detail
+查询警告语证书的填写规则
+/goods-compliance/query-warning-certificate-rules
+更新SKC的警告语
+/goods-compliance/update-skc-warning-certificate
+查询SKC的警告语绑定状态
+/goods-compliance/query-skc-warning-status
+查询SKC的实拍图要求
+/goods-compliance/skc-label-list
+查询SKC可用的标签模板
+/goods-compliance/get-label-template
+获取全量环保耗材信息
+/goods-quality/environmental-label-rule/material-quality-tree-v2
+打印合规标签
+/goods-compliance/label-print
+上传实拍图图片
+/goods-compliance/upload-skc-label-picture
+绑定SKC和实拍图
+/goods-compliance/skc-save-label
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-06-29 19:38:47
+查询SKC的警告语绑定状态
+POST
+/open-api/goods-compliance/query-skc-warning-status
+自运营
+全托管
+半托管
+POP
+查询SKC的警告语证书绑定要求和状态，（此接口已有新接口承接，建议优先对接新接口：/open-api/goods-compliance-requirements/list）。
+
+警告语接口完整调用方案，详见文档。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	否	
+application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+
+x-lt-signature
+string	是	
+接口签名
+
+language
+string	否	
+响应msg的语种。  不传时默认为英语，枚举值支持语种:英语:US 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+certificateTypeCodes
+string[]	是	
+证书类型编码列表，最多20个（目前警告语证书少于20个）。
+
+建议先查询/open-api/goods-compliance/query-warning-certificate-rules，获取到全量的警告语证书code，将他们入参至此以确保查出的结果全是警告语的绑定数据。目前平台没有警告语证书标识，只能通过具体的certificateTypeCode来识别哪些是警告语。
+
+pageNum
+integer	是	
+页数
+
+pageSize
+integer	是	
+每页数量，最多200个
+
+reviewStates
+integer[]	否	
+审核状态。0=没有提交过审核;1=待审核;2=审核成功;3=审核驳回
+
+skcNames
+string[]	否	
+SKC平台编码，最多200个
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	否	
+响应码
+
+msg
+string	否	
+响应信息
+
+info
+object	否	
+详情
+
+data
+object[]	否	
+详情
+
+skcName
+string	否	
+SKC平台编码
+
+items
+object[]	否	
+SKC需要绑定的警告语证书
+
+certificateTypeCode
+string	否	
+证书类型Code
+
+certificateTypeName
+string	否	
+证书类型名称
+
+certificateTypeId
+integer	否	
+证书类型ID
+
+complianceGroupCode
+string	否	
+证书所属场景，对ERP无业务意义
+
+reviewState
+integer	否	
+审核状态。0=没有提交过审核;1=待审核;2=审核成功;3=审核驳回
+
+isRequired
+integer	否	
+是否必传。0-否, 1-是。
+
+meta
+object	否	
+计数数据
+
+count
+integer	否	
+SKC条数
+
+customObj
+json	否	
+
+
+bbl
+json	否	
+
+
+traceId
+string	否	
+追踪码
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'http://openapi-test01.sheincorp.cn/open-api/goods-compliance/query-skc-warning-status' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1768984801196' \
+--header 'language: zh-cn' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+  "certificateTypeCodes": [
+  "PlaypenWMWAttr",
+  "PWarningAttr",
+  "111111",
+  "BallWarnings",
+  "FPWarningAttr",
+  "Tem1",
+  "SWarningAttr",
+  "BCSWarningAttr",
+  "EuToyWarnings",
+  "cathymuban1",
+  "ToyWarningWord",
+  "WSWarningAttr",
+  "BabyBathPWAttr",
+  "InfanBedWMWAttr",
+  "BabyRockerWAttr",
+  "FCWarningAttr",
+  "HCWarningAttr"
+]
+,
+  "pageNum": 1,
+  "pageSize": 10,
+  "reviewStates": null,
+  "skcNames": [
+    "s24102107079376"
+  ]
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "skcName": "s24102107079376",
+                "items": [
+                    {
+                        "certificateTypeCode": "WSWarningAttr",
+                        "certificateTypeName": "婴儿安全门栏警告语-属性",
+                        "certificateTypeId": 677,
+                        "complianceGroupCode": "HGXXL",
+                        "reviewState": 0,
+                        "isRequired": 1
+                    },
+                    {
+                        "certificateTypeCode": "FCWarningAttr",
+                        "certificateTypeName": "婴儿背带警告语-属性",
+                        "certificateTypeId": 667,
+                        "complianceGroupCode": "HGXXL",
+                        "reviewState": 1,
+                        "isRequired": 1
+                    },
+                    {
+                        "certificateTypeCode": "SWarningAttr",
+                        "certificateTypeName": "婴儿车警告语-属性",
+                        "certificateTypeId": 671,
+                        "complianceGroupCode": "HGXXL",
+                        "reviewState": 1,
+                        "isRequired": 1
+                    },
+                    {
+                        "certificateTypeCode": "PWarningAttr",
+                        "certificateTypeName": "安抚奶嘴及配件警告语-属性",
+                        "certificateTypeId": 666,
+                        "complianceGroupCode": "HGXXL",
+                        "reviewState": 0,
+                        "isRequired": 1
+                    },
+                    {
+                        "certificateTypeCode": "EuToyWarnings",
+                        "certificateTypeName": "欧盟玩具安全指令",
+                        "certificateTypeId": 396,
+                        "complianceGroupCode": "HGXXL",
+                        "reviewState": 0,
+                        "isRequired": 1
+                    },
+                    {
+                        "certificateTypeCode": "FPWarningAttr",
+                        "certificateTypeName": "母婴喂养用品警告语-属性",
+                        "certificateTypeId": 665,
+                        "complianceGroupCode": "HGXXL",
+                        "reviewState": 0,
+                        "isRequired": 1
+                    },
+                    {
+                        "certificateTypeCode": "BallWarnings",
+                        "certificateTypeName": "气球警告语",
+                        "certificateTypeId": 537,
+                        "complianceGroupCode": "HGXXL",
+                        "reviewState": 0,
+                        "isRequired": 1
+                    },
+                    {
+                        "certificateTypeCode": "ToyWarningWord",
+                        "certificateTypeName": "玩具窒息危险警告语",
+                        "certificateTypeId": 340,
+                        "complianceGroupCode": "HGXXL",
+                        "reviewState": 0,
+                        "isRequired": 1
+                    },
+                    {
+                        "certificateTypeCode": "BCSWarningAttr",
+                        "certificateTypeName": "自行车儿童座椅警告语-属性",
+                        "certificateTypeId": 675,
+                        "complianceGroupCode": "HGXXL",
+                        "reviewState": 0,
+                        "isRequired": 1
+                    },
+                    {
+                        "certificateTypeCode": "HCWarningAttr",
+                        "certificateTypeName": "高脚椅警告语-属性",
+                        "certificateTypeId": 669,
+                        "complianceGroupCode": "HGXXL",
+                        "reviewState": 0,
+                        "isRequired": 1
+                    }
+                ]
+            }
+        ],
+        "meta": {
+            "count": 1,
+            "customObj": null
+        }
+    },
+    "bbl": null,
+    "traceId": "f436fe15a8c3aa20"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：40次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

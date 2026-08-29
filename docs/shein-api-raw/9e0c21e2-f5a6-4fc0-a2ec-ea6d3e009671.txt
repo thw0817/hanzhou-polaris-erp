@@ -1,0 +1,485 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+更新商品售价
+/openapi-business-backend/product/price/save
+更新成本价
+/goods/update-cost
+获取成本价涨价原因枚举值
+/goods/query-change-price-reason
+价格证明材料上传
+/goods/discuss/upload-discuss-file
+查询商品建议零售价
+/goods-recommend-retail-price/search
+查询建议零售价填写规则
+/goods/query-recommend-retail-price-rule
+提交建议零售价
+/goods-recommend-retail-price/batch-save
+查询建议零售价审核记录
+/goods-recommend-retail-price-audit/search
+获取议价单列表
+/goods/discuss/query-discuss-list
+处理议价单
+/goods/discuss/process-discuss
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-07-02 20:35:33
+获取议价单列表
+POST
+/open-api/goods/discuss/query-discuss-list
+全托管
+半托管
+支持获取商品成本价的议价单列表。
+
+目前仅支持3种议价类型：新品议价、老品议价、新品核价复议
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-signature
+string	是	
+请求签名
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：158339876400
+
+language
+string	是	
+语种。默认为中文。支持语种:英语:US 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+discussStatus
+integer	否	
+议价单状态,。
+
+1:待商家确认 2:待平台审核 3:接受议价 4:不接受议价 5:议价终止-成功 6:议价终止-失败
+
+pageNum
+integer	是	
+分页数量。建议从1开始查询
+
+pageSize
+integer	是	
+分页内条数，单页最多200
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	否	
+响应码
+
+info
+object	是	
+响应详情
+
+count
+integer	否	
+查询结果条数
+
+data
+object[]	是	
+具体数据。目前仅支持3种议价类型：新品议价、老品议价、新品核价复议
+
+allPicUrls
+string[]	否	
+SKC的所有商品图片
+
+appealCount
+integer	否	
+议价单剩余可议价次数。（平台不允许对同一个SKC进行无限次议价行为，因此会有次数限制，当剩余次数为0时，议价单状态变为6终止-失败）
+
+appealReason
+string	否	
+建议改价原因（平台侧写入的内容）
+
+discussSn
+string	否	
+议价单单号
+
+discussStatus
+integer	否	
+议价单状态。
+
+1:待商家确认 2:待平台审核 3:接受议价 4:不接受议价 5:议价终止-成功 6:议价终止-失败
+
+discussType
+integer	否	
+议价单类型。
+
+0:新品议价 1:老品议价 3:新品核价复议
+
+fileUploadList
+object[]	是	
+议价上传的辅助材料
+
+file_name
+string	否	
+原始文件名
+
+object_key
+string	否	
+文件唯一key，需通过接口/open-api/goods/discuss/upload-discuss-file上传文件后获取
+
+type
+integer	否	
+文件类型 1:图片
+
+url
+string	否	
+文件url，需通过接口/open-api/goods/discuss/upload-discuss-file上传文件后获取
+
+isSizeSamePrice
+integer	否	
+是否限制所有尺码同价
+
+1-是（代表SKC下所有SKU的价格需相同，即议价时也需要相同）；0 否
+
+mainPicUrl
+string	否	
+商品主图地址
+productTitle
+string	否	
+商品标题
+
+reason
+string	否	
+议价原因（商家侧输入的内容）
+
+saleAttributeValue
+string	否	
+SKC销售属性值
+
+serialNumber
+integer	否	
+当前议价的轮次数
+
+skcName
+string	否	
+平台的skc编码
+
+skuCostPrices
+object[]	是	
+sku成本价列表
+
+costPriceHistories
+object[]	是	
+商家的成本价报价记录
+
+costPrice
+double	否	
+成本价
+
+currency
+string	否	
+币种
+serialNumber
+integer	否	
+报价轮次数
+
+latestCostPrice
+double	否	
+最近一次的商家报价价格。如果serialNumber=1即商家侧还没有发起过报价时，则此字段无数据。
+
+saleAttributeValues
+string[]	否	
+次规格属性值
+
+skuCode
+string	否	
+平台的sku编码
+
+suggestCostCurrency
+string	否	
+平台的建议成本价币种
+
+suggestCostPrice
+double	否	
+平台的建议成本价
+spuName
+string	否	
+平台的spu编码
+
+supplierCode
+string	否	
+商家的skc货号
+
+msg
+string	否	
+响应信息
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'http://openapi-test01.sheincorp.cn/open-api/goods/discuss/query-discuss-list' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1762494208230' \
+--header 'language: US' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+  "discussStatus":"",
+  "pageNum":1,
+  "pageSize":10
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "discussSn": "YJ30251107172948307968",
+                "discussStatus": 1,
+                "spuName": "s2501228549",
+                "skcName": "ss25012285492844",
+                "supplierCode": "1234287-westmonth-481.1",
+                "productTitle": "SRAH'SHOPEELHOE Electric Anti-Wrinkle Eye Cream Lifting Firming Moisturizing Reducing Fine Lines Eye Bags Dark Circles Eye Care11999888",
+                "saleAttributeValue": "Army Green",
+                "mainPicUrl": "https://img.ltwebstatic.com/images3_spmp/2024/11/29/be/1732860076c6e0d55b84433a061ae2bd3aaf18473b_square.jpg",
+                "allPicUrls": [
+                    "https://img.ltwebstatic.com/images3_spmp/2024/11/29/be/1732860076c6e0d55b84433a061ae2bd3aaf18473b_square.jpg",
+                    "https://img.ltwebstatic.com/images3_spmp/2025/01/22/cc/17375297668e8a6193029f772d9da4244cb673da92_square.jpg",
+                    "https://img.ltwebstatic.com/images3_spmp/2025/01/22/1e/1737529770d0eff71f021c0216ab5382199a89b6bb_square.jpg",
+                    "https://img.ltwebstatic.com/images3_spmp/2025/01/22/e7/173752977548b263cd797420d7d4e9c5a596bdcf6f_square.jpg",
+                    "https://imgdeal-test01.shein.com/images3_pi/2025/01/22/00/17375297821232599685_square.jpeg",
+                    "https://imgdeal-test01.shein.com/images3_pi/2025/01/22/a6/17375297844286045663_square.jpeg",
+                    "https://imgdeal-test01.shein.com/images3_pi/2025/01/22/26/17375297872895279191_square.jpeg",
+                    "https://img.ltwebstatic.com/images3_spmp/2024/11/29/be/1732860076c6e0d55b84433a061ae2bd3aaf18473b_square.jpg",
+                    "https://img.ltwebstatic.com/images3_spmp/2025/01/21/58/17374406563ab9ef9bf71874ee0a3a6697fedc29fe.jpg",
+                    "https://img.ltwebstatic.com/images3_spmp/2025/01/21/c8/1737440653da9e412d426641d7950bce6e8d3cc529_square.jpg",
+                    "https://imgdeal-test01.shein.com/images3_pi/2025/01/22/5b/17375297893352422689.jpeg",
+                    "https://img.ltwebstatic.com/images3_spmp/2024/11/29/09/17328677228845557c7afea1dfb5673220d7e8a72b.jpg"
+                ],
+                "serialNumber": 2,
+                "skuCostPrices": [
+                    {
+                        "skuCode": "I4ajkf1r3xrs",
+                        "saleAttributeValues": [],
+                        "costPriceHistories": [
+                            {
+                                "serialNumber": 0,
+                                "costPrice": 481.1,
+                                "currency": "EUR"
+                            },
+                            {
+                                "serialNumber": 1,
+                                "costPrice": 480.0,
+                                "currency": "EUR"
+                            }
+                        ],
+                        "suggestCostPrice": 280.0,
+                        "suggestCostCurrency": "EUR",
+                        "latestCostPrice": 480.0
+                    }
+                ],
+                "discussType": 3,
+                "appealReason": "",
+                "appealCount": 3,
+                "fileUploadList": null,
+                "reason": null,
+                "isSizeSamePrice": 0
+            },
+            {
+                "discussSn": "YJ30251107169517383680",
+                "discussStatus": 1,
+                "spuName": "f250606571555",
+                "skcName": "sf25060657155599136",
+                "supplierCode": "C3OGFO-TTP8UV-Y2IE9K",
+                "productTitle": "shein",
+                "saleAttributeValue": "tight",
+                "mainPicUrl": "https://imgdeal-test01.shein.com/v4/j/pi/2025/06/06/32/1749190480c43a1f8a66b2ae3ce659dba397531431_square.jpg",
+                "allPicUrls": [
+                    "https://imgdeal-test01.shein.com/v4/j/pi/2025/06/06/32/1749190480c43a1f8a66b2ae3ce659dba397531431_square.jpg",
+                    "https://imgdeal-test01.shein.com/v4/j/pi/2025/06/06/5f/17491904828572b894374054d55304cf37a943c75c_square.jpg",
+                    "https://imgdeal-test01.shein.com/v4/p/pi/2025/06/06/78/174919048333ee43378e1afdcd591559215de743c4_square.png",
+                    "https://imgdeal-test01.shein.com/v4/j/pi/2025/06/06/7f/1749190484babc7fda118a3fe5151cf0a00529aec3_square.jpg",
+                    "https://imgdeal-test01.shein.com/v4/j/pi/2025/06/06/47/1749190489b161ef52b8519e11190b229d77ce4da4_square.jpg",
+                    "https://imgdeal-test01.shein.com/v4/p/pi/2025/06/06/4f/17491904911f230b051303efbca75ef381297f3825_square.png",
+                    "https://imgdeal-test01.shein.com/v4/j/pi/2025/06/06/24/1749190491ea920fab83ea4bc6d7c5fa5d06bb7e7f_square.jpg"
+                ],
+                "serialNumber": 1,
+                "skuCostPrices": [
+                    {
+                        "skuCode": "I84mm55j5vwd",
+                        "saleAttributeValues": [
+                            "Flowers"
+                        ],
+                        "costPriceHistories": [
+                            {
+                                "serialNumber": 0,
+                                "costPrice": 1.0,
+                                "currency": "EUR"
+                            }
+                        ],
+                        "suggestCostPrice": 0.01,
+                        "suggestCostCurrency": "EUR",
+                        "latestCostPrice": null
+                    },
+                    {
+                        "skuCode": "I84mm55j6dc5",
+                        "saleAttributeValues": [
+                            "Print"
+                        ],
+                        "costPriceHistories": [
+                            {
+                                "serialNumber": 0,
+                                "costPrice": 1.0,
+                                "currency": "EUR"
+                            }
+                        ],
+                        "suggestCostPrice": 0.01,
+                        "suggestCostCurrency": "EUR",
+                        "latestCostPrice": null
+                    }
+                ],
+                "discussType": 3,
+                "appealReason": "",
+                "appealCount": 4,
+                "fileUploadList": null,
+                "reason": null,
+                "isSizeSamePrice": 0
+            },
+            {
+                "discussSn": "YJ30251107169332834304",
+                "discussStatus": 1,
+                "spuName": "f250606571555",
+                "skcName": "sf25060657155510001",
+                "supplierCode": "C3OGFO-TTP8UV-8OWXJP",
+                "productTitle": "shein",
+                "saleAttributeValue": "DYJ_ long sleeves",
+                "mainPicUrl": "https://imgdeal-test01.shein.com/v4/j/pi/2025/06/06/32/1749190480c43a1f8a66b2ae3ce659dba397531431_square.jpg",
+                "allPicUrls": [
+                    "https://imgdeal-test01.shein.com/v4/j/pi/2025/06/06/32/1749190480c43a1f8a66b2ae3ce659dba397531431_square.jpg",
+                    "https://imgdeal-test01.shein.com/v4/j/pi/2025/06/06/5f/17491904828572b894374054d55304cf37a943c75c_square.jpg",
+                    "https://imgdeal-test01.shein.com/v4/p/pi/2025/06/06/78/174919048333ee43378e1afdcd591559215de743c4_square.png",
+                    "https://imgdeal-test01.shein.com/v4/j/pi/2025/06/06/7f/1749190484babc7fda118a3fe5151cf0a00529aec3_square.jpg",
+                    "https://imgdeal-test01.shein.com/v4/j/pi/2025/06/06/9d/17491904888cd6eda5353e7ac06aafd3f0b028e164_square.jpg"
+                ],
+                "serialNumber": 1,
+                "skuCostPrices": [
+                    {
+                        "skuCode": "I84mm55j4qpu",
+                        "saleAttributeValues": [
+                            "Print"
+                        ],
+                        "costPriceHistories": [
+                            {
+                                "serialNumber": 0,
+                                "costPrice": 1.0,
+                                "currency": "EUR"
+                            }
+                        ],
+                        "suggestCostPrice": 0.01,
+                        "suggestCostCurrency": "EUR",
+                        "latestCostPrice": null
+                    },
+                    {
+                        "skuCode": "I84mm55j3ss0",
+                        "saleAttributeValues": [
+                            "Flowers"
+                        ],
+                        "costPriceHistories": [
+                            {
+                                "serialNumber": 0,
+                                "costPrice": 1.0,
+                                "currency": "EUR"
+                            }
+                        ],
+                        "suggestCostPrice": 0.01,
+                        "suggestCostCurrency": "EUR",
+                        "latestCostPrice": null
+                    }
+                ],
+                "discussType": 3,
+                "appealReason": "",
+                "appealCount": 4,
+                "fileUploadList": null,
+                "reason": null,
+                "isSizeSamePrice": 0
+            }
+        ],
+        "count": 3
+    },
+    "bbl": null,
+    "traceId": "f2d4974508bd3d5b"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：10次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

@@ -1,0 +1,338 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+查询退货申请单列表
+/purchase/return-application-list
+查询退货申请单商品明细
+/purchase/return-application-detail
+查询商家可选择的处理方式
+/purchase/return-disposals
+查询退货方式
+/purchase/return-pickup-methods
+查询商家退货地址
+/purchase/query-return-address
+查询退货可选择的物流
+/purchase/return-carriers
+确认退货申请单
+/purchase/confirm-return-application
+查询商品可退库存数
+/purchase/returnable-inventory
+创建退货申请单
+/purchase/create-return-application
+查询退货与报废单列表
+/purchase/return-list
+查询退货与报废单商品明细
+/purchase/return-product-detail
+查询退货与报废单包裹明细
+/purchase/return-package-detail
+修改退货单的退货方式
+/purchase/update-pickup-methods
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新记录
+更新时间：2026-07-03 15:35:30
+查询退货与报废单列表
+POST
+/open-api/purchase/return-list
+全托管
+分页查询退货单、报废单列表数据；如何对接请查看采购单退货解决方案
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+
+x-lt-signature
+string	是	
+接口签名
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+startTime
+string	否	
+开始时间（returnOrderNoList为空时必填），开始时间、结束时间跨度不要超过60天
+
+endTime
+string	否	
+结束时间（returnOrderNoList为空时必填），开始时间、结束时间跨度不要超过60天
+
+page
+integer	否	
+页码，不传默认1
+
+pageSize
+integer	否	
+分页大小，1-100，不传默认100
+queryType
+integer	否	
+查询类型：1-根据退货单的发起时间查询，2-根据退货单的更新时间查询；当returnOrderNoList为空时必填
+
+returnOrderNoList
+string[]	否	
+退货单号列表（最多200个），有值时，startTime/endTime/queryType可不传
+
+returnReasonTypes
+integer[]	否	
+发起原因列表：1滞销退、2关店退、3D2商品退、4商品稽查退、5面料&材质稽查退、6出库质检退、7入库问题退、8商家主动退、9CNPJ税务变更退、10运营发起退、11集货中转退
+status
+integer[]	否	
+退货状态列表；1:平台确认中，2：待退货，3:部分出库，4:全部出库，5:已取消，6:已报废，7:待报废，8:退货中
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码，成功：0
+
+msg
+string	否	
+错误描述,成功：OK
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+info
+object	否	
+data
+object[]	否	
+addTime
+string	否	
+发起时间
+initiator
+integer	否	
+发起方：1:SHEIN，2:商家
+
+processing
+object	否	
+处理
+actualQuantityProcessed
+integer	否	
+实际处理数量
+distributionType
+integer	否	
+退货方式；1:SHEIN合作物流，4:自提
+planReturnAddress
+object	是	
+退货地址信息
+address
+string	否	
+退货地址
+contact
+string	否	
+收件人
+phone
+string	否	
+联系电话
+planReturnQuantity
+integer	否	
+预计退货或报废数量
+returnDealType
+integer	否	
+处理方式；1:退货，2:报废
+
+returnExpressCompanyCode
+string	否	
+退货物流公司code
+returnExpressCompanyName
+string	否	
+退货物流公司名称
+warehouse
+string	否	
+SHEIN仓库名称
+warehouseId
+integer	否	
+SHEIN仓库id
+subWarehouseId
+string	否	
+子仓仓库id
+subWarehouseName
+string	否	
+子仓仓库名称
+relateOrders
+object	否	
+关联的采购单信息
+deliveryCodes
+string[]	否	
+发货单号
+orders
+string[]	否	
+采购单号
+returnPlanNos
+string[]	否	
+退货申请单号
+returnInstructions
+string	否	
+退货说明
+returnNo
+string	否	
+退货与报废单号
+returnReasonType
+integer	否	
+发起原因列表：1滞销退、2关店退、3D2商品退、4商品稽查退、5面料&材质稽查退、6出库质检退、7入库问题退、8商家主动退、9CNPJ税务变更退、10运营发起退、11集货中转退
+returnStatus
+integer	否	
+退货状态；1:平台确认中，2：待退货，3:部分出库，4:全部出库，5:已取消，6:已报废，7:待报废，8:退货中
+
+signStatus
+integer	否	
+签收状态；1已签收，2未签收，0无需签收
+
+updateTime
+string	否	
+更新时间
+meta
+object	是	
+count
+integer	否	
+customObj
+object	是	
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/open-api/purchase/return-list' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'Content-Type: application/json;charset=UTF-8' \
+--header 'x-lt-timestamp: 1752570817402' \
+--data-raw '{
+    "queryType": 1,
+    "page": 1,
+    "returnOrderNoList": [
+    "TG26050700010"
+  ],
+    "pageSize": 50
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "returnNo": "TG26050700010",
+                "returnStatus": 4,
+                "addTime": "2026-05-09 14:18:24",
+                "updateTime": "2026-05-09 14:18:23",
+                "initiator": 2,
+                "returnReasonType": 1,
+                "returnInstructions": "发起退货说明测试",
+                "signStatus": 2,
+                "relateOrders": {
+                    "orders": [],
+                    "deliveryCodes": [],
+                    "returnPlanNos": [
+                        "JH26050700000082"
+                    ]
+                },
+                "processing": {
+                    "returnDealType": 1,
+                    "planReturnQuantity": 1,
+                    "actualQuantityProcessed": 0,
+                    "distributionType": 1,
+                    "warehouseId": 1,
+                    "warehouse": "佛山仓",
+                    "subWarehouseId": 59,
+                    "subWarehouseName": "宏盛2号仓",
+                    "planReturnAddress": {
+                        "contact": "123",
+                        "phone": "34231312123",
+                        "address": "天津市   tianjing123"
+                    },
+                    "returnExpressCompanyCode": "shunfeng",
+                    "returnExpressCompanyName": "顺丰"
+                }
+            }
+        ],
+        "meta": {
+            "count": 1,
+            "customObj": {}
+        }
+    },
+    "bbl": {},
+    "traceId": "36378874c25f8c10"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：50次/秒
+FAQ
+No Data
+暂无数据
+更新记录
+更新时间	更新内容
+2026-06-17	
+processing中新增字段：subWarehouseId，子仓id;subWarehouseName，子仓名称;processing中字段返回逻辑调整：warehouse从返回子仓名称改为返回大仓名称
+2026-06-03	
+新增接口
+共2条数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

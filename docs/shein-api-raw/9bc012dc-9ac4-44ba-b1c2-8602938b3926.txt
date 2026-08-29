@@ -1,0 +1,270 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+获取openKeyId和secretKey
+/auth/get-by-token
+商品
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2025-12-26 14:35:50
+获取openKeyId和secretKey
+POST
+/open-api/auth/get-by-token
+自运营
+全托管
+SHEIN自营
+半托管
+POP
+该API支持用tempToken交换openKeyId和secretKey，对接之前请查阅店铺授权开发者应用手册了解更全面的信息
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+x-lt-appid
+string	是	
+开发者appid，可登录查看
+
+x-lt-timestamp
+string	是	
+时间戳（5分钟内有效）
+
+x-lt-signature
+string	是	
+可查看签名规则，由于调用getbytoken接口时，开发者还没有openkeyId和secretKey，请使用appId和appSecretKey生成签名；
+
+Content-Type
+string	是	
+application/json;charset=UTF-8
+language
+string	否	
+支持返回的多语言报错信息，例如：language:en。默认返回中文多语言信息  支持传参：  英语:en  法语: fr  西班牙语:es  德语:de  中文简体:zh-cn  泰语:th  巴西葡语:pt-br 日语:ja
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+tempToken
+string	是	
+商家账号登录确认授权返回的tempToken
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应码. 0:处理成功
+msg
+string	否	
+响应描述
+info
+object	否	
+响应内容
+secretKey
+string	是	
+卖家账号秘钥，需用开发者appSecretKey解密
+
+openKeyId
+string	是	
+卖家账号openKeyId
+appid
+string	是	
+开发者appId
+
+state
+string	否	
+原样返回的标识
+supplierId
+integer	是	
+SHEIN商户ID
+supplierBusinessMode
+string	否	
+商家业务类型。只有特殊的商家此字段才会有值。
+
+POP-US:美国POP店；POP-GLOBAL:跨境POP店；SFS:商家既要备货又要管理客单
+
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/auth/get-by-token' \
+--header 'x-lt-appid: test' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-timestamp: 1752560461085' \
+--header 'language: zh-cn' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "tempToken": "de723b1c-210b-4ecc-8da4-5f1da6ea0a9b"
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "secretKey": "CQsi1eOAf****************YQqmG",
+        "appid": "10AF15E7DD802804E7140BE2D326D",
+        "openKeyId": "5C83782096BA46008D66C424CB39803F",
+        "state": "OPENAPI",
+        "supplierId": 21840925,
+        "supplierSource": 10,
+        "supplierBusinessMode":"POP-US"
+        
+    },
+    "traceId": "7b0461d5534f3e1"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+33051002	
+请求超时，请重新请求生成临时token
+开发者获取temptoken后，需要5分钟内完成接口调用。如超过5分钟未调用接口，需要商家重新授权应用并使用新的temptoken
+33051002	
+参数异常，入参tempToken不能为空
+调用该接口前，开发者需要通过商家授权拿到tempToken，更多信息可查看文档：https://open.sheincorp.com/documents/system/2169474d-1d4a-41a9-b9fd-427f63f54a63
+openapi00001	
+签名错误:生成的签名不正确，请检查
+开发者生成的签名不正确，可以使用官网提供的签名工具进行验证：https://open.sheincorp.com/documents/system/passwdrule。如果开发者生成的签名与官网生成的签名一致，则可能是商家取消授权或重新授权，导致secretkey发生变更。在这种情况下，开发者需要联系商家重新授权应用
+openapi00001	
+签名错误: 请求头参数异常，未通过验签策略，请检查
+开发者需要检查接口的请求头参数是否正确
+openapi00001	
+签名错误: 请求时间戳已过期，请检查
+时间戳5分钟有效，超过则会报错，需要开发者重新授权
+openapi00002	
+IP is not in the whitelist
+服务器IP地址已添加至白名单，您必须将应用服务的IP地址添加到IP白名单后，才能对线上环境的接口进行调用
+openapi00003	
+应用没有该接口访问权限，请登陆开发者后台检查
+应用没有该接口权限、接口地址错误或者开发者账号已被禁用
+openapi00004	
+用户【xxx】已过期
+用户已过期，需要重新授权，开发者拿最新的密钥请求接口
+33051002	
+无权限操作appid的授权信息
+授权链接的appid与调用getbytoken接口的appid不一致，请检查
+33051002	
+商户和开发者正在进行授权操作，请稍后再试
+商家正在重新授权应用，请稍后重试
+33051002	
+当前待授权的开发者应用无效，请重新授权
+该appid暂未启用或不存在，请开发者仔细检查
+共11条数据
+限流规则
+收起
+单个开发者接口限流频次：40次/秒
+FAQ
+Q：调用接口返回“子系统登录重定向”错误是什么原因？
+2025-10-13
+A：
+该错误是由于接口调用的域名错误引起的。接口调用的域名与授权域名不一致会导致此错误。正式环境下，接口调用的正确域名应为：https://openapi.sheincorp.com 或 https://openapi.sheincorp.cn。 如果开发者错误地使用授权域名（例如：https://openapi-sem.sheincorp.com/#/empower）来调用接口，则会出现此报错。 以下是报错示例：{
+	"code": "20302",
+	"msg": "子系统登录重定向",
+	"info": null,
+	"bbl": null
+}
+查看详情
+Q：签名不正确的问题是什么原因？
+2026-01-08
+A：
+
+常见的签名错误如下：1、getbytoken接口比较特殊，由于调用getbytoken接口时，开发者还没有openkey和secretKey，请使用后台应用的APP_ID和APP_Secretkey生成签名；2、一般签名错误出现的原因有以下几种：a、接口调用域名不正确；生产环境的密钥用了测试环境的域名会导致签名不正确b、请求头参数不正确；比如调用订单接口时，请求头是openKeyId等入参c、商家重置了密钥，导致开发者使用旧的密钥生成签名，建议查看应用后台的授权记录，以确认商家是否重新授权；d、Secretkey没有解密；3、通过getbytoken获取的密钥没有解密直接使用生成签名，会导致签名不正确，签名的生成方法可以查看文档： https://open.sheincorp.com/documents/system/passwdrule
+
+正确的签名生成流程：1、签名概述在SHEIN开放平台中，每次接口调用都需要进行签名验证，以确保请求的合法性和安全性。本文档详细说明如何生成符合SHEIN平台要求的API签名。2、签名生成步骤步骤1：准备签名参数以获取采购单信息接口(/open-api/order/purchase-order-info)为例，签名需要准备以下参数：参数名称说明示例值OpenKeyId授权返回的OpenKeyIdB96C15416C9240DF96BAA0BC9B367C6DSecretKey授权返回的解密后SecretKey6BEC9C4B668B4B14B17EEF106BB98AE5Path请求接口路径/open-api/order/purchase-order-infoTimestamp请求时间戳(毫秒)1740709414000RandomKey5位随机字符串test1步骤2：组装签名数据(VALUE)将OpenKeyId、Timestamp和Path按特定格式拼接：OpenKeyId + "&" + Timestamp + "&" + Path示例结果：B96C15416C9240DF96BAA0BC9B367C6D&1740709414000&/open-api/order/purchase-order-info
+步骤3：组装签名密钥(KEY)将SecretKey和RandomKey直接拼接：SecretKey + RandomKey示例结果：6BEC9C4B668B4B14B17EEF106BB98AE5test1步骤4：HMAC-SHA256加密并转十六进制使用步骤二得到的密钥(KEY)，对步骤一的数据(VALUE)进行HMAC-SHA256加密，然后将二进制结果转换为十六进制字符串：HexString = HMAC-SHA256(VALUE, KEY).toHexString()示例结果：d6ca2c789f5307de567f77717fcf098b114aeb415534166e61d0d192ba95acca步骤5：Base64编码对步骤三得到的十六进制字符串进行Base64编码：Base64String = Base64Encode(HexString)示例结果：ZDZjYTJjNzg5ZjUzMDdkZTU2N2Y3NzcxN2ZjZjA5OGIxMTRhZWI0MTU1MzQxNjZlNjFkMGQxOTJiYTk1YWNjYQ==步骤6：拼接RandomKey将RandomKey添加到Base64编码结果前面，形成最终签名：Signature = RandomKey + Base64String最终签名结果：test1ZDZjYTJjNzg5ZjUzMDdkZTU2N2Y3NzcxN2ZjZjA5OGIxMTRhZWI0MTU1MzQxNjZlNjFkMGQxOTJiYTk1YWNjYQ==
+查看详情
+Q：咨询密钥什么情况下会失效？
+2025-05-27
+A：
+
+密钥失效一般有以下几种情况：商家在后台取消授权，则密钥会立即失效，开发者将无法通过密钥调用接口。同时 SHEIN 开放平台会将密钥失效信息推送给开发者。 查看文档商家在商家后台点击重新授权，则商家会收到新的密钥短信，原先的密钥将失效。商家通过授权链接重新授权应用，完成授权后，旧的密钥将立即失效
+查看详情
+Q：咨询密钥是否永久有效的？
+2026-01-07
+A：
+正常情况下，密钥是永久有效的。可通过开发者控制台确认密钥的有效时间，路径： 登录开发者控制台 - 菜单“应用管理” - tab“授权记录” - 列表“授权有效期至”，若列表为空则代表永久有效
+查看详情
+Q：子账号是否可以授权开发者应用？
+2026-02-20
+A：
+由于店铺授权开发者应用后，应用可拉取店铺的数据，如商品、订单、库存等。因此，只有商家主账号可以完成应用授权。子账号无法授权应用。只有商家主账号可以完成应用授权。
+查看详情
+Q：密钥接口常见问题
+2024-12-24
+A：
+1、不同店铺授权应用openKeyId一样吗？openKeyId是每个店铺和应用的一组关系，全局唯一2、openKeyId多久有效，如果用户重新授权openKeyId和secretkey会变更吗？openKeyId目前永久有效用户重新授权后，openKeyId不会变更，secretkey会更改
+查看详情
+Q：如何取消授权？
+2025-10-27
+A：
+目前平台暂未提供取消授权的接口。若需进行取消授权操作，可以联系商家登录 SHEIN 商家后台，搜索并进入「第三方应用」页面。在页面中点击「我的授权」，即可查看所有已授权的应用列表。找到需要取消授权的应用后，点击“取消授权”按钮即可完成操作。
+查看详情
+Q：supplierSource字段是指什么？
+2025-12-04
+A：
+supplierSource为商家来源，是SHEIN内部定义的商家类型，用于确定唯一商家，开发者无需关注。
+Q：如果一个商家有多个店铺，如何区分是哪个店铺？
+2025-12-04
+A：
+
+当一个商家拥有多个店铺，并授权同一个开发者应用时，平台会为每个店铺生成唯一的密钥，其中 openkey 表示 SHEIN 平台上店铺与应用之间的唯一关系。如果你想知道每个 openkey 对应的商家信息，可以通过以下接口获取：
+店铺信息查询接口： /open-api/openapi-business-backend/query-store-info
+返回的数据包括：店铺名称（字段：storeName）店铺状态（字段：storeStatus）店铺商家ID（字段：supplierId）
+注意：平台当前不提供查询应用授权记录的接口。如果开发者需要查看所有授权记录，可以登录 开发者后台 进行查询
+查看详情
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

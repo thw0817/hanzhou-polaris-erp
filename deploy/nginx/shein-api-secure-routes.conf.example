@@ -1,0 +1,128 @@
+# Merge these locations into the HTTPS server block for api.hanzhou.icu.
+# Keep the Certbot-managed listen/certificate directives already on the server.
+
+client_max_body_size 16k;
+
+location = /health {
+    proxy_pass http://127.0.0.1:8790;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 5s;
+}
+
+location = /v1/auth/enroll {
+    proxy_pass http://127.0.0.1:8790;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 12s;
+}
+
+location = /v1/session {
+    proxy_pass http://127.0.0.1:8790;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 8s;
+}
+
+# The V2 web app normally uses the app.hanzhou.icu same-origin route. Keep the
+# direct publish action available through the API hostname as well so a stale
+# or locally configured API base cannot turn a valid publish request into an
+# Nginx 404. Authentication and trusted-origin checks remain in control.
+location ~ ^/v1/web/stores/[^/]+/publish-now$ {
+    proxy_pass http://127.0.0.1:8790;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 60s;
+}
+
+location = /v1/webhook-audits {
+    proxy_pass http://127.0.0.1:8790;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 8s;
+}
+
+location = /v1/auth/logout {
+    proxy_pass http://127.0.0.1:8790;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 8s;
+}
+
+location = /v1/shein/auth/start {
+    proxy_pass http://127.0.0.1:8790;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 12s;
+}
+
+location = /v1/shein/auth/complete {
+    proxy_pass http://127.0.0.1:8790;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 20s;
+}
+
+location = /webhooks/shein {
+    client_max_body_size 1m;
+    proxy_pass http://127.0.0.1:8791;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 1s;
+    proxy_read_timeout 2s;
+}
+
+location = /webhooks/shein/test {
+    client_max_body_size 1m;
+    proxy_pass http://127.0.0.1:8791;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 1s;
+    proxy_read_timeout 2s;
+}
+
+location = /ready {
+    return 404;
+}
+
+location / {
+    return 404;
+}

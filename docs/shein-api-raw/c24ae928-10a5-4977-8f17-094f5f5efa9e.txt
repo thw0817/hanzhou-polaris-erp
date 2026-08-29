@@ -1,0 +1,878 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+商品发布/编辑
+/goods/product/publishOrEdit
+商品部分编辑
+/goods/product/partialEdit
+确认店铺是否可发品
+/goods/product/check-publish-permission
+确认商品是否可编辑
+/goods/product/check-edit-permission
+查询商品审核状态
+/goods/query-document-state
+撤回商品审核
+/goods/revoke-product
+商品综合查询
+/goods/searchProduct
+商品列表接口
+/openapi-business-backend/product/query
+商品上下架
+/goods/modify-skc-shelf
+spu商品详情查询
+/goods/spu-info
+sku商品详情查询（即将作废）
+/openapi-business-backend/product/full-detail
+商品发布字段规范
+/goods/query-publish-fill-in-standard
+店铺查商品末级分类
+/goods/query-category-tree
+图文识别推荐类目
+/goods/image-category-suggestion
+查询分类可用属性
+/goods/query-attribute-template
+查询是否支持自定义属性值
+/goods/get-custom-attribute-permission-config
+添加自定义属性值
+/goods/add-custom-attribute-value
+查询关联属性填写规则
+/goods/get-associated-attribute-rules
+查询店铺站点和币种信息（新）
+/goods/query-site-list
+查询店铺站点和站点币种（旧）
+/openapi-business-backend/site/query
+查询可用品牌列表
+/goods/query-brand-list
+查询可用IP列表
+/goods/query-ip-list
+图片链接转换
+/goods/transform-pic
+本地图片上传
+/goods/upload-pic
+获取店铺上架额度
+/goods/query-shelf-quota
+查询商家sku是否已存在
+/goods/product/check-supplierSku-repeated
+商品删除预校验
+/goods/check-deletable
+提交商品删除申请
+/goods/delete/{skcName}
+查询商品删除审核记录
+/goods-delete-logs/search
+查询商品证书要求和审核状态
+/goods/get-certificate-rule
+查询证书所需上传资料（新）
+/goods/certificate/get-all-certificate-type-list-v2
+上传证书文件
+/goods/upload-certificate-file
+商品证书池创建/编辑
+/goods/save-or-update-certificate-pool
+店铺证书池创建/编辑
+/goods/save-or-update-supplier-certificate
+SKC绑定商品证书池
+/goods/save-certificate-pool-skc-bind
+商品接口-根据条码批量获取SKC与尺码
+/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表
+/goods/number-list
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2025-05-06 16:08:52
+sku商品详情查询（即将作废）
+POST
+/open-api/openapi-business-backend/product/full-detail
+自运营
+全托管
+半托管
+POP
+该API支持通过skucode查询sku详细信息，该接口目前暂停维护，请对接spu商品详情查询(新)接口，如需查询库存，请对接库存查询接口。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+skuCodes
+string[]	是	
+skucode, 最大支持传100个，skucode是SHEIN生成的系统编码
+
+language
+string	否	
+语种, 默认中文简体: zh-cn
+
+支持语种:英语:en 法语:fr 西班牙语:es 德语:de 中文简体:zh-cn 泰语:th 巴西葡语:pt-br
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	否	
+return code (0:success)
+info
+object[]	否	
+skuCode
+string	是	
+skuCode是SHEIN生成的系统编码
+
+spuName
+string	否	
+spuName是SHEIN生成的系统编码
+
+skcName
+string	否	
+skcName是SHEIN生成的系统编码, skc means stock keeping color, the sku by color is skc  
+
+productName
+object	否	
+商品名称
+
+productName
+string	否	
+商品名称
+
+language
+string	否	
+语言
+
+productDesc
+object	否	
+商品描述
+
+productDesc
+string	否	
+商品描述
+
+language
+string	否	
+语言
+
+productNumber
+string	否	
+货号
+
+sellerSku
+string	否	
+商家sku
+
+goodsInventory
+object	否	
+商品库存
+
+inventoryQuantity
+integer	否	
+库存数；只返回部分备货到shein仓或不备货到shein仓的商品库存
+lockedQuantity
+integer	否	
+已销售未出库锁定库存数
+
+usableInventory
+integer	否	
+可用库存
+
+tempLockQuantity
+integer	否	
+已下单未支付锁定库存数
+
+warehouseInventoryList
+object[]	否	
+各仓库库存详情
+
+warehouseCode
+string	否	
+仓库编码
+
+warehouseType
+string	否	
+仓库类型
+
+inventoryQuantity
+integer	否	
+库存数;只返回部分备货到shein仓或不备货到shein仓的商品库存
+lockedQuantity
+integer	否	
+已销售未出库锁定库存数
+
+usableInventory
+integer	否	
+可用库存
+
+tempLockQuantity
+integer	否	
+已下单未支付锁定库存数
+
+skuCode
+string	否	
+skucode，skucode是SHEIN生成的系统编码
+
+attributeLists
+object[]	否	
+SKC属性
+
+attributeId
+long	否	
+属性ID
+
+attributeValueMulti
+object	否	
+属性值多语言
+
+attributeAdditionList
+object[]	否	
+属性附加列表
+
+additionAttrValueMulti
+object	否	
+语言
+
+additionValue
+string	否	
+属性名称(按语种返回，默认返回中文)
+
+additionAttrValueId
+string	否	
+additionAttrMulti
+object	否	
+additionAttrId
+string	否	
+attributeValueId
+string	否	
+属性值ID
+
+attributeMulti
+object	否	
+属性多语言
+
+language
+string	否	
+语言
+
+attributeMulti
+string	否	
+属性值(按语种返回，默认返回中文)
+
+attributeType
+string	否	
+属性类型
+skuAttributeLists
+object[]	否	
+商品sku属性
+
+attributeValueMulti
+object	否	
+属性值多语言
+
+attributeValueMulti
+string	否	
+language
+string	否	
+attributeValueId
+string	否	
+属性值ID(默认)
+
+attributeMulti
+object	否	
+属性名称(多语言）
+
+attributeMulti
+string	否	
+language
+string	否	
+attributeId
+string	否	
+属性id
+
+saleAttribute
+object	否	
+商品销售属性
+
+attributeValueMulti
+object	否	
+属性值多语言
+
+language
+string	否	
+语言
+
+attributeValueMulti
+string	否	
+属性值
+
+attributeId
+string	否	
+属性id
+
+attributeMulti
+object	否	
+属性名称(多语言）
+
+language
+string	否	
+语言
+
+attributeMulti
+string	否	
+属性名称
+
+attributeValueId
+string	否	
+属性值id
+
+currentPrices
+object[]	否	
+价格
+
+shopPrice
+double	否	
+商品原价
+
+specialPrice
+double	否	
+商品特价
+
+site
+string	否	
+站点
+
+specialPriceStart
+datetime	否	
+商品特价开始时间
+specialPriceEnd
+datetime	否	
+商品特价结束时间
+salePrice
+double	否	
+最终生效的价格，原价或者特价中的一个
+terminal
+string	否	
+所属渠道
+currency
+string	否	
+币种
+suggestedRetailPrice
+object	否	
+建议零售价信息
+srpPrice
+string	否	
+价格
+currency
+string	否	
+币种
+multiCurrencyCostList
+object[]	否	
+价格信息 /Price info
+cost
+string	否	
+供货价（代运营和半托管模式返回该数据）
+currency
+string	否	
+币种
+categoryName
+string	否	
+商品分类名称
+
+categoryId
+string	否	
+商品分类id
+
+imageList
+object[]	否	
+图片
+
+imageType
+string	否	
+图片类型such as: MAIN/DETAIL/SQUARE/PIECE
+
+sort
+integer	否	
+排序
+
+imageMediumUrl
+string	否	
+中等图图片链接
+
+imageSmallUrl
+string	否	
+小图链接
+
+imageUrl
+string	否	
+原图链接
+
+imageItemId
+long	否	
+图片id
+
+groupCode
+string	否	
+图片组编码
+
+skuDimensionsInfo
+object	否	
+尺寸属性
+
+length
+string	否	
+包装尺寸（长）(cm)
+
+width
+string	否	
+包装尺寸（宽）(cm)
+
+height
+string	否	
+包装尺寸（高）(cm)
+
+weight
+string	否	
+重量 （g）
+
+shelfDetails
+object[]	否	
+上下架信息
+
+isOnShelf
+boolean	否	
+是否上架 / is On Shelf，ture代表上架，false代表下架
+lastUpdateTime
+string	否	
+最近更新时间
+
+site
+string	否	
+站点
+
+stockMode
+string	否	
+销售状态,0:实际;1:虚拟
+
+isRecycled
+string	否	
+productTypeId
+string	否	
+商品类型
+
+brandCode
+string	否	
+商品品牌
+
+stopPurchase
+string	是	
+采购状态 1：可采 2：停采
+mallStateList
+object[]	是	
+mallState
+string	是	
+SKU商城销售状态 1：在售 2：停售
+siteDetailImageInfoList
+object[]	否	
+imageGroupCode
+string	否	
+图片组编码
+imageInfoList
+object[]	否	
+详情图列表
+imageItemId
+long	否	
+图片id
+imageSort
+integer	否	
+图片排序
+imageUrl
+string	否	
+图片地址
+siteList
+object[]	否	
+站点列表
+channel
+string	否	
+渠道
+mainSite
+string	否	
+主站点
+site
+string	否	
+子站点
+proofOfStockList
+object[]	否	
+库存证明文件
+fileName
+string	否	
+库存证明文件名
+type
+integer	否	
+库存证明类型(1:图片;2:PDF)
+url
+string	否	
+库存证明文件地址
+competingProductLink
+string	否	
+竞品商品链接地址
+sampleInfo
+object	否	
+样品信息
+reserveSampleFlag
+string	否	
+是否留样，1:是，2:否
+spotFlag
+string	否	
+是否现货，1:是，2:否
+sampleJudgeType
+string	否	
+审版类型，2:大货样衣
+sampleCode
+string	否	
+样衣的平台商品code，只有主销售属性时返回skc_name，有次销售属性时返回sku_code
+msg
+string	否	
+error message
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi-test01.sheincorp.cn/open-api/openapi-business-backend/product/full-detail' \
+--header 'x-lt-signature: test0N2M2M2YyOGYxOTFjOTlhZTk1ZGJmZWEwY2VkNDA3NzM5MzgwNDVkNGMzODhhOTZlOTU1MWM3MWU5MTA4NzI2Mg==' \
+--header 'x-lt-openKeyId: 6DF5F597AEF84494B42388C63F4632B3' \
+--header 'x-lt-timestamp: 1692620638880' \
+--header 'Content-Type: application/json;charset=UTF-8' \
+--data-raw '{
+    "skuCodes": [
+        "I967uum2xi2q"
+    ],
+    "language": "en"
+}'
+
+
+返回示例
+复制
+{
+	"code": "0",
+	"msg": "OK",
+	"info": [{
+		"spuName": "w2301056886",
+		"categoryId": 2233,
+		"categoryName": "大码毛衣半身裙",
+		"skuDimensionsInfo": {
+			"length": "12.00",
+			"width": "12.00",
+			"weight": "12",
+			"height": "12.00"
+		},
+		"isSaleAttribute": 1,
+		"productNumber": "123",
+		"productTypeId": 1031,
+		"skcName": "sw23010568863917",
+		"skcCode": "O07f497x809b",
+		"brandCode": "",
+		"productName": {
+			"language": "zh-cn",
+			"productName": "商品测试详情图0626"
+		},
+		"goodsInventory": {
+			"inventoryQuantity": 0,
+			"lockedQuantity": 0,
+			"tempLockQuantity": 0,
+			"sellerSku": null,
+			"usableInventory": 0,
+			"skuCode": "I07f497xa731",
+			"warehouseInventoryList": []
+		},
+		"shelfDetails": null,
+		"productDesc": {
+			"productDesc": "",
+			"language": "zh-cn"
+		},
+		"currentPrices": [{
+			"productCode": "I07f497xa731",
+			"site": "shein-www",
+			"shopPrice": 12.00,
+			"currency": "USD",
+			"terminal": null,
+			"specialPrice": 12.00,
+			"specialPriceStart": null,
+			"salePrice": 12.00,
+			"specialPriceEnd": null,
+			"suggestedRetailPrice": null,
+			"multiCurrencyCostList": [{
+				"cost": 12.00,
+				"currency": "CNY"
+			}]
+		}],
+		"sellerSku": "",
+		"imageList": [{
+			"imageItemId": 4177814,
+			"groupCode": "G3ck0j5himvq",
+			"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/01/05/1672915851294102400.jpeg",
+			"imageMediumUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/01/05/1672915851294102400_thumbnail_405x552.jpeg",
+			"sort": 1,
+			"imageSmallUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/01/05/1672915851294102400_thumbnail_220x293.jpeg",
+			"imageType": "MAIN"
+		}, {
+			"imageItemId": 2147510583,
+			"groupCode": "G3ck0j5himvq",
+			"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/26/16877583224104183094.jpg",
+			"imageMediumUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/26/16877583224104183094_thumbnail_405x552.jpg",
+			"sort": 2,
+			"imageSmallUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/26/16877583224104183094_thumbnail_220x293.jpg",
+			"imageType": "DETAIL"
+		}, {
+			"imageItemId": 4177815,
+			"groupCode": "G3ck0j5himvq",
+			"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/01/05/16729158581743044934.jpeg",
+			"imageMediumUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/01/05/16729158581743044934_thumbnail_405x552.jpeg",
+			"sort": 3,
+			"imageSmallUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/01/05/16729158581743044934_thumbnail_220x293.jpeg",
+			"imageType": "SQUARE"
+		}, {
+			"imageItemId": 4177816,
+			"groupCode": "G3ck0j5himvq",
+			"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/01/05/16729158633401920931.jpeg",
+			"imageMediumUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/01/05/16729158633401920931_thumbnail_405x552.jpeg",
+			"sort": 4,
+			"imageSmallUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/01/05/16729158633401920931_thumbnail_220x293.jpeg",
+			"imageType": "PIECE"
+		}],
+		"skuCode": "I07f497xa731",
+		"attributeLists": [{
+			"attributeValueMulti": {
+				"attributeValueMulti": "否",
+				"language": "zh-cn"
+			},
+			"attributeAdditionList": [],
+			"attributeId": 9,
+			"attributeMulti": {
+				"attributeMulti": "腰带修改属性名",
+				"language": "zh-cn"
+			},
+			"attributeType": 4,
+			"attributeValueId": 459
+		}, {
+			"attributeValueMulti": {
+				"attributeValueMulti": "雨靴",
+				"language": "zh-cn"
+			},
+			"attributeAdditionList": [],
+			"attributeId": 1000455,
+			"attributeMulti": {
+				"attributeMulti": "关务种类",
+				"language": "zh-cn"
+			},
+			"attributeType": 4,
+			"attributeValueId": 1002593
+		}],
+		"saleAttribute": {
+			"attributeValueMulti": {
+				"attributeValueMulti": "S",
+				"language": "zh-cn"
+			},
+			"attributeId": 87,
+			"attributeMulti": {
+				"attributeMulti": "尺寸",
+				"language": "zh-cn"
+			},
+			"attributeValueId": 568
+		},
+		"skuAttributeLists": [{
+			"attributeValueMulti": {
+				"attributeValueMulti": "高腰",
+				"language": "zh-cn"
+			},
+			"attributeId": 1000253,
+			"attributeMulti": {
+				"attributeMulti": "腰高",
+				"language": "zh-cn"
+			},
+			"attributeValueId": 1001537
+		}],
+		"stopPurchase": 1,
+		"mallStateList": [{
+			"mallState": 1
+		}],
+		"siteDetailImageInfoList": [{
+			"imageGroupCode": "G4101b6x0x2q",
+			"imageInfoList": [{
+				"imageItemId": 1147525967,
+				"imageSort": 1,
+				"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/27/16878497173382906927.jpg"
+			}, {
+				"imageItemId": 1147525968,
+				"imageSort": 2,
+				"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/27/1687849716132016602.jpg"
+			}, {
+				"imageItemId": 1147525969,
+				"imageSort": 3,
+				"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/27/16878497172100198531.jpg"
+			}, {
+				"imageItemId": 1147525972,
+				"imageSort": 4,
+				"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/27/16878497171538544330.jpg"
+			}, {
+				"imageItemId": 1147525970,
+				"imageSort": 5,
+				"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/27/168784971786427267.jpg"
+			}, {
+				"imageItemId": 1147525973,
+				"imageSort": 6,
+				"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/27/16878497172692858196.jpg"
+			}, {
+				"imageItemId": 1147525971,
+				"imageSort": 7,
+				"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/27/16878497171257169109.jpg"
+			}, {
+				"imageItemId": 1147525974,
+				"imageSort": 8,
+				"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/27/1687849717267425053.jpg"
+			}, {
+				"imageItemId": 1147525966,
+				"imageSort": 9,
+				"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/27/16878497172530412707.jpg"
+			}, {
+				"imageItemId": 1147525975,
+				"imageSort": 10,
+				"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/27/16878497181300119333.jpg"
+			}],
+			"siteList": [{
+				"channel": "",
+				"mainSite": "rw",
+				"site": "rw-fr"
+			}]
+		}, {
+			"imageGroupCode": "G1gn3ar0kuri",
+			"imageInfoList": [{
+				"imageItemId": 1147525978,
+				"imageSort": 1,
+				"imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2023/06/27/16878503612266741411.jpg"
+			}],
+			"siteList": [{
+				"channel": "",
+				"mainSite": "shein",
+				"site": "shein-roe"
+			}, {
+				"channel": "",
+				"mainSite": "shein",
+				"site": "shein-euqs"
+			}, {
+				"channel": "",
+				"mainSite": "shein",
+				"site": "shein-uk"
+			}, {
+				"channel": "",
+				"mainSite": "shein",
+				"site": "shein-ca"
+			}, {
+				"channel": "",
+				"mainSite": "shein",
+				"site": "shein-ma"
+			}]
+		}],
+		"proofOfStockList": null,
+		"sampleInfo": {
+			"reserveSampleFlag": 0,
+			"sampleCode": "",
+			"spotFlag": 0,
+			"sampleJudgeType": 2
+		},
+		"competingProductLink": null
+	}]
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：60次/秒
+FAQ
+Q：什么是product_id和goods_id？SHEIN平台商品唯一标识是什么？
+2025-11-12
+A：
+
+SHEIN平台没有叫做product_id的标识。常见的商品唯一标识有：SPU（字段：spu_name）：平台生成的SPU唯一编码，代表一个商品型号或款式，包含多种颜色、尺码等变体。SPU标识用于接口查询商品信息。SKC（字段：skc_name）：平台生成的SKC唯一编码，在SPU基础上增加了主销售属性（通常为颜色）。SHEIN的商品层级关系有3层，其中SKC是销售属性，也叫主规格属性，例如一个商品有黑色和白色两种颜色，黑色和白色会分别生成skc_name；SKC标识一般用于接口修改商品上下架。SKU（字段：sku_code）：平台生成的SKU唯一编码，是最小产品单元，区分每个具体规格，如款式、颜色、尺寸。SKU是最小的产品单元，但也是销售属性，也叫次规格属性，比如黑色有S、M、L三个尺码，S、M、L三个尺码分别对应不同sku_code；SKU标识一般用于接口修改库存和价格。
+商品标识可通过商品列表接口获取：/open-api/openapi-business-backend/product/query。⚠️注意：商品列表接口只返回审核通过的商品信息。平台未提供接口获取审核中或审核失败的商品标识。开发者使用商品发布接口 /open-api/goods/product/publishOrEdit 上传商品后，接口会返回spu_name、skc_name、sku_code参数，但此时商品处于审核中或可能审核失败，因此不会通过商品列表接口返回。商品标识之间的关系（spu、skc、sku）可通过商品详情接口获取：/open-api/goods/spu-info
+SHEIN平台也没有goods_id的标识。但是有订单详情接口有goodsid字段；接口：/open-api/order/order-detail订单详情里面的商品数量可以根据goodsid来统计，每件商品的唯一ID。如果一个 SKU 有多件，每一件的goodsId都是唯一的
+查看详情
+Q：是否有字段可以获取商品的原产国？
+2025-05-20
+A：
+目前平台不提供该字段。
+Q：为什么库存字段查询到的库存和商家后台的不同
+2024-12-24
+A：
+请先和用户确认是否为自主运营的商家，这个字段是给自主运营的商家使用的
+Q：上传的图片格式有什么要求？
+2025-06-15
+A：
+[存在图片内容，请点击查看详情]
+查看详情
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

@@ -1,0 +1,34 @@
+# Dependencies and local tool caches
+node_modules/
+.vite/
+coverage/
+
+# Generated front-end output
+dist/
+dist-v2/
+dist-web/
+
+# Local runtime data and databases
+.data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files: only safe templates are tracked
+.env
+.env.*
+!.env.example
+!.env.cloud.example
+
+# Logs and operating-system files
+*.log
+.DS_Store
+
+# Historical/local release archives are indexed separately and never committed
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+
+# Retained empty shell-artifact filename from the original workspace; do not delete
+*Destination*

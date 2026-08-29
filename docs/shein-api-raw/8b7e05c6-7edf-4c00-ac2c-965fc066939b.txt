@@ -1,0 +1,303 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+更新商品售价
+/openapi-business-backend/product/price/save
+更新成本价
+/goods/update-cost
+获取成本价涨价原因枚举值
+/goods/query-change-price-reason
+价格证明材料上传
+/goods/discuss/upload-discuss-file
+查询商品建议零售价
+/goods-recommend-retail-price/search
+查询建议零售价填写规则
+/goods/query-recommend-retail-price-rule
+提交建议零售价
+/goods-recommend-retail-price/batch-save
+查询建议零售价审核记录
+/goods-recommend-retail-price-audit/search
+获取议价单列表
+/goods/discuss/query-discuss-list
+处理议价单
+/goods/discuss/process-discuss
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-07-02 20:35:43
+处理议价单
+POST
+/open-api/goods/discuss/process-discuss
+全托管
+半托管
+只有议价单状态discussStatus=1（待商家确认）的议价单，才可以使用此接口调用处理。
+
+议价单的处理操作有3项。
+
+1、同意平台建议价：同意后，商品价格会变更为平台建议价格，议价单结束。
+
+2、拒绝，放弃上架商品：拒绝后，议价单结束，商家无法再发起报价处理，商品无法上架
+
+3、重新报价：商家对平台建议价有疑问，再次进行价格沟通。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-signature
+string	是	
+接口签名
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+
+language
+string	是	
+指定出参语种，默认中文；支持语种:英语:US 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+
+请求参数（请求体）
+收起
+数据类型	是否必须	描述
+confirmInfos
+object[]	否	
+议价单操作=【同意平台建议价】或【拒绝，放弃上架】时，请在此字段内入参。
+
+注意：每个议价单只能执行一个操作，不要同时在confirmInfos、createCostDiscusses中入参执行多项操作。
+
+
+
+discussAuditType
+string	是	
+操作类型
+
+1-同意平台建议价； 2-拒绝，放弃上架
+
+discussSn
+string	是	
+议价单号
+
+只有议价单状态discussStatus=1（待商家确认）的议价单，才可以使用此接口调用处理。
+
+createCostDiscusses
+object[]	否	
+议价单操作=【重新报价】时，请在此字段内入参。
+
+注意：每个议价单只能执行一个操作，不要同时在confirmInfos、createCostDiscusses中入参执行多项操作。
+
+discussSn
+string	是	
+议价单号。
+
+只有议价单状态discussStatus=1（待商家确认）的议价单，才可以使用此接口调用处理。
+
+discussStep
+integer	是	
+议价单轮次数。每个议价单可沟通价格的次数有限，若次数=0则代表无法再次发起新报价。
+
+取值逻辑=获取议价单列表接口：/open-api/goods/discuss/query-discuss-list的serialNumber
+
+fileUploadList
+object[]	否	
+上传议价材料
+
+file_name
+string	否	
+原始文件名（开发者维护）
+
+object_key
+string	否	
+文件key，由平台生成，通过接口上传文件后获取/open-api/goods/discuss/upload-discuss-file
+
+type
+integer	否	
+文件类型。仅支持1:图片
+
+url
+string	否	
+文件url，由平台生成，通过接口上传文件后获取/open-api/goods/discuss/upload-discuss-file
+
+reason
+string	否	
+商家填写发起议价的理由，最多255个字符
+
+skcName
+string	是	
+平台的skc编码
+
+skuCostInfoList
+object[]	是	
+发起议价的sku成本价列表
+
+cost
+double	是	
+成本价
+
+currency
+string	是	
+币种
+
+lastCost
+double	是	
+上次报价的成本价。
+
+取值逻辑=获取议价单列表接口：/open-api/goods/discuss/query-discuss-list的响应中"costPriceHistories"下"serialNumber"数值最大组的costPrice（即议价历史记录中，最新一次议价时的价格。注意：从未发起过议价的sku也有议价历史，会用发布商品时的价格作为第一次议价历史。）
+
+lastCurrency
+string	是	
+上次报价的币种。
+
+取值逻辑=获取议价单列表接口：/open-api/goods/discuss/query-discuss-list的响应中"costPriceHistories"下"serialNumber"数值最大组的currency
+
+skuCode
+string	是	
+平台的sku编码
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应码
+
+info
+object	否	
+响应详情
+
+failCount
+integer	否	
+提交失败数
+
+successCount
+integer	否	
+提交成功数
+
+msg
+string	否	
+响应信息
+
+请求返回示例
+收起
+示例场景
+请求示例
+复制
+curl --location --request POST 'http://openapi-test01.sheincorp.cn/open-api/goods/discuss/process-discuss' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1762495278098' \
+--header 'language: US' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+  "createCostDiscusses": [
+    {
+      "discussSn": "YJ30251107172948307968",
+      "discussStep": 2,
+      "fileUploadList": [
+        {
+          "file_name": "test_file_name",
+          "object_key": "rdpas251107-4299811744231955199.jpeg",
+          "type": 1,
+          "url": "https://fsproxy-test.ltwebstatic.com/dpas-test/dpas251107-4299811744231955199.jpeg?Expires=1762505860&Signature=6d389801c0dd26ab78ea1f3b2a0a8c3b&AccessKeyId=dpas"
+        }
+      ],
+      "reason": "test reason",
+      "skcName": "ss25012285492844",
+      "skuCostInfoList": [
+        {
+          "cost": 400.00,
+          "currency": "EUR",
+          "lastCost": 480,
+          "lastCurrency": "EUR",
+          "skuCode": "I4ajkf1r3xrs"
+        }
+      ]
+    }
+  ]
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "successCount": 1,
+        "failCount": 0
+    },
+    "bbl": null,
+    "traceId": "c6b789192a4e8eec"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：10次/秒
+FAQ
+Q：商品价格中各个币种的精度要求
+2026-05-07
+A：
+名称三字码币种要求斐济元FJD整数墨西哥比索MXN两位小数塞舌尔卢比SCR整数刚果法郎CDF整数格查尔GTQ整数巴巴多斯元BBD整数智利比索CLP整数乌干达先令UGX整数伦皮拉HNL整数兰特ZAR整数突尼斯第纳尔TND整数圣多美和普林西比多布拉STN整数利昂SLE整数巴哈马元BSD整数苏丹镑SDG整数伊拉克第纳尔IQD整数法拉西GMD整数古巴比索CUP整数特别提款权SDR整数新台币TWD整数塞尔维亚第纳尔RSD整数多米尼加比索DOP整数科摩罗法郎KMF整数马元MYR两位小数非共体法郎XOF整数格鲁吉亚拉里GEL两位小数乌拉圭新比索UYU整数摩洛哥迪拉姆MAD两位小数佛得角埃斯库多CVE整数汤加潘加TOP整数巴布亚新几内亚基那PGK整数阿曼里亚尔OMR两位小数阿塞拜疆马纳特AZN整数瑞典克朗SEK整数肯尼亚先令KES整数离岸人民币CNH整数乌克兰格里夫纳UAH整数不丹努尔特鲁姆BTN整数几内亚法郎GNF整数莫桑比克美提卡MZN整数厄立特里亚纳克法ERN整数萨尔瓦多科朗SVC整数阿根廷比索ARS整数伊朗里亚尔IRR整数乌兹别克斯坦苏姆UZS整数泰铢THB整数人民币CNY两位小数太平洋法郎XPF整数毛里塔尼亚乌吉亚MRU整数孟加拉塔卡BDT整数利比亚第纳尔LYD整数百慕大元BMD整数菲律宾比索PHP整数科威特第纳尔KWD两位小数俄罗斯卢布RUB整数巴拉圭瓜拉尼PYG整数牙买加元JMD整数冰岛克朗ISK整数哥伦比亚比索COP整数美元USD两位小数马其顿第纳尔MKD整数阿尔及利亚第纳尔DZD整数巴拿马巴波亚PAB整数新加坡元SGD两位小数埃塞俄比亚比尔ETB整数瓦努阿图瓦图VUV整数索马里先令SOS整数吉尔吉斯斯坦索姆KGS整数基普LAK整数文莱林吉特BND整数中非金融合作法郎XAF整数利比里亚元LRD整数瑞士法郎CHF两位小数克罗地亚库纳HRK两位小数吉布提法郎DJF整数列克ALL两位小数委内瑞拉玻利瓦尔VES整数赞比亚克瓦查ZMW整数坦桑尼亚先令TZS整数越南盾VND整百澳大利亚元AUD两位小数以色列新谢克尔ILS两位小数朝鲜元KPW整数圭亚那元GYD整数加纳塞地GHS两位小数摩尔多瓦列伊MDL整数瑞尔KHR整数玻利维亚诺BOB整数印度尼西亚盾IDR整百开曼群岛元KYD整数亚美尼亚德拉姆AMD整数土耳其里拉TRY两位小数圣赫勒拿群岛磅SHP整数博茨瓦纳普拉BWP整数黎巴嫩镑LBP整数约旦第纳尔JOD两位小数阿联酋迪拉姆AED两位小数卢旺达法郎RWF整数港币HKD两位小数欧元EUR两位小数莱索托马洛蒂LSL整数丹麦克朗DKK两位小数加元CAD两位小数保加利亚列弗BGN两位小数缅甸元MMK整数叙利亚镑SYP整数挪威克朗NOK两位小数毛里求斯卢比MUR整数津巴布韦元ZWL整数罗马尼亚列伊RON两位小数斯里兰卡卢比LKR整数奈拉NGN整数捷克克朗CZK整数哥斯达黎加科朗CRC整数巴基斯坦卢比PKR整数东加勒比元XCD整数荷属安的列斯盾ANG整数古德HTG整数巴林第纳尔BHD两位小数斯威士兰里兰吉尼SZL整数苏利南元SRD整数哈萨克斯坦腾格KZT整数特立尼达多巴哥元TTD整数沙特里亚尔SAR两位小数也门里亚尔YER整数马尔代夫卢比MVR整数阿富汗尼AFN整数印度卢比INR整数尼泊尔卢比NPR整数韩元KRW整数阿鲁巴岛弗罗林AWG整数蒙古图格里克MNT整数日元JPY整数兹罗提PLN两位小数安哥拉宽扎AOA整数所罗门元SBD整数英镑GBP两位小数白俄罗斯卢布BYN整数匈牙利福林HUF整数布隆迪法郎BIF整数马拉维克瓦查MWK整数马达加斯加阿里亚里MGA整数伯利兹元BZD整数可兑换马克BAM两位小数澳门元MOP整数埃及镑EGP两位小数纳米比亚元NAD整数尼加拉瓜科多巴NIO整数秘鲁索尔PEN两位小数萨摩亚塔拉WST整数新西兰元NZD两位小数土库曼斯坦马纳特TMT整数巴西雷亚尔BRL两位小数
+查看详情
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

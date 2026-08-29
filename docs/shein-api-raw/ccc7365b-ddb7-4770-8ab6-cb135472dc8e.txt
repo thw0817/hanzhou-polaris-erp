@@ -1,0 +1,950 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+更新商品售价
+/openapi-business-backend/product/price/save
+更新成本价
+/goods/update-cost
+获取成本价涨价原因枚举值
+/goods/query-change-price-reason
+价格证明材料上传
+/goods/discuss/upload-discuss-file
+查询商品建议零售价
+/goods-recommend-retail-price/search
+查询建议零售价填写规则
+/goods/query-recommend-retail-price-rule
+提交建议零售价
+/goods-recommend-retail-price/batch-save
+查询建议零售价审核记录
+/goods-recommend-retail-price-audit/search
+获取议价单列表
+/goods/discuss/query-discuss-list
+处理议价单
+/goods/discuss/process-discuss
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-07-02 20:33:41
+查询建议零售价审核记录
+POST
+/open-api/goods-recommend-retail-price-audit/search
+自运营
+全托管
+半托管
+建议零售价的审核记录明细。
+
+
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+x-lt-signature
+int64	是	
+接口签名
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+
+language
+string	否	
+响应msg的语种。不传时默认为英语，枚举值支持语种:英语:US 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+audit_state_list
+integer[]	否	
+审核状态列表。1: 待审核 2: 审核成功 3: 审核失败 5: 部分通过 6: 已撤回
+
+5: 部分通过，说明SKC下有部分SKU已审核通过，获得有效期。
+
+page_num
+integer	是	
+页码
+
+page_size
+integer	是	
+每页大小，单页最大100
+
+skc
+string	否	
+SKC平台编码
+
+spu
+string	否	
+SPU平台编码
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码 成功：0
+info
+object	否	
+响应信息
+
+data
+object[]	否	
+列表信息
+
+spu_name
+string	否	
+SPU平台编码
+
+skc_name
+string	否	
+SKC平台编码
+
+submit_time
+datetime	否	
+提交时间
+
+audit_time
+datetime	否	
+审核时间
+
+audit_state
+integer	否	
+审核状态 1: 待审核 2: 审核成功 3: 审核失败 5: 部分通过 6: 已撤回
+
+audit_reason
+string	否	
+驳回原因
+
+change_sn
+string	否	
+调价单号
+
+creator
+string	否	
+申请人
+
+sale_attribute_value
+string	否	
+SKC属性值
+
+sku_rrp_info_list
+object[]	否	
+SKU信息列表
+
+sku_code
+string	否	
+SKU平台编码
+
+site
+string	否	
+站点。站点=其它站点，代表是不按站点提供的SKU建议零售价；站点=某个具体站点，例如shein-fr，代表是站点维度的建议零售价。
+
+currency
+string	否	
+币种缩写
+
+suggested_retail_price
+double	否	
+修改后的建议零售价
+
+before_suggested_retail_price
+double	否	
+修改前的建议零售价
+
+type_one_proof
+object	否	
+证明材料信息
+
+attachments
+string[]	否	
+证明材料附件列表
+proof_link
+string	否	
+证明链接
+type_two_proof
+object	否	
+证明材料信息
+attachments
+string[]	否	
+证明材料附件列表
+proof_link
+string	否	
+证明链接
+audit_state
+integer	否	
+SKU审核状态 1:待审核;2:审核成功 3:审核失败 6: 已撤回
+
+audit_reason
+string	否	
+驳回原因
+
+meta
+object	否	
+元数据
+count
+integer	否	
+数据记录数
+customObj
+object	否	
+用户自定义扩展
+
+msg
+string	否	
+错误描述,成功：OK
+traceId
+string	否	
+追踪码
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'http://openapi-test01.sheincorp.cn/open-api/goods-recommend-retail-price-audit/search' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1780923627168' \
+--header 'language: US' \
+--header 'Content-Type: application/json' \
+--header 'Accept: */*' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+
+"page_num":1,
+"page_size":10,
+"audit_state_list":[1,2,3]
+
+}'
+
+
+返回示例
+复制
+
+
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "creator": "SPAE",
+                "skc_name": "ss260608113514842493722",
+                "sale_attribute_value": "杏色",
+                "spu_name": "s2606081135148424",
+                "change_sn": "RRP260608177343496195",
+                "audit_time": null,
+                "audit_state": 1,
+                "submit_time": "2026-06-08 11:44:42",
+                "audit_reason": null,
+                "sku_rrp_info_list": [
+                    {
+                        "site": "shein-de",
+                        "currency": "EUR",
+                        "sku_code": "I8mq4o1r9ezhqk",
+                        "audit_state": 1,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [
+                                "https://ssmp-spmp-test.oss-cn-shenzhen.aliyuncs.com/dpas/proof/rrp/1780890181593lyp0fzki.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tD1ANf6jAP8CkpBmDaC%2F20260608%2Fcn-shenzhen%2Fs3%2Faws4_request&X-Amz-Date=20260608T130409Z&X-Amz-Expires=180&X-Amz-SignedHeaders=host&X-Amz-Signature=fa690d971bea671062e363a949447dde39a7f6486f1a3cbeb6f693143e901856"
+                            ],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 23.0,
+                        "before_suggested_retail_price": null
+                    },
+                    {
+                        "site": "shein-fr",
+                        "currency": "EUR",
+                        "sku_code": "I8mq4o1r9ezhqk",
+                        "audit_state": 1,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [
+                                "https://ssmp-spmp-test.oss-cn-shenzhen.aliyuncs.com/dpas/proof/rrp/1780890181593lyp0fzki.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tD1ANf6jAP8CkpBmDaC%2F20260608%2Fcn-shenzhen%2Fs3%2Faws4_request&X-Amz-Date=20260608T130409Z&X-Amz-Expires=180&X-Amz-SignedHeaders=host&X-Amz-Signature=fa690d971bea671062e363a949447dde39a7f6486f1a3cbeb6f693143e901856"
+                            ],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 23.0,
+                        "before_suggested_retail_price": null
+                    },
+                    {
+                        "site": "shein-it",
+                        "currency": "EUR",
+                        "sku_code": "I8mq4o1r9ezhqk",
+                        "audit_state": 1,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [
+                                "https://ssmp-spmp-test.oss-cn-shenzhen.aliyuncs.com/dpas/proof/rrp/1780890181593lyp0fzki.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tD1ANf6jAP8CkpBmDaC%2F20260608%2Fcn-shenzhen%2Fs3%2Faws4_request&X-Amz-Date=20260608T130409Z&X-Amz-Expires=180&X-Amz-SignedHeaders=host&X-Amz-Signature=fa690d971bea671062e363a949447dde39a7f6486f1a3cbeb6f693143e901856"
+                            ],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 23.0,
+                        "before_suggested_retail_price": null
+                    }
+                ]
+            },
+            {
+                "creator": "SPAE",
+                "skc_name": "ss260608113514842493722",
+                "sale_attribute_value": "杏色",
+                "spu_name": "s2606081135148424",
+                "change_sn": "RRP260608177343496196",
+                "audit_time": "2026-06-08 11:44:41",
+                "audit_state": 2,
+                "submit_time": "2026-06-08 11:44:42",
+                "audit_reason": null,
+                "sku_rrp_info_list": [
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I8mq4o1r9ezhqk",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 23.0,
+                        "before_suggested_retail_price": null
+                    },
+                    {
+                        "site": "shein-es",
+                        "currency": "EUR",
+                        "sku_code": "I8mq4o1r9ezhqk",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [
+                                "https://ssmp-spmp-test.oss-cn-shenzhen.aliyuncs.com/dpas/proof/rrp/1780890181593lyp0fzki.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tD1ANf6jAP8CkpBmDaC%2F20260608%2Fcn-shenzhen%2Fs3%2Faws4_request&X-Amz-Date=20260608T130409Z&X-Amz-Expires=180&X-Amz-SignedHeaders=host&X-Amz-Signature=fa690d971bea671062e363a949447dde39a7f6486f1a3cbeb6f693143e901856"
+                            ],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 23.0,
+                        "before_suggested_retail_price": null
+                    },
+                    {
+                        "site": "shein-us",
+                        "currency": "USD",
+                        "sku_code": "I8mq4o1r9ezhqk",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [
+                                "https://ssmp-spmp-test.oss-cn-shenzhen.aliyuncs.com/dpas/proof/rrp/1780890181593lyp0fzki.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tD1ANf6jAP8CkpBmDaC%2F20260608%2Fcn-shenzhen%2Fs3%2Faws4_request&X-Amz-Date=20260608T130409Z&X-Amz-Expires=180&X-Amz-SignedHeaders=host&X-Amz-Signature=fa690d971bea671062e363a949447dde39a7f6486f1a3cbeb6f693143e901856"
+                            ],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 23.0,
+                        "before_suggested_retail_price": null
+                    }
+                ]
+            },
+            {
+                "creator": "OPENAPI",
+                "skc_name": "sc260414201529947197009",
+                "sale_attribute_value": "彩色",
+                "spu_name": "c2604142015299471",
+                "change_sn": "RRP260605202219831299",
+                "audit_time": "2026-06-05 13:23:32",
+                "audit_state": 2,
+                "submit_time": "2026-06-05 13:23:33",
+                "audit_reason": null,
+                "sku_rrp_info_list": [
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I1mnyl60zmz8jl",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 104.0,
+                        "before_suggested_retail_price": 103.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I2mnyl60zhxtyp",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 104.0,
+                        "before_suggested_retail_price": 103.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I9mnyl60zpu301",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 104.0,
+                        "before_suggested_retail_price": 103.0
+                    }
+                ]
+            },
+            {
+                "creator": "OPENAPI",
+                "skc_name": "sc260414201529947197009",
+                "sale_attribute_value": "彩色",
+                "spu_name": "c2604142015299471",
+                "change_sn": "RRP260602349661757441",
+                "audit_time": "2026-06-02 23:09:25",
+                "audit_state": 2,
+                "submit_time": "2026-06-02 23:09:25",
+                "audit_reason": null,
+                "sku_rrp_info_list": [
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I1mnyl60zmz8jl",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 103.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I2mnyl60zhxtyp",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 103.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I9mnyl60zpu301",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 103.0
+                    }
+                ]
+            },
+            {
+                "creator": "OPENAPI",
+                "skc_name": "sc260414201529947197009",
+                "sale_attribute_value": "彩色",
+                "spu_name": "c2604142015299471",
+                "change_sn": "RRP260602349640785921",
+                "audit_time": "2026-06-02 23:09:20",
+                "audit_state": 2,
+                "submit_time": "2026-06-02 23:09:21",
+                "audit_reason": null,
+                "sku_rrp_info_list": [
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I1mnyl60zmz8jl",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 103.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I2mnyl60zhxtyp",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 103.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I9mnyl60zpu301",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 103.0
+                    }
+                ]
+            },
+            {
+                "creator": "OPENAPI",
+                "skc_name": "sc260414201529947197009",
+                "sale_attribute_value": "彩色",
+                "spu_name": "c2604142015299471",
+                "change_sn": "RRP260602347082244097",
+                "audit_time": "2026-06-02 22:59:10",
+                "audit_state": 2,
+                "submit_time": "2026-06-02 22:59:11",
+                "audit_reason": null,
+                "sku_rrp_info_list": [
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I1mnyl60zmz8jl",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 103.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I2mnyl60zhxtyp",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 103.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I9mnyl60zpu301",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 103.0
+                    }
+                ]
+            },
+            {
+                "creator": "OPENAPI",
+                "skc_name": "sc260414201529947197009",
+                "sale_attribute_value": "彩色",
+                "spu_name": "c2604142015299471",
+                "change_sn": "RRP260602340295843841",
+                "audit_time": "2026-06-02 22:32:12",
+                "audit_state": 2,
+                "submit_time": "2026-06-02 22:32:12",
+                "audit_reason": null,
+                "sku_rrp_info_list": [
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I1mnyl60zmz8jl",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 102.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I2mnyl60zhxtyp",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 102.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I9mnyl60zpu301",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 103.0,
+                        "before_suggested_retail_price": 102.0
+                    }
+                ]
+            },
+            {
+                "creator": "OPENAPI",
+                "skc_name": "sc260414201529947197009",
+                "sale_attribute_value": "彩色",
+                "spu_name": "c2604142015299471",
+                "change_sn": "RRP260602339062718464",
+                "audit_time": "2026-06-02 22:27:18",
+                "audit_state": 2,
+                "submit_time": "2026-06-02 22:27:18",
+                "audit_reason": null,
+                "sku_rrp_info_list": [
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I1mnyl60zmz8jl",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 102.0,
+                        "before_suggested_retail_price": 102.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I2mnyl60zhxtyp",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 102.0,
+                        "before_suggested_retail_price": 102.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I9mnyl60zpu301",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 102.0,
+                        "before_suggested_retail_price": 102.0
+                    }
+                ]
+            },
+            {
+                "creator": "OPENAPI",
+                "skc_name": "sc260414201529947197009",
+                "sale_attribute_value": "彩色",
+                "spu_name": "c2604142015299471",
+                "change_sn": "RRP260602328774090754",
+                "audit_time": "2026-06-02 21:46:25",
+                "audit_state": 2,
+                "submit_time": "2026-06-02 21:46:25",
+                "audit_reason": null,
+                "sku_rrp_info_list": [
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I1mnyl60zmz8jl",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 102.0,
+                        "before_suggested_retail_price": 102.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I2mnyl60zhxtyp",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 102.0,
+                        "before_suggested_retail_price": 102.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I9mnyl60zpu301",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 102.0,
+                        "before_suggested_retail_price": 102.0
+                    }
+                ]
+            },
+            {
+                "creator": "OPENAPI",
+                "skc_name": "sc260414201529947197009",
+                "sale_attribute_value": "彩色",
+                "spu_name": "c2604142015299471",
+                "change_sn": "RRP260602328488878082",
+                "audit_time": "2026-06-02 21:45:17",
+                "audit_state": 2,
+                "submit_time": "2026-06-02 21:45:17",
+                "audit_reason": null,
+                "sku_rrp_info_list": [
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I1mnyl60zmz8jl",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 102.0,
+                        "before_suggested_retail_price": 102.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I2mnyl60zhxtyp",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 102.0,
+                        "before_suggested_retail_price": 102.0
+                    },
+                    {
+                        "site": "其它站点",
+                        "currency": "USD",
+                        "sku_code": "I9mnyl60zpu301",
+                        "audit_state": 2,
+                        "audit_reason": "",
+                        "type_one_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "type_two_proof": {
+                            "attachments": [],
+                            "proof_link": ""
+                        },
+                        "suggested_retail_price": 102.0,
+                        "before_suggested_retail_price": 102.0
+                    }
+                ]
+            }
+        ],
+        "meta": {
+            "count": 475,
+            "customObj": null
+        }
+    },
+    "bbl": null,
+    "traceId": "8fe982488f59f4a2"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：20次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

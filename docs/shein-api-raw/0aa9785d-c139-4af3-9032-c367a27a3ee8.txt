@@ -1,0 +1,409 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+开发者文档
+开发入门
+开发指南（必看）
+开发者账号类型介绍
+店铺授权应用手册
+签名规则
+API调用说明文档
+事件回调接入说明
+测试工具介绍
+常见名词说明
+解决方案
+解决方案介绍
+应用类型介绍
+自运营解决方案
+自运营模式接入指南
+商品发布-自运营
+商品编辑-自运营
+商品属性
+商品自定义属性值
+商品图片
+商品合规管理
+商品SKU建议零售价
+商品实拍图
+商品批量处理
+ERP订单履约方案
+平台指定物流履约（墨西哥市场）
+平台指定物流履约（巴西市场）
+超限拆包服务
+客单退货退款服务
+订单换货场景说明
+库存管理解决方案
+半托管解决方案
+半托管模式接入指南
+商品发布-半托管
+商品编辑-半托管
+商品属性
+商品自定义属性值
+商品图片
+商品合规管理
+商品SKU建议零售价
+商品实拍图
+ERP订单履约方案
+平台指定物流履约（墨西哥市场）
+平台指定物流履约（巴西市场）
+超限拆包服务
+客单退货退款服务
+订单换货场景说明
+库存管理解决方案
+全托管解决方案
+全托管模式接入指南
+商品发布-全托管
+商品编辑-全托管
+商品属性
+商品自定义属性值
+商品图片
+商品合规管理
+商品SKU建议零售价
+商品实拍图
+备货履约
+采购单退货解决方案
+库存管理-全托管
+定制业务接入解决方案
+备货至海外仓解决方案
+SHEIN自营解决方案
+自营库存管理
+自营排产任务
+SHEIN开放平台API签名指南
+
+1、签名概述
+在SHEIN开放平台中，每次接口调用都需要进行签名验证，以确保请求的合法性和安全性。本文档详细说明如何生成符合SHEIN平台要求的API签名。
+
+
+2、签名生成步骤
+步骤1：准备签名参数
+以获取采购单信息接口(/open-api/order/purchase-order-info)为例，签名需要准备以下参数：
+
+参数名称
+
+说明
+
+示例值
+
+OpenKeyId
+
+授权返回的OpenKeyId
+
+B96C15416C9240DF96BAA0BC9B367C6D
+
+SecretKey
+
+授权返回的解密后SecretKey
+
+6BEC9C4B668B4B14B17EEF106BB98AE5
+
+Path
+
+请求接口路径
+
+/open-api/order/purchase-order-info
+
+Timestamp
+
+请求时间戳(毫秒)
+
+1740709414000
+
+RandomKey
+
+5位随机字符串
+
+test1
+
+
+步骤2：组装签名数据(VALUE)
+将OpenKeyId、Timestamp和Path按特定格式拼接：
+
+OpenKeyId + "&" + Timestamp + "&" + Path
+
+示例结果：
+
+B96C15416C9240DF96BAA0BC9B367C6D&1740709414000&/open-api/order/purchase-order-info
+
+
+步骤3：组装签名密钥(KEY)
+将SecretKey和RandomKey直接拼接：
+
+SecretKey + RandomKey
+
+示例结果：
+
+6BEC9C4B668B4B14B17EEF106BB98AE5test1
+
+
+步骤4：HMAC-SHA256加密并转十六进制
+使用步骤二得到的密钥(KEY)，对步骤一的数据(VALUE)进行HMAC-SHA256加密，然后将二进制结果转换为十六进制字符串：
+
+HexString = HMAC-SHA256(VALUE, KEY).toHexString()
+
+示例结果：
+
+d6ca2c789f5307de567f77717fcf098b114aeb415534166e61d0d192ba95acca
+
+
+步骤5：Base64编码
+对步骤三得到的十六进制字符串进行Base64编码：
+
+Base64String = Base64Encode(HexString)
+
+示例结果：
+
+ZDZjYTJjNzg5ZjUzMDdkZTU2N2Y3NzcxN2ZjZjA5OGIxMTRhZWI0MTU1MzQxNjZlNjFkMGQxOTJiYTk1YWNjYQ==
+
+
+步骤6：拼接RandomKey
+将RandomKey添加到Base64编码结果前面，形成最终签名：
+
+Signature = RandomKey + Base64String
+
+最终签名结果：
+
+test1ZDZjYTJjNzg5ZjUzMDdkZTU2N2Y3NzcxN2ZjZjA5OGIxMTRhZWI0MTU1MzQxNjZlNjFkMGQxOTJiYTk1YWNjYQ==
+
+
+
+3、代码示例
+JAVA
+
+代码块
+
+public static String generateSheinSignature(String openKeyId, String secretKey, String path, 
+                                               String timestamp, String randomKey) throws Exception {
+        
+        // 步骤一：组装签名数据VALUE
+        String value = openKeyId + "&" + timestamp + "&" + path;
+        System.out.println("步骤一 - 签名数据VALUE: " + value);
+        
+        // 步骤二：组装签名密钥KEY
+        String key = secretKey + randomKey;
+        System.out.println("步骤二 - 签名密钥KEY: " + key);
+        
+        // 步骤三：HMAC-SHA256计算并转换为十六进制
+        Mac mac = Mac.getInstance("HmacSHA256");
+        SecretKeySpec secretKeySpec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        mac.init(secretKeySpec);
+        byte[] hmacResult = mac.doFinal(value.getBytes(StandardCharsets.UTF_8));
+        
+        StringBuilder hexStringBuilder = new StringBuilder();
+        for (byte b : hmacResult) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexStringBuilder.append('0');
+            }
+            hexStringBuilder.append(hex);
+        }
+        String hexSignature = hexStringBuilder.toString();
+        System.out.println("步骤三 - HMAC-SHA256结果(HEX): " + hexSignature);
+        
+        // 步骤四：Base64编码
+        String base64Signature = Base64.getEncoder().encodeToString(
+                hexSignature.getBytes(StandardCharsets.UTF_8));
+        System.out.println("步骤四 - Base64编码结果: " + base64Signature);
+        
+        // 步骤五：拼接RandomKey
+        String finalSignature = randomKey + base64Signature;
+        System.out.println("步骤五 - 最终签名: " + finalSignature);
+        
+        return finalSignature;
+    }
+
+PHP
+
+代码块
+
+<?php
+
+function generateSheinSignature($openKeyId, $secretKey, $path, $timestamp, $randomKey) {
+    // 步骤一：组装签名数据VALUE
+    $value = $openKeyId . "&" . $timestamp . "&" . $path;
+    echo "步骤一 - 签名数据VALUE: " . $value . "
+";
+    
+    // 步骤二：组装签名密钥KEY
+    $key = $secretKey . $randomKey;
+    echo "步骤二 - 签名密钥KEY: " . $key . "
+";
+    
+    // 步骤三：HMAC-SHA256计算并转换为十六进制
+    $hmacResult = hash_hmac('sha256', $value, $key, false); // false意味着返回十六进制
+    echo "步骤三 - HMAC-SHA256结果(HEX): " . $hmacResult . "
+";
+    
+    // 步骤四：Base64编码
+    $base64Signature = base64_encode($hmacResult);
+    echo "步骤四 - Base64编码结果: " . $base64Signature . "
+";
+    
+    // 步骤五：拼接RandomKey
+    $finalSignature = $randomKey . $base64Signature;
+    echo "步骤五 - 最终签名: " . $finalSignature . "
+";
+    
+    return $finalSignature;
+}
+?>
+
+C#
+
+代码块
+
+public static string GenerateSheinSignature(string openKeyId, string secretKey, string path, 
+                                               string timestamp, string randomKey)
+    {
+        // 步骤一：组装签名数据VALUE
+        string value = $"{openKeyId}&{timestamp}&{path}";
+        Console.WriteLine($"步骤一 - 签名数据VALUE: {value}");
+        
+        // 步骤二：组装签名密钥KEY
+        string key = $"{secretKey}{randomKey}";
+        Console.WriteLine($"步骤二 - 签名密钥KEY: {key}");
+        
+        // 步骤三：HMAC-SHA256计算并转换为十六进制
+        byte[] keyBytes = Encoding.UTF8.GetBytes(key);
+        byte[] valueBytes = Encoding.UTF8.GetBytes(value);
+        
+        using (HMACSHA256 hmac = new HMACSHA256(keyBytes))
+        {
+            byte[] hmacResult = hmac.ComputeHash(valueBytes);
+            StringBuilder hexBuilder = new StringBuilder();
+            
+            foreach (byte b in hmacResult)
+            {
+                hexBuilder.Append(b.ToString("x2"));
+            }
+            
+            string hexSignature = hexBuilder.ToString();
+            Console.WriteLine($"步骤三 - HMAC-SHA256结果(HEX): {hexSignature}");
+            
+            // 步骤四：Base64编码
+            string base64Signature = Convert.ToBase64String(Encoding.UTF8.GetBytes(hexSignature));
+            Console.WriteLine($"步骤四 - Base64编码结果: {base64Signature}");
+            
+            // 步骤五：拼接RandomKey
+            string finalSignature = $"{randomKey}{base64Signature}";
+            Console.WriteLine($"步骤五 - 最终签名: {finalSignature}");
+            
+            return finalSignature;
+        }
+    }
+
+Python
+
+代码块
+
+def generate_shein_signature(open_key_id, secret_key, path, timestamp, random_key):
+    # 步骤一：组装签名数据VALUE
+    value = f"{open_key_id}&{timestamp}&{path}"
+    print(f"步骤一 - 签名数据VALUE: {value}")
+    
+    # 步骤二：组装签名密钥KEY
+    key = f"{secret_key}{random_key}"
+    print(f"步骤二 - 签名密钥KEY: {key}")
+    
+    # 步骤三：HMAC-SHA256计算并转换为十六进制
+    hmac_result = hmac.new(key.encode('utf-8'), value.encode('utf-8'), hashlib.sha256).digest()
+    hex_signature = hmac_result.hex()
+    print(f"步骤三 - HMAC-SHA256结果(HEX): {hex_signature}")
+    
+    # 步骤四：Base64编码
+    base64_signature = base64.b64encode(hex_signature.encode('utf-8')).decode('utf-8')
+    print(f"步骤四 - Base64编码结果: {base64_signature}")
+    
+    # 步骤五：拼接RandomKey
+    final_signature = f"{random_key}{base64_signature}"
+    print(f"步骤五 - 最终签名: {final_signature}")
+    
+    return final_signature
+JavaScript
+
+代码块
+
+  // 需引入CryptoJS库：https://github.com/brix/crypto-js
+
+function generateSheinSignature(openKeyId, secretKey, path, timestamp, randomKey) {
+    // 步骤一：组装签名数据VALUE
+    var value = openKeyId + "&" + timestamp + "&" + path;
+    console.log("步骤一 - 签名数据VALUE: " + value);
+    
+    // 步骤二：组装签名密钥KEY
+    var key = secretKey + randomKey;
+    console.log("步骤二 - 签名密钥KEY: " + key);
+    
+    // 步骤三：HMAC-SHA256计算并转换为十六进制
+    var hexSignature = CryptoJS.HmacSHA256(value, key).toString();
+    console.log("步骤三 - HMAC-SHA256结果(HEX): " + hexSignature);
+    
+    // 步骤四：Base64编码
+    var base64Signature = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(hexSignature));
+    console.log("步骤四 - Base64编码结果: " + base64Signature);
+    
+    // 步骤五：拼接RandomKey
+    var finalSignature = randomKey + base64Signature;
+    console.log("步骤五 - 最终签名: " + finalSignature);
+    
+    return finalSignature;
+}
+
+// 测试示例
+var openKeyId = "B96C15416C9240DF96BAA0BC9B367C6D";
+var secretKey = "6BEC9C4B668B4B14B17EEF106BB98AE5";
+var path = "/open-api/order/purchase-order-info";
+var timestamp = "1740709414000";
+var randomKey = "test1";
+
+var signature = generateSheinSignature(openKeyId, secretKey, path, timestamp, randomKey);
+
+4、签名计算工具
+
+
+1、getbytoken接口比较特殊，由于调用getbytoken接口时，开发者还没有openkey和secretKey，请使用后台应用的APP_ID和APP_Secretkey生成签名；
+2、一般签名错误出现的原因有以下几种：
+a、接口调用域名不正确；
+b、请求头参数不正确；
+c、商家重置了密钥，导致开发者使用旧的密钥生成签名，建议查看应用后台的授权记录，以确认商家是否重新授权；
+d、Secretkey没有解密；
+openKeyId
+secretKey
+urlPath
+时间戳
+随机码
+签名串
+SHEIN开放平台API签名指南
+1、签名概述
+2、签名生成步骤
+步骤1：准备签名参数
+步骤2：组装签名数据(VALUE)
+步骤3：组装签名密钥(KEY)
+步骤4：HMAC-SHA256加密并转十六进制
+步骤5：Base64编码
+步骤6：拼接RandomKey
+3、代码示例
+JAVA
+PHP
+C#
+Python
+JavaScript
+4、签名计算工具
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

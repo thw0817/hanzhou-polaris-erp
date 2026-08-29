@@ -1,0 +1,504 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+查询SKC的合规信息要求
+/goods-compliance-requirements/list
+查询资质证书列表
+/goods-certificates/search
+查询资质证书填写规则
+/goods-certificate-schemas/detail
+上传资质证书文件
+/goods-certificate-files/upload
+创建/编辑资质证书
+/goods-certificates/save
+SKC绑定资质证书
+/goods-certificates/bind
+查询代理公司列表
+/goods-compliance/agency-list
+绑定SKC和代理公司
+/goods-compliance/save-skc-agency
+查询SKC的代理公司绑定要求
+/goods-compliance/skc-agency-detail
+查询警告语证书的填写规则
+/goods-compliance/query-warning-certificate-rules
+更新SKC的警告语
+/goods-compliance/update-skc-warning-certificate
+查询SKC的警告语绑定状态
+/goods-compliance/query-skc-warning-status
+查询SKC的实拍图要求
+/goods-compliance/skc-label-list
+查询SKC可用的标签模板
+/goods-compliance/get-label-template
+获取全量环保耗材信息
+/goods-quality/environmental-label-rule/material-quality-tree-v2
+打印合规标签
+/goods-compliance/label-print
+上传实拍图图片
+/goods-compliance/upload-skc-label-picture
+绑定SKC和实拍图
+/goods-compliance/skc-save-label
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-07-02 21:02:51
+获取全量环保耗材信息
+GET
+/open-api/goods-quality/environmental-label-rule/material-quality-tree-v2
+自运营
+全托管
+半托管
+商品若要打印环保标，需先通过此接口获取平台支持的环保材料信息。
+
+环保材料信息共有两层，材料类型 -> 具体材料。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名。
+
+language
+string	是	
+支持返回的多语言报错信息，例如：language:en。默认返回中文多语言信息 英语:en 法语: fr 西班牙语:es 德语:de 中文简体:zh-cn 泰语:th 巴西葡语:pt-br
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	否	
+
+
+msg
+string	否	
+info
+object[]	是	
+
+
+packageTypeId
+integer	否	
+环保材料类型ID
+
+packageTypeName
+string	否	
+环保材料类型名称
+
+isEnabled
+integer	否	
+环保材料类型是否可用
+
+packageMaterials
+object[]	是	
+某个环保材料类型下的具体环保材料信息
+
+packageMaterialId
+integer	否	
+环保材料ID
+
+packageMaterialName
+string	否	
+环保材料名称
+
+isEnabled
+integer	否	
+环保材料是否可用
+
+traceId
+string	否	
+请求追踪ID
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request GET 'https://openapi.sheincorp.com//open-api/goods-quality/environmental-label-rule/material-quality-tree-v2' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1751007419290' \
+--header 'language: zh-cn' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi.sheincorp.com' \
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": [
+        {
+            "packageTypeId": 6,
+            "packageTypeName": "塑料袋",
+            "isEnabled": 1,
+            "packageMaterials": [
+                {
+                    "packageMaterialId": 62,
+                    "packageMaterialName": "PVC塑料袋",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 66,
+                    "packageMaterialName": "PE塑料袋LDPE",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 61,
+                    "packageMaterialName": "PE塑料袋HDPE",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 63,
+                    "packageMaterialName": "PET塑料袋",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 60,
+                    "packageMaterialName": "PP塑料袋",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 65,
+                    "packageMaterialName": "PS塑料袋",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 64,
+                    "packageMaterialName": "其他塑料袋",
+                    "isEnabled": 1
+                }
+            ]
+        },
+        {
+            "packageTypeId": 7,
+            "packageTypeName": "包装盒",
+            "isEnabled": 1,
+            "packageMaterials": [
+                {
+                    "packageMaterialId": 67,
+                    "packageMaterialName": "PVC塑料盒",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 72,
+                    "packageMaterialName": "PE塑料盒LDPE",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 71,
+                    "packageMaterialName": "PE塑料盒HDPE",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 74,
+                    "packageMaterialName": "PET塑料盒",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 73,
+                    "packageMaterialName": "PP塑料盒",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 70,
+                    "packageMaterialName": "PS塑料盒",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 69,
+                    "packageMaterialName": "其他塑料盒",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 68,
+                    "packageMaterialName": "瓦楞纸盒",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 98,
+                    "packageMaterialName": "非瓦楞纸盒",
+                    "isEnabled": 1
+                }
+            ]
+        },
+        {
+            "packageTypeId": 8,
+            "packageTypeName": "瓶子",
+            "isEnabled": 1,
+            "packageMaterials": [
+                {
+                    "packageMaterialId": 79,
+                    "packageMaterialName": "PVC塑料瓶",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 81,
+                    "packageMaterialName": "PE塑料瓶LDPE",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 75,
+                    "packageMaterialName": "PE塑料瓶HDPE",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 78,
+                    "packageMaterialName": "PET塑料瓶",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 80,
+                    "packageMaterialName": "PP塑料瓶",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 76,
+                    "packageMaterialName": "PS塑料瓶",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 77,
+                    "packageMaterialName": "其他塑料瓶",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 97,
+                    "packageMaterialName": "透明玻璃",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 101,
+                    "packageMaterialName": "绿玻璃",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 106,
+                    "packageMaterialName": "棕色玻璃",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 107,
+                    "packageMaterialName": "有色（非绿/非棕）玻璃",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 99,
+                    "packageMaterialName": "钢铁",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 108,
+                    "packageMaterialName": "铝",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 105,
+                    "packageMaterialName": "其他金属（非钢铁非铝）",
+                    "isEnabled": 1
+                }
+            ]
+        },
+        {
+            "packageTypeId": 9,
+            "packageTypeName": "盖子",
+            "isEnabled": 1,
+            "packageMaterials": [
+                {
+                    "packageMaterialId": 91,
+                    "packageMaterialName": "PVC塑料盖子",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 87,
+                    "packageMaterialName": "PE塑料盖子LDPE",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 94,
+                    "packageMaterialName": "PE塑料盖子HDPE",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 88,
+                    "packageMaterialName": "PET塑料盖子",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 85,
+                    "packageMaterialName": "PP塑料盖子",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 84,
+                    "packageMaterialName": "PS塑料盖子",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 83,
+                    "packageMaterialName": "其他塑料盖子",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 109,
+                    "packageMaterialName": "钢铁",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 104,
+                    "packageMaterialName": "铝",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 103,
+                    "packageMaterialName": "其他金属（非钢铁非铝）",
+                    "isEnabled": 1
+                }
+            ]
+        },
+        {
+            "packageTypeId": 10,
+            "packageTypeName": "泡沫板",
+            "isEnabled": 1,
+            "packageMaterials": [
+                {
+                    "packageMaterialId": 95,
+                    "packageMaterialName": "PVC塑料板",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 93,
+                    "packageMaterialName": "PE塑料板LDPE",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 86,
+                    "packageMaterialName": "PE塑料板HDPE",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 82,
+                    "packageMaterialName": "PET塑料板",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 90,
+                    "packageMaterialName": "PP塑料板",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 92,
+                    "packageMaterialName": "PS塑料板",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 89,
+                    "packageMaterialName": "其他塑料板",
+                    "isEnabled": 1
+                }
+            ]
+        },
+        {
+            "packageTypeId": 11,
+            "packageTypeName": "纸板",
+            "isEnabled": 1,
+            "packageMaterials": [
+                {
+                    "packageMaterialId": 102,
+                    "packageMaterialName": "瓦楞纸板",
+                    "isEnabled": 1
+                },
+                {
+                    "packageMaterialId": 100,
+                    "packageMaterialName": "非瓦楞纸板",
+                    "isEnabled": 1
+                }
+            ]
+        },
+        {
+            "packageTypeId": 12,
+            "packageTypeName": "纸",
+            "isEnabled": 1,
+            "packageMaterials": [
+                {
+                    "packageMaterialId": 96,
+                    "packageMaterialName": "纸",
+                    "isEnabled": 1
+                }
+            ]
+        }
+    ],
+    "traceId": "4e6ef5f4cb1b5a4"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：40次/秒
+FAQ
+Q：商品未绑定证书会有什么影响？
+2025-05-26
+A：
+商品未绑定证书，有可能会因为合规要求而自动下架，商品由于合规规则下架后无法上架，需要补充证书后才能上架。更多信息可查看商品证书解决方案：商品证书解决方案。
+查看详情
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

@@ -1,0 +1,457 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+报账单列表
+/finance/report-list
+报账单销售款收支明细
+/finance/report-sales-detail
+报账单补扣款收支明细
+/finance/report-adjustment-detail
+查询报账单列表
+/finance/report-order-list
+查询对账单列表
+/finance/get-check-order-list
+查询对账单详情
+/finance/get-check-order-detail
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-03-26 14:19:56
+报账单列表
+POST
+/open-api/finance/report-list
+全托管
+POP
+查询全托管店铺和POP模式的账单列表，当前仅支持查询2024年1月1日至今的数据，需要查询更多数据需要在商家后台操作；
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+application/json
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+
+x-lt-signature
+string	是	
+接口签名
+
+x-lt-language
+string	否	
+指定出参语种，默认英文；支持语种:英语:US 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+addTimeEnd
+datetime	否	
+报账单生成时间结束值（北京时间）；格式：yyyy-MM-dd HH:mm:ss (报账单生成时间和最后更新时间任一必填，单次最多查询7天数据)
+
+addTimeStart
+datetime	否	
+报账单生成时间开始值（北京时间）；格式：yyyy-MM-dd HH:mm:ss (报账单生成时间和最后更新时间任一必填，单次最多查询7天数据)
+
+lastUpdateTimeEnd
+datetime	否	
+最后更新时间结束值（北京时间）；格式：yyyy-MM-dd HH:mm:ss (报账单生成时间和最后更新时间任一必填，单次最多查询7天数据)
+
+lastUpdateTimeStart
+datetime	否	
+最后更新时间开始值（北京时间）；格式：yyyy-MM-dd HH:mm:ss (报账单生成时间和最后更新时间任一必填，单次最多查询7天数据)
+
+page
+integer	是	
+页码
+perPage
+integer	是	
+每页大小，最大200
+settlementStatuses
+integer[]	否	
+结算状态；1：待确认/ 2：待结算/ 3：已结算/ 不传默认查所有
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码 成功：0
+info
+object	否	
+count
+integer	是	
+报账单总数
+reportOrderInfos
+object[]	否	
+报账单列表
+addTime
+datetime	是	
+报账单生成日期
+companyName
+string	是	
+公司主体名称
+completedPayTime
+datetime	否	
+实际付款时间
+currencyCode
+string	是	
+币种
+estimateIncomeMoneyTotal
+double	是	
+金额
+estimatePayTime
+datetime	是	
+预计付款时间
+expenseType
+integer	是	
+账单费用类型；0:商品/ 1:服务；明细费用类型；0:商品/ 1:服务；相同的bzOrderNo和skuCode可能在不同的报账单中以不同的费用明细给出；
+lastUpdateTime
+datetime	是	
+最后更新时间
+replenishTotal
+int64	否	
+补扣款数量
+reportOrderNo
+string	是	
+报账单号
+salesTotal
+int64	否	
+销售款明细数量
+settlementStatus
+integer	是	
+结算状态
+settlementStatusName
+string	是	
+结算状态名称；支持指定语种出参；
+
+msg
+string	否	
+错误描述,成功：OK
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/finance/report-list' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1752808873480' \
+--header 'x-lt-signature: test' \
+--header 'language: zh-cn' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi.sheincorp.com' \
+--data-raw '{
+ "addTimeEnd": "2024-12-24 10:29:59",
+ "addTimeStart":"2024-12-17 10:29:59",
+ "page": 1,
+ "perPage": 100
+}'
+
+
+返回示例
+复制
+{
+ "code": "0",
+ "msg": "OK",
+ "info": {
+ "reportOrderInfos": [
+ {
+ "reportOrderNo": "B2412164523430915",
+ "salesTotal": 0,
+ "replenishTotal": 3,
+ "addTime": "2024-12-17 19:46:38",
+ "lastUpdateTime": "2024-12-17 19:47:12",
+ "settlementStatus": 2,
+ "settlementStatusName": "Pending settlement",
+ "estimatePayTime": "2025-01-16 00:00:00",
+ "completedPayTime": "",
+ "companyName": "那就",
+ "estimateIncomeMoneyTotal": 17.38,
+ "currencyCode": "EUR"
+ },
+ {
+ "reportOrderNo": "B2412164532016130",
+ "salesTotal": 3,
+ "replenishTotal": 0,
+ "addTime": "2024-12-17 19:46:38",
+ "lastUpdateTime": "2024-12-17 19:47:12",
+ "settlementStatus": 2,
+ "settlementStatusName": "Pending settlement",
+ "estimatePayTime": "2025-01-16 00:00:00",
+ "completedPayTime": "",
+ "companyName": "TEST 公司",
+ "estimateIncomeMoneyTotal": 43.8,
+ "currencyCode": "CNY"
+ },
+ {
+ "reportOrderNo": "B2412173138066433",
+ "salesTotal": 1,
+ "replenishTotal": 1,
+ "addTime": "2024-12-17 19:46:38",
+ "lastUpdateTime": "2024-12-17 19:48:03",
+ "settlementStatus": 2,
+ "settlementStatusName": "Pending settlement",
+ "estimatePayTime": "2024-12-14 17:00:00",
+ "completedPayTime": "",
+ "companyName": "INFINITE STYLES SERVICES CO., LIMITED ",
+ "estimateIncomeMoneyTotal": 781.54,
+ "currencyCode": "CNY"
+ },
+ {
+ "reportOrderNo": "B2412174644020226",
+ "salesTotal": 1,
+ "replenishTotal": 0,
+ "addTime": "2024-12-17 19:46:38",
+ "lastUpdateTime": "2024-12-17 19:48:04",
+ "settlementStatus": 2,
+ "settlementStatusName": "Pending settlement",
+ "estimatePayTime": "2024-12-14 17:00:00",
+ "completedPayTime": "",
+ "companyName": "INFINITE STYLES SERVICES CO., LIMITED ",
+ "estimateIncomeMoneyTotal": 43.8,
+ "currencyCode": "CNY"
+ },
+ {
+ "reportOrderNo": "B2412174651163650",
+ "salesTotal": 1,
+ "replenishTotal": 0,
+ "addTime": "2024-12-17 19:46:38",
+ "lastUpdateTime": "2024-12-17 19:48:04",
+ "settlementStatus": 2,
+ "settlementStatusName": "Pending settlement",
+ "estimatePayTime": "2024-12-14 17:00:00",
+ "completedPayTime": "",
+ "companyName": "INFINITE STYLES SERVICES CO., LIMITED ",
+ "estimateIncomeMoneyTotal": 43.8,
+ "currencyCode": "CNY"
+ },
+ {
+ "reportOrderNo": "B2412190026229760",
+ "salesTotal": 0,
+ "replenishTotal": 0,
+ "addTime": "2024-12-19 00:06:40",
+ "lastUpdateTime": "2024-12-25 14:13:41",
+ "settlementStatus": 1,
+ "settlementStatusName": "to be confirmed",
+ "estimatePayTime": "2025-01-11 00:00:00",
+ "completedPayTime": "",
+ "companyName": "ROADGET BUSINESS PTE. LTD.",
+ "estimateIncomeMoneyTotal": 94.56,
+ "currencyCode": "USD"
+ },
+ {
+ "reportOrderNo": "B2412190064568322",
+ "salesTotal": 2,
+ "replenishTotal": 0,
+ "addTime": "2024-12-19 00:16:26",
+ "lastUpdateTime": "2024-12-25 15:32:44",
+ "settlementStatus": 1,
+ "settlementStatusName": "to be confirmed",
+ "estimatePayTime": "2025-01-11 00:00:00",
+ "completedPayTime": "2025-12-19 00:16:25",
+ "companyName": "ROADGET BUSINESS PTE. LTD.",
+ "estimateIncomeMoneyTotal": 9.56,
+ "currencyCode": "USD"
+ },
+ {
+ "reportOrderNo": "B2412174812054529",
+ "salesTotal": 2,
+ "replenishTotal": 2,
+ "addTime": "2024-12-19 14:02:49",
+ "lastUpdateTime": "2024-12-25 15:19:57",
+ "settlementStatus": 1,
+ "settlementStatusName": "to be confirmed",
+ "estimatePayTime": "2025-01-17 00:00:00",
+ "completedPayTime": "2026-01-17 00:00:00",
+ "companyName": "INFINITE STYLES SERVICES CO., LIMITED ",
+ "estimateIncomeMoneyTotal": 82.04,
+ "currencyCode": "USD"
+ },
+ {
+ "reportOrderNo": "B2412183921686531",
+ "salesTotal": 2,
+ "replenishTotal": 2,
+ "addTime": "2024-12-19 14:02:50",
+ "lastUpdateTime": "2024-12-19 14:02:49",
+ "settlementStatus": 1,
+ "settlementStatusName": "to be confirmed",
+ "estimatePayTime": "2025-01-16 00:00:00",
+ "completedPayTime": "",
+ "companyName": "INFINITE STYLES SERVICES CO., LIMITED ",
+ "estimateIncomeMoneyTotal": 84.04,
+ "currencyCode": "CNY"
+ },
+ {
+ "reportOrderNo": "B2412185000214529",
+ "salesTotal": 0,
+ "replenishTotal": 0,
+ "addTime": "2024-12-19 14:02:50",
+ "lastUpdateTime": "2024-12-19 14:02:49",
+ "settlementStatus": 1,
+ "settlementStatusName": "to be confirmed",
+ "estimatePayTime": "2025-01-16 00:00:00",
+ "completedPayTime": "",
+ "companyName": "INFINITE STYLES SERVICES CO., LIMITED ",
+ "estimateIncomeMoneyTotal": 175.2,
+ "currencyCode": "CNY"
+ },
+ {
+ "reportOrderNo": "B2412192918793218",
+ "salesTotal": 4,
+ "replenishTotal": 4,
+ "addTime": "2024-12-19 14:02:50",
+ "lastUpdateTime": "2024-12-19 14:02:49",
+ "settlementStatus": 1,
+ "settlementStatusName": "to be confirmed",
+ "estimatePayTime": "2025-01-16 00:00:00",
+ "completedPayTime": "",
+ "companyName": "那就75",
+ "estimateIncomeMoneyTotal": 174.36,
+ "currencyCode": "CNY"
+ },
+ {
+ "reportOrderNo": "B2412193369681921",
+ "salesTotal": 0,
+ "replenishTotal": 2,
+ "addTime": "2024-12-19 14:20:31",
+ "lastUpdateTime": "2024-12-19 14:20:30",
+ "settlementStatus": 1,
+ "settlementStatusName": "to be confirmed",
+ "estimatePayTime": "2025-01-16 00:00:00",
+ "completedPayTime": "",
+ "companyName": "TEST 公司",
+ "estimateIncomeMoneyTotal": 205.05,
+ "currencyCode": "CNY"
+ },
+ {
+ "reportOrderNo": "B2403210004",
+ "salesTotal": 1,
+ "replenishTotal": 0,
+ "addTime": "2024-12-19 14:51:03",
+ "lastUpdateTime": "2024-12-23 17:29:08",
+ "settlementStatus": 2,
+ "settlementStatusName": "Pending settlement",
+ "estimatePayTime": "2025-01-16 00:00:00",
+ "completedPayTime": "",
+ "companyName": "TEST 公司",
+ "estimateIncomeMoneyTotal": 43.8,
+ "currencyCode": ""
+ },
+ {
+ "reportOrderNo": "B2412190180567041",
+ "salesTotal": 1,
+ "replenishTotal": 1,
+ "addTime": "2024-12-19 14:51:03",
+ "lastUpdateTime": "2024-12-23 17:28:45",
+ "settlementStatus": 2,
+ "settlementStatusName": "Pending settlement",
+ "estimatePayTime": "2025-01-16 00:00:00",
+ "completedPayTime": "",
+ "companyName": "INFINITE STYLES SERVICES CO., LIMITED ",
+ "estimateIncomeMoneyTotal": 43.02,
+ "currencyCode": "CNY"
+ },
+ {
+ "reportOrderNo": "B2412210147608576",
+ "salesTotal": 3,
+ "replenishTotal": 2,
+ "addTime": "2024-12-21 00:37:32",
+ "lastUpdateTime": "2024-12-23 17:27:21",
+ "settlementStatus": 2,
+ "settlementStatusName": "Pending settlement",
+ "estimatePayTime": "2025-01-03 00:00:00",
+ "completedPayTime": "",
+ "companyName": "ROADGET BUSINESS PTE. LTD.",
+ "estimateIncomeMoneyTotal": 156.8,
+ "currencyCode": "USD"
+ }
+ ],
+ "count": 15
+ },
+ "bbl": {},
+ "traceId": "ba8e56514963c35e"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+99400	
+结算状态异常
+settlementStatuses入参错误，请检查
+99400	
+创建开始时间和更新开始时间其中一个需要必填
+addTimeStart和lastUpdateTimeStart 字段至少填写1个
+99400	
+创建开始时间和更新开始时间不能同时传参
+addTimeStart和lastUpdateTimeStart 字段不能同时传参
+94030	
+报账单生成时间每次查询范围不能超过{0}天
+开始时间不能和结束时间一样
+94190	
+查询时间不能小于{0}
+时间设置异常，请检查
+99500	
+系统异常，请稍后重试
+系统异常，请稍后重试
+共6条数据
+限流规则
+收起
+单个开发者接口限流频次：50次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

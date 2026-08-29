@@ -1,0 +1,742 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+商品发布/编辑
+/goods/product/publishOrEdit
+商品部分编辑
+/goods/product/partialEdit
+确认店铺是否可发品
+/goods/product/check-publish-permission
+确认商品是否可编辑
+/goods/product/check-edit-permission
+查询商品审核状态
+/goods/query-document-state
+撤回商品审核
+/goods/revoke-product
+商品综合查询
+/goods/searchProduct
+商品列表接口
+/openapi-business-backend/product/query
+商品上下架
+/goods/modify-skc-shelf
+spu商品详情查询
+/goods/spu-info
+sku商品详情查询（即将作废）
+/openapi-business-backend/product/full-detail
+商品发布字段规范
+/goods/query-publish-fill-in-standard
+店铺查商品末级分类
+/goods/query-category-tree
+图文识别推荐类目
+/goods/image-category-suggestion
+查询分类可用属性
+/goods/query-attribute-template
+查询是否支持自定义属性值
+/goods/get-custom-attribute-permission-config
+添加自定义属性值
+/goods/add-custom-attribute-value
+查询关联属性填写规则
+/goods/get-associated-attribute-rules
+查询店铺站点和币种信息（新）
+/goods/query-site-list
+查询店铺站点和站点币种（旧）
+/openapi-business-backend/site/query
+查询可用品牌列表
+/goods/query-brand-list
+查询可用IP列表
+/goods/query-ip-list
+图片链接转换
+/goods/transform-pic
+本地图片上传
+/goods/upload-pic
+获取店铺上架额度
+/goods/query-shelf-quota
+查询商家sku是否已存在
+/goods/product/check-supplierSku-repeated
+商品删除预校验
+/goods/check-deletable
+提交商品删除申请
+/goods/delete/{skcName}
+查询商品删除审核记录
+/goods-delete-logs/search
+查询商品证书要求和审核状态
+/goods/get-certificate-rule
+查询证书所需上传资料（新）
+/goods/certificate/get-all-certificate-type-list-v2
+上传证书文件
+/goods/upload-certificate-file
+商品证书池创建/编辑
+/goods/save-or-update-certificate-pool
+店铺证书池创建/编辑
+/goods/save-or-update-supplier-certificate
+SKC绑定商品证书池
+/goods/save-certificate-pool-skc-bind
+商品接口-根据条码批量获取SKC与尺码
+/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表
+/goods/number-list
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-03-27 15:55:46
+商品综合查询
+POST
+/open-api/goods/searchProduct
+自运营
+全托管
+半托管
+POP
+商品列表接口，支持使用各种条件综合查询，查询结果按SPU维度提供，每个SPU下会提供商品的关键信息。
+
+支持的条件：平台编码、商家维护货号、上架状态、类目、发布时间和更新时间；各条件间是且的关系。
+
+返回的信息：各层级的编码和货号、标题属性、主图、上架状态、价格、库存
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+
+x-lt-signature
+string	是	
+接口签名
+
+language
+string	是	
+支持返回的多语言报错信息，例如：language:en。默认返回中文多语言信息 英语:en 法语: fr 西班牙语:es 德语:de 中文简体:zh-cn 泰语:th 巴西葡语:pt-br
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+pageNum
+integer	是	
+分页页码，从1开始
+
+pageSize
+integer	是	
+分页大小，最大10
+
+categoryIds
+int64[]	否	
+末级分类ID列表，单次最多10个。
+
+spuNameList
+string[]	否	
+SPU编码列表（平台编码），单次最多10个。
+
+skcNameList
+string[]	否	
+SKC编码列表（平台编码），单次最多10个。
+skuCodeList
+string[]	否	
+SKU编码列表（平台编码），单次最多10个。
+skcSupplierCodeList
+string[]	否	
+SKC货号列表（商家维护的货号），单次最多10个。
+supplierSkuList
+string[]	否	
+商家SKU列表（商家维护的SKU货号），单次最多10个
+skcShelfStatus
+integer	否	
+SKC上架状态，0:下架 1:上架。
+
+待上架和已售罄均属于下架状态。
+
+languageList
+string[]	否	
+语种列表，决定商品信息中名称、属性名称、属性值名称返回的语种内容。单次最多入参5个语种，不传时默认返回英语。
+
+支持的语种包括：英语:en、法语:fr、西班牙语:es、德语:de、中文简体:zh-cn、泰语:th、巴西葡语:pt-br、日语:ja、韩语:ko
+
+createTimeStart
+string	否	
+SPU的发布时间段（开始时间），格式 yyyy-MM-dd HH:mm:ss。
+
+发布时间定义：SPU首次审核通过时间。
+
+createTimeEnd
+string	否	
+SPU的发布时间段（结束时间），格式 yyyy-MM-dd HH:mm:ss。
+
+发布时间定义：SPU首次审核通过时间。
+
+updateTimeEnd
+string	否	
+SPU的更新时间段（结束时间），格式 yyyy-MM-dd HH:mm:ss。
+
+更新时间定义：SPU下任意SKC的标题、品牌、IP、属性变更导致的更新。不包括价格、库存的更新。
+
+updateTimeStart
+string	否	
+SPU的更新时间段（开始时间），格式 yyyy-MM-dd HH:mm:ss。
+
+更新时间定义：SPU下任意SKC的标题、品牌、IP、属性变更导致的更新。不包括价格、库存的更新。
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码 成功：0
+
+msg
+string	否	
+错误描述,成功：OK
+info
+object	否	
+查询结果
+
+meta
+object	否	
+分页元信息
+
+count
+integer	否	
+符合查询条件的SPU数量
+
+data
+object[]	否	
+SPU列表。默认按SPU发布时间降序排序。
+
+spuName
+string	否	
+spu编码，平台生成的编码
+
+spuShelfStatus
+integer	否	
+SPU的上架状态，0:下架 1:上架。
+
+待上架和已售罄均属于下架状态。
+
+
+
+categoryId
+string	否	
+末级类目ID
+
+skcList
+object[]	否	
+SKC列表
+
+skcName
+string	否	
+SKC的平台编码
+
+skcShelfStatus
+integer	否	
+SKC上架状态，0:下架 1:上架。
+
+待上架和已售罄均属于下架状态。
+
+supplierCode
+string	否	
+SKC的商家货号
+
+skcMainPicUrl
+string	否	
+SKC主图URL
+
+skcTitle
+object[]	否	
+SKC标题列表
+
+language
+string	否	
+语种。返回的语种取决于入参中的languageList
+
+title
+string	否	
+标题内容
+
+skcSalesAttribute
+object[]	否	
+SKC销售属性列表
+language
+string	否	
+语种。返回的语种取决于入参中的languageList
+
+attributeId
+string	否	
+属性ID
+attributeName
+string	否	
+属性名称
+
+attributeValueId
+string	否	
+属性值ID
+
+attributeValueName
+string	否	
+属性值名称
+
+skcSiteShelfStatusList
+object[]	否	
+SKC的站点维度上架状态
+
+status
+integer	否	
+上架状态，0:下架 1:上架。
+
+subSite
+string	否	
+子站点，例如shein-us
+
+skuList
+object[]	否	
+SKU列表
+
+skuCode
+string	否	
+SKU的平台编码
+
+supplierSku
+string	否	
+商家维护的SKU，即发布接口中的supplier_sku
+
+skuSalesAttributeList
+object[]	否	
+SKU销售属性列表。如果列表为空，说明商品没有次规格属性。
+
+language
+string	否	
+语种。返回的语种取决于入参中的languageList
+
+attributeId
+string	否	
+属性ID
+
+attributeName
+string	否	
+属性名称
+attributeValueId
+string	否	
+属性值ID
+attributeValueName
+string	否	
+属性值名称
+costList
+object[]	否	
+成本价列表。仅半托管/全托管模式商家会返回此数据
+
+cost
+double	否	
+金额
+
+currency
+string	否	
+币种
+
+priceList
+object[]	否	
+售价列表。仅自运营商家返回此数据
+
+site
+string	否	
+站点。例如shein-us
+
+currency
+string	否	
+币种
+
+basePrice
+double	否	
+原价
+
+specialPrice
+double	否	
+特价。特价=0，代表商家发布商品时没有维护特价。特价为0时可视为无特价。
+
+inventoryList
+object[]	否	
+库存列表。如果为空，则说明商品在任一仓库都没有维护库存数据
+
+warehouseId
+string	否	
+仓库ID
+inventoryNum
+integer	否	
+库存数量
+
+traceId
+string	否	
+请求跟踪码
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi-test01.sheincorp.cn/open-api/goods/searchProduct' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1774494443833' \
+--header 'language: zh-cn' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+  "pageSize": 3,
+  "pageNum": 1,
+  "skcShelfStatus": 0,
+  "createTimeStart": "2026-01-01 00:00:00",
+  "createTimeEnd": "2026-02-01 00:00:00"
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "meta": {
+            "count": 60891
+        },
+        "data": [
+            {
+                "spuName": "a2601281717698647",
+                "spuShelfStatus": 0,
+                "categoryId": "20039881",
+                "skcList": [
+                    {
+                        "skcName": "sa260128171769864787801",
+                        "skcTitle": [
+                            {
+                                "language": "en",
+                                "title": "Roll To Class In Pride With This San Francisco Giants Wheeled Backpack. Two Large Compartments With Padded Computer Sleeve For 17inch Laptop Or Tablet. Large Front Zippered Organizer Pocket With Pen Loops, Slots & Key Fob. Retractable Handle. Padded, Adjustable Shoulder Straps. Kick Plate Protects Bottom. Side Mesh Pocket. 19\"H X 9\"W X 7.5\"D. 600denier Polyester. Wipe Clean. Imported. Shop Our Full Assortment Of San Francisco Giants Items Here. When Youre , Youre Family! Size One Size. Color Gray. Gender Unisex. Age Group Adult. Material OTHER MATERIAL. Skechers® ! Hands Free Slipins® Bounder Boys Shoes, Boys, #&!(!&) Sdahsd Asd Newborn & Infant Royal Kentucky Wildcats #1 Fan Foam Finger Bodysuit, Kids Unisex, Skechers® ! Hands Free Slipins® Bounder Boys Shoes, Boys Mens Columbia PFG UPF 40 Tamiami™ II Long Sleeve ButtonDown Shirt,"
+                            }
+                        ],
+                        "skcMainPicUrl": "https://imgdeal-test01.shein.com/v4/j/pi/2026/01/21/49/17689368571ef48fdfe8bdd052d1daaa88ee0bee6c.jpg",
+                        "skcSalesAttribute": [
+                            {
+                                "language": "en",
+                                "attributeId": "2147484187",
+                                "attributeName": "OPENAPI-Color",
+                                "attributeValueId": "536",
+                                "attributeValueName": "Purple"
+                            }
+                        ],
+                        "supplierCode": "Testing_4567",
+                        "skcShelfStatus": 0,
+                        "skcSiteShelfStatusList": [
+                            {
+                                "subSite": "shein-mx",
+                                "status": 0
+                            },
+                            {
+                                "subSite": "shein-it",
+                                "status": 0
+                            },
+                            {
+                                "subSite": "shein-us",
+                                "status": 0
+                            }
+                        ],
+                        "skuList": [
+                            {
+                                "skuCode": "I7mkxtb0qh7f53",
+                                "supplierSku": "Tesing_1234",
+                                "skuSalesAttributeList": [
+                                    {
+                                        "language": "en",
+                                        "attributeId": "2147484186",
+                                        "attributeName": "OPENAPI-Size",
+                                        "attributeValueId": "2147488283",
+                                        "attributeValueName": "30*20"
+                                    }
+                                ],
+                                "priceList": [
+                                    {
+                                        "site": "shein-us",
+                                        "currency": "USD",
+                                        "basePrice": 62.99,
+                                        "specialPrice": 0.0
+                                    }
+                                ],
+                                "costList": null,
+                                "inventoryList": [
+                                    {
+                                        "warehouseId": "PS3417911133",
+                                        "inventoryNum": 5
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "spuName": "a2601281716859981",
+                "spuShelfStatus": 0,
+                "categoryId": "20039881",
+                "skcList": [
+                    {
+                        "skcName": "sa260128171685998123762",
+                        "skcTitle": [
+                            {
+                                "language": "en",
+                                "title": "Mens New Era Purple Los Angeles Lakers Side Logo 9FIFTY Snapback Hat"
+                            }
+                        ],
+                        "skcMainPicUrl": "https://imgdeal-test01.shein.com/v4/j/pi/2026/01/21/49/17689368571ef48fdfe8bdd052d1daaa88ee0bee6c.jpg",
+                        "skcSalesAttribute": [
+                            {
+                                "language": "en",
+                                "attributeId": "2147484187",
+                                "attributeName": "OPENAPI-Color",
+                                "attributeValueId": "536",
+                                "attributeValueName": "Purple"
+                            }
+                        ],
+                        "supplierCode": "Testing_456",
+                        "skcShelfStatus": 0,
+                        "skcSiteShelfStatusList": [
+                            {
+                                "subSite": "shein-mx",
+                                "status": 0
+                            },
+                            {
+                                "subSite": "shein-it",
+                                "status": 0
+                            },
+                            {
+                                "subSite": "shein-us",
+                                "status": 0
+                            }
+                        ],
+                        "skuList": [
+                            {
+                                "skuCode": "I0mkxt98pe995u",
+                                "supplierSku": "Tesing_123",
+                                "skuSalesAttributeList": [
+                                    {
+                                        "language": "en",
+                                        "attributeId": "2147484186",
+                                        "attributeName": "OPENAPI-Size",
+                                        "attributeValueId": "2147488283",
+                                        "attributeValueName": "30*20"
+                                    }
+                                ],
+                                "priceList": [
+                                    {
+                                        "site": "shein-us",
+                                        "currency": "USD",
+                                        "basePrice": 62.99,
+                                        "specialPrice": 0.0
+                                    }
+                                ],
+                                "costList": null,
+                                "inventoryList": [
+                                    {
+                                        "warehouseId": "PS3417911133",
+                                        "inventoryNum": 5
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "spuName": "a2601271703231232",
+                "spuShelfStatus": 0,
+                "categoryId": "20040046",
+                "skcList": [
+                    {
+                        "skcName": "sa260127170323123298625",
+                        "skcTitle": [
+                            {
+                                "language": "en",
+                                "title": "1L * 2 Bottles Of Large-Capacity Children's Milk Shampoo, Body Wash, Gentle Two-In-One Baby Wash, Newborn Care"
+                            }
+                        ],
+                        "skcMainPicUrl": "https://imgdeal-test01.shein.com/v4/j/pi/2026/01/27/c9/17695046002cc8b0bce31365a408b64eef8555bc97.jpg",
+                        "skcSalesAttribute": [
+                            {
+                                "language": "en",
+                                "attributeId": "2147484187",
+                                "attributeName": "OPENAPI-Color",
+                                "attributeValueId": "2147488295",
+                                "attributeValueName": "Navy"
+                            }
+                        ],
+                        "supplierCode": "122",
+                        "skcShelfStatus": 0,
+                        "skcSiteShelfStatusList": [
+                            {
+                                "subSite": "shein-mx",
+                                "status": 0
+                            },
+                            {
+                                "subSite": "shein-it",
+                                "status": 0
+                            },
+                            {
+                                "subSite": "shein-us",
+                                "status": 0
+                            }
+                        ],
+                        "skuList": [
+                            {
+                                "skuCode": "I1mkwdcx1rdcym",
+                                "supplierSku": "",
+                                "skuSalesAttributeList": [
+                                    {
+                                        "language": "en",
+                                        "attributeId": "2147484186",
+                                        "attributeName": "OPENAPI-Size",
+                                        "attributeValueId": "2147488283",
+                                        "attributeValueName": "30*20"
+                                    }
+                                ],
+                                "priceList": [
+                                    {
+                                        "site": "shein-us",
+                                        "currency": "USD",
+                                        "basePrice": 600.0,
+                                        "specialPrice": 500.0
+                                    }
+                                ],
+                                "costList": null,
+                                "inventoryList": [
+                                    {
+                                        "warehouseId": "PS3417911133",
+                                        "inventoryNum": 99
+                                    }
+                                ]
+                            },
+                            {
+                                "skuCode": "I0mkwdcx1tj32k",
+                                "supplierSku": "",
+                                "skuSalesAttributeList": [
+                                    {
+                                        "language": "en",
+                                        "attributeId": "2147484186",
+                                        "attributeName": "OPENAPI-Size",
+                                        "attributeValueId": "19884748",
+                                        "attributeValueName": "70*50*30cm"
+                                    }
+                                ],
+                                "priceList": [
+                                    {
+                                        "site": "shein-us",
+                                        "currency": "USD",
+                                        "basePrice": 600.0,
+                                        "specialPrice": 500.0
+                                    }
+                                ],
+                                "costList": null,
+                                "inventoryList": [
+                                    {
+                                        "warehouseId": "PS3417911133",
+                                        "inventoryNum": 99
+                                    }
+                                ]
+                            },
+                            {
+                                "skuCode": "I3mkwdcx1sft80",
+                                "supplierSku": "",
+                                "skuSalesAttributeList": [
+                                    {
+                                        "language": "en",
+                                        "attributeId": "2147484186",
+                                        "attributeName": "OPENAPI-Size",
+                                        "attributeValueId": "2147488282",
+                                        "attributeValueName": "27*20"
+                                    }
+                                ],
+                                "priceList": [
+                                    {
+                                        "site": "shein-us",
+                                        "currency": "USD",
+                                        "basePrice": 600.0,
+                                        "specialPrice": 500.0
+                                    }
+                                ],
+                                "costList": null,
+                                "inventoryList": [
+                                    {
+                                        "warehouseId": "PS3417911133",
+                                        "inventoryNum": 99
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "traceId": "61256b62aa6bb5ed"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：20次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

@@ -1,0 +1,412 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+查询SKC的合规信息要求
+/goods-compliance-requirements/list
+查询资质证书列表
+/goods-certificates/search
+查询资质证书填写规则
+/goods-certificate-schemas/detail
+上传资质证书文件
+/goods-certificate-files/upload
+创建/编辑资质证书
+/goods-certificates/save
+SKC绑定资质证书
+/goods-certificates/bind
+查询代理公司列表
+/goods-compliance/agency-list
+绑定SKC和代理公司
+/goods-compliance/save-skc-agency
+查询SKC的代理公司绑定要求
+/goods-compliance/skc-agency-detail
+查询警告语证书的填写规则
+/goods-compliance/query-warning-certificate-rules
+更新SKC的警告语
+/goods-compliance/update-skc-warning-certificate
+查询SKC的警告语绑定状态
+/goods-compliance/query-skc-warning-status
+查询SKC的实拍图要求
+/goods-compliance/skc-label-list
+查询SKC可用的标签模板
+/goods-compliance/get-label-template
+获取全量环保耗材信息
+/goods-quality/environmental-label-rule/material-quality-tree-v2
+打印合规标签
+/goods-compliance/label-print
+上传实拍图图片
+/goods-compliance/upload-skc-label-picture
+绑定SKC和实拍图
+/goods-compliance/skc-save-label
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2025-09-05 16:59:54
+打印合规标签
+POST
+/open-api/goods-compliance/label-print
+自运营
+全托管
+SHEIN自营
+半托管
+POP
+此接口支持打印商品相关的标签，标签中会包含多种信息，包括：环保标、GPSR、制造商、商品条码。
+
+打印标签前，请先通过接口/open-api/goods-compliance/get-label-template查询每个SKC可用的标签模板，每个模板中包含不同信息，每个信息需提供的入参不同。
+
+不同标签类型的图片示例参考文档。商家后台的标签打印流程可参考文档。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+请求参数（请求体）
+收起
+数据类型	是否必须	描述
+labelDetailList
+object[]	否	
+打印规则列表。即提供具体要打印什么内容的标签。单次最多支持10组规则，过多容易响应超时。
+
+打印标签前，请先通过接口/open-api/goods-compliance/get-label-template查询每个SKC可用的标签模板，每个模板中包含不同信息，每个信息需提供的入参不同。
+
+labelType
+integer	是	
+标签类型。各类型打印示例查看文档底部FAQ。
+
+1-环保标：通常包含环保信息
+
+2-GPSR标：通常包含GPSR信息（可能也会有环保标、商品条码、制造商信息）
+
+3-商家自定义：包含内容不定，此类标签由商家在后台自行创建。具体包含信息可查询/open-api/goods-compliance/get-label-template。
+
+4-GPSR+环保标：通常包含GPSR、环保信息。
+
+5-商品条码合并标：通常包含商品条码（可能也会有环保标、商品条码、制造商信息）
+
+labelCode
+string	否	
+打印的标签模板编码。通过/open-api/goods-compliance/get-label-template查询获取
+
+非必填，不传值时系统会根据入参的skc和labelType去匹配出skc可打印的所有标签模板进行打印。
+
+printNumber
+integer	否	
+标签打印数量。
+
+非必填，只有在入参labelCode的情况下，printNumer才会生效。不传值时默认每个标签打印1份。
+
+packageTypeId
+int64	否	
+此字段后续会废弃，请改用packageMaterialList入参（支持在一个标签内打印多个环保材料）。
+
+
+
+packageMaterialId
+int64	否	
+此字段后续会废弃，请改用packageMaterialList入参（支持在一个标签内打印多个环保材料）。
+
+
+
+packageMaterialList
+object[]	否	
+环保材料列表。支持一个标签内打印多个环保材料，最多10个材料。
+
+标签内包含环保信息时，需要入参此列表。通常labelType=1/2/4/5时均可入参此信息，但最终打印结果中是否会有环保材料信息，取决于标签模板中是否有环保材料的变量信息。
+
+packageTypeId
+int64	否	
+环保材料类型ID。可通过接口获取全量环保耗材信息（新）获取。
+
+通常labelType=1/2/4/5时均可入参，但最终打印结果中是否会有环保材料信息，取决于标签模板中是否有环保材料的变量信息。
+
+packageMaterialId
+int64	否	
+环保材料ID。可通过接口获取全量环保耗材信息（新）获取。
+
+通常labelType=1/2/4/5时均可入参，但最终打印结果中是否会有环保材料信息，取决于标签模板中是否有环保材料的变量信息。
+
+skc
+string	是	
+平台生成的SKC唯一编码。
+
+必填，不论什么类型的标签都需要提供。
+
+skuCode
+string	否	
+商品条码中显示的sku。标签内包含条码信息时，skucode和suppliersku选择一个入参即可，
+
+通常labelType=2/4/5时均可入参，但最终打印结果中是否会有商品条码信息，取决于标签模板中是否有商品条码的变量信息。
+
+supplierSku
+string	否	
+商品条码中显示的sku。标签内包含条码信息时，skucode和suppliersku选择一个入参即可，
+
+通常labelType=2/4/5时均可入参，但最终打印结果中是否会有商品条码信息，取决于标签模板中是否有商品条码的变量信息。
+
+orderNo
+string	否	
+商品条码中显示的采购单号。标签内包含条码信息时使用，非必填，不传值则单号位置显示空。
+
+通常labelType=2/4/5时均可入参，但最终打印结果中是否会有商品条码信息，取决于标签模板中是否有商品条码的变量信息。
+
+originCountry
+string	否	
+原产地。标签内包含GPSR信息时使用，由商家自定义输入值，填写国家名称。
+
+通常labelType=2/4/5是均可入参。
+
+productBatchNo
+string	否	
+产品批次号。标签内包含GPSR信息时使用，由商家自定义输入值。
+
+通常labelType=2/4/5是均可入参。
+
+warning
+string	否	
+警示语。标签内包含GPSR信息时使用，由商家自定义输入值。
+
+通常labelType=2/4/5是均可入参。
+
+uid
+string	是	
+打印规则的定位ID。每一行的定位ID不可重复。由开发者自定义输入，用于在返回中判断哪条规则打印失败，哪条打印成功。
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码 成功：0
+
+info
+object	否	
+打印结果列表
+
+failedList
+object[]	否	
+失败列表
+
+code
+string[]	否	
+失败code
+
+labelType
+integer	否	
+标签类型
+reason
+string[]	否	
+失败原因
+uid
+string	否	
+失败行的定位ID。
+
+一组打印规则可能匹配出多个标签，因此返回结果中会有多行相同UID出现。
+
+successList
+object[]	否	
+成功列表
+labelLength
+integer	否	
+标签尺寸-长
+
+labelType
+integer	否	
+标签类型
+labelUrl
+string	否	
+标签PDF URL。
+
+当入参中包含labelCode和printNumber（且大于1）时，URL中会包含多个内容一样的标签内容。
+
+
+
+labelWidth
+integer	否	
+标签尺寸-宽
+
+labelCode
+string	否	
+标签模板code
+uid
+string	否	
+成功行的定位ID。
+
+一组打印规则可能匹配出多个标签，因此返回结果中会有多行相同UID出现。
+
+msg
+string	否	
+错误描述,成功：OK
+
+请求返回示例
+收起
+示例场景
+请求示例
+复制
+curl --location --request POST 'http://openapi-test01.sheincorp.cn/open-api/goods-compliance/label-print' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1757062136138' \
+--header 'language: zh-cn' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+    "labelDetailList":[
+        {
+        "labelCode":"1752493613919",
+        "labelType":1,
+        "skc":"sa25080185896920018",
+        "productBatchNo":"005655435444",
+        "originCountry":"china",
+        "warning":"warning test",
+        "packageMaterialList":[
+            {
+                "package_material_id":191,
+                "package_type_id":113
+            },
+            {
+                "package_material_id":408,
+                "package_type_id":113
+            }
+        ],
+        "printNumber":10,
+        "skuCode":"I9pfmig3wu1d",
+        "uid":1},
+
+        {
+        "labelCode":"1754474187729",
+        "labelType":5,
+        "printNumber":5,
+        "skuCode":"I9pfmig3wu1d",
+        "uid":2
+        }
+    ]
+
+}'
+
+
+返回示例
+复制
+
+
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "successList": [
+            {
+                "uid": "1",
+                "labelType": 1,
+                "labelUrl": "https://ssmp-public-test-ali.oss-cn-shenzhen.aliyuncs.com/pdf2-test/pcrs/2025/9/5/1757062138054-a57537e253bf3961c581cab3ba93f4ee.oss.pdf?AWSAccessKeyId=LTAI5tRyBdX9kWZcVCLyWMTF&Expires=1757666940&Signature=FuPwCp9u2c7fbbIu3IGlvD8fOwI%3D",
+                "labelCode": "1752493613919",
+                "labelWidth": 110,
+                "labelLength": 100
+            },
+            {
+                "uid": "2",
+                "labelType": 5,
+                "labelUrl": "https://ssmp-public-test-ali.oss-cn-shenzhen.aliyuncs.com/pdf2-test/pcrs/2025/9/5/1757062138048-ef08b2bf2044f4a98af7330b5c9b0f87.oss.pdf?AWSAccessKeyId=LTAI5tRyBdX9kWZcVCLyWMTF&Expires=1757666938&Signature=5M7wMNEZXO27twojlMiOmBQmbhY%3D",
+                "labelCode": "1754474187729",
+                "labelWidth": 60,
+                "labelLength": 80
+            }
+        ],
+        "failedList": []
+    },
+    "bbl": null,
+    "traceId": "84e29a98f70cef36"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+0001	
+未找到模板
+此错误代表目前商家的数据中，无法找到符合您提供的入参组合的标签打印样式。请您调整入参重试，可以重点关注一下type。
+0002	
+未找到变量
+如果您打印的是GPSR标签，且您提供了SKC，代表商家可能没有在SKC商绑定欧代责任人或制造商信息，导致无法通过SKC获取到标签内展示信息。请联系商家前往商家后台的合规中心中操作。
+0003	
+PDF生成失败
+生成异常，请您稍后再试
+共3条数据
+限流规则
+收起
+单个开发者接口限流频次：20次/秒
+FAQ
+Q：商家后台中的打印合规标签流程
+2025-08-19
+A：
+[存在图片内容，请点击查看详情]
+查看详情
+Q：商品未绑定证书会有什么影响？
+2025-05-26
+A：
+商品未绑定证书，有可能会因为合规要求而自动下架，商品由于合规规则下架后无法上架，需要补充证书后才能上架。更多信息可查看商品证书解决方案：商品证书解决方案。
+查看详情
+Q：合规标签模板类型图片示例
+2025-03-13
+A：
+[存在图片内容，请点击查看详情]
+查看详情
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

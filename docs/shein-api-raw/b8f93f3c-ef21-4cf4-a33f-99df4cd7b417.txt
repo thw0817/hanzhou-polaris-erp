@@ -1,0 +1,165 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+首页
+应用管理
+开发套件
+我的工单
+基本信息
+app icon
+预览
+SHEIN全托运营助手
+审核通过
+合作模式: 全托管
+创建时间: 2026-06-25 15:02:41
+APP_ID
+15BE35FC0B8039835C5B0C075161F
+开发指南
+API权限包
+Webhook设置
+授权记录
+基本信息
+应用审核通过后会自动获取大部分权限包的权限，部分权限包需单独申请，审核通过后获权。
+权限包	订阅状态	API名称	API路径&文档
+议价单管理
+获取议价单列表	/open-api/goods/discuss/query-discuss-list
+处理议价单	/open-api/goods/discuss/process-discuss
+价格证明材料上传	/open-api/goods/discuss/upload-discuss-file
+店铺信息查询
+查询店铺信息	/open-api/openapi-business-backend/query-store-info
+开发者接入
+获取openKeyId和secretKey	/open-api/auth/get-by-token
+商家服务-商品
+商品接口-根据条码批量获取SKC与尺码	/open-api/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表	/open-api/goods/number-list
+商品打印条码	/open-api/goods/print-barcode
+查询是否支持自定义属性值	/open-api/goods/get-custom-attribute-permission-config
+/open-api/goods-quality/environmental-label-rule/print
+/open-api/goods-quality/environmental-label-rule/list
+/open-api/goods-quality/environmental-label-rule/material-quality-tree
+打印合规标签	/open-api/goods-compliance/label-print
+商品管理
+查询店铺站点和站点币种（旧）	/open-api/openapi-business-backend/site/query
+商品列表接口	/open-api/openapi-business-backend/product/query
+商品发布/编辑	/open-api/goods/product/publishOrEdit
+店铺查商品末级分类	/open-api/goods/query-category-tree
+查询可用品牌列表	/open-api/goods/query-brand-list
+查询分类可用属性	/open-api/goods/query-attribute-template
+sku商品详情查询（即将作废）	/open-api/openapi-business-backend/product/full-detail
+查询店铺站点和币种信息（新）	/open-api/goods/query-site-list
+图片链接转换	/open-api/goods/transform-pic
+商品发布字段规范	/open-api/goods/query-publish-fill-in-standard
+本地图片上传	/open-api/goods/upload-pic
+查询是否支持自定义属性值	/open-api/goods/get-custom-attribute-permission-config
+更新成本价	/open-api/goods/update-cost
+spu商品详情查询	/open-api/goods/spu-info
+查询商品审核状态	/open-api/goods/query-document-state
+图文识别推荐类目	/open-api/goods/image-category-suggestion
+获取全量环保耗材信息	/open-api/goods-quality/environmental-label-rule/material-quality-tree-v2
+打印合规标签	/open-api/goods-compliance/label-print
+撤回商品审核	/open-api/goods/revoke-product
+商品部分编辑	/open-api/goods/product/partialEdit
+查询关联属性填写规则	/open-api/goods/get-associated-attribute-rules
+确认店铺是否可发品	/open-api/goods/product/check-publish-permission
+确认商品是否可编辑	/open-api/goods/product/check-edit-permission
+查询商家sku是否已存在	/open-api/goods/product/check-supplierSku-repeated
+价格证明材料上传	/open-api/goods/discuss/upload-discuss-file
+查询可用IP列表	/open-api/goods/query-ip-list
+商品综合查询	/open-api/goods/searchProduct
+获取成本价涨价原因枚举值	/open-api/goods/query-change-price-reason
+查询建议零售价填写规则	/open-api/goods/query-recommend-retail-price-rule
+提交建议零售价	/open-api/goods-recommend-retail-price/batch-save
+查询商品建议零售价	/open-api/goods-recommend-retail-price/search
+查询建议零售价审核记录	/open-api/goods-recommend-retail-price-audit/search
+商品删除预校验	/open-api/goods/check-deletable
+查询商品删除审核记录	/open-api/goods-delete-logs/search
+/open-api/goods/delete/**
+上传商品证书
+/open-api/goods/get-all-certificate-type-list
+SKC绑定商品证书池	/open-api/goods/save-certificate-pool-skc-bind
+店铺证书池创建/编辑	/open-api/goods/save-or-update-supplier-certificate
+上传证书文件	/open-api/goods/upload-certificate-file
+商品证书池创建/编辑	/open-api/goods/save-or-update-certificate-pool
+查询商品证书要求和审核状态	/open-api/goods/get-certificate-rule
+查询证书所需上传资料（新）	/open-api/goods/certificate/get-all-certificate-type-list-v2
+商品合规资质
+打印合规标签	/open-api/goods-compliance/label-print
+查询代理公司列表	/open-api/goods-compliance/agency-list
+查询SKC的代理公司绑定要求	/open-api/goods-compliance/skc-agency-detail
+绑定SKC和代理公司	/open-api/goods-compliance/save-skc-agency
+查询SKC的实拍图要求	/open-api/goods-compliance/skc-label-list
+上传实拍图图片	/open-api/goods-compliance/upload-skc-label-picture
+绑定SKC和实拍图	/open-api/goods-compliance/skc-save-label
+查询SKC可用的标签模板	/open-api/goods-compliance/get-label-template
+查询警告语证书的填写规则	/open-api/goods-compliance/query-warning-certificate-rules
+更新SKC的警告语	/open-api/goods-compliance/update-skc-warning-certificate
+查询SKC的警告语绑定状态	/open-api/goods-compliance/query-skc-warning-status
+查询SKC的合规信息要求	/open-api/goods-compliance-requirements/list
+查询资质证书列表	/open-api/goods-certificates/search
+查询资质证书填写规则	/open-api/goods-certificate-schemas/detail
+上传资质证书文件	/open-api/goods-certificate-files/upload
+创建/编辑资质证书	/open-api/goods-certificates/save
+SKC绑定资质证书	/open-api/goods-certificates/bind
+采购单履约
+获取采购单信息	/open-api/order/purchase-order-infos
+查询SHEIN仓库的收件信息	/open-api/order/storage-receiver-info
+JIT母单及子单对应关系查询接口	/open-api/order/get-mothe-child-orders
+商品打印条码	/open-api/goods/print-barcode
+打印箱唛或包裹面单	/open-api/order/print-package
+创建发货单	/open-api/shipping/orderToShipping
+发货基本信息查询接口	/open-api/shipping/basic
+收货仓信息查询	/open-api/shipping/warehouse
+发货单维度打印面单	/open-api/shipping/delivery/print-package
+查询发货单列表	/open-api/shipping/delivery
+修改和取消发货单订单	/open-api/shipping/modify-delivery-order-info
+根据SKU查询销量	/open-api/goods/query-sku-sales
+商家库存查询接口	/open-api/stock/stock-query
+全托管/SHEIN自营商家库存更新	/open-api/goods/stock-update
+物流产品查询	/open-api/shipping/express-company-list-v2
+手工下备货单	/open-api/idms/create-order
+备货单审核列表	/open-api/idms/review-orders
+查shein合作物流预估运费	/open-api/openapi-business-backend/purchase-estimated-fee
+查询商品备货信息列表	/open-api/openapi-business-backend/stock-goods-list
+​查询货代信息	/open-api/pfmp/shipping/thirdPartyAndChannelList
+打印物流面单	/open-api/pfmp/print-purchase-logisticsLabel
+采购单退货解决方案
+查询商家可选择的处理方式	/open-api/purchase/return-disposals
+确认退货申请单	/open-api/purchase/confirm-return-application
+创建退货申请单	/open-api/purchase/create-return-application
+查询商家退货地址	/open-api/purchase/query-return-address
+查询退货申请单列表	/open-api/purchase/return-application-list
+查询退货申请单商品明细	/open-api/purchase/return-application-detail
+查询退货可选择的物流	/open-api/purchase/return-carriers
+查询退货与报废单列表	/open-api/purchase/return-list
+查询退货与报废单包裹明细	/open-api/purchase/return-package-detail
+查询退货方式	/open-api/purchase/return-pickup-methods
+查询退货与报废单商品明细	/open-api/purchase/return-product-detail
+查询商品可退库存数	/open-api/purchase/returnable-inventory
+修改退货单的退货方式	/open-api/purchase/update-pickup-methods
+备货申请
+手工下备货单	/open-api/idms/create-order
+备货单审核列表	/open-api/idms/review-orders
+查询商品备货信息列表	/open-api/openapi-business-backend/stock-goods-list
+库存同步
+库存接口-实时库存同步(仅代运营&自营模式)	/open-api/stock/access
+全托管/SHEIN自营商家库存更新	/open-api/goods/stock-update
+商家库存查询接口	/open-api/stock/stock-query
+销量查询
+根据SKU查询销量	/open-api/goods/query-sku-sales
+账单接口（全托&POP）
+报账单列表	/open-api/finance/report-list
+报账单补扣款收支明细	/open-api/finance/report-adjustment-detail
+报账单销售款收支明细	/open-api/finance/report-sales-detail
+获取定制信息
+查询任务结果	/open-api/ccst/v1/composite/queryTask
+获取定制数据	/open-api/ccst/v1/custom-infos
+创建⽣产模板任务	/open-api/ccst/v1/composite/task
+获取模版数据	/open-api/ccst/v1/custom-info/templates
+查询加车结构信息	/open-api/ccst/v1/custom-info/queryAddCartInfo
+AI客服
+智能客服

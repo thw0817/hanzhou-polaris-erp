@@ -1,0 +1,695 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+获取采购单信息
+/order/purchase-order-infos
+JIT母单及子单对应关系查询接口
+/order/get-mothe-child-orders
+发货基本信息查询接口
+/shipping/basic
+物流产品查询
+/shipping/express-company-list-v2
+查shein合作物流预估运费
+/openapi-business-backend/purchase-estimated-fee
+​查询货代信息
+/pfmp/shipping/thirdPartyAndChannelList
+收货仓信息查询
+/shipping/warehouse
+创建发货单
+/shipping/orderToShipping
+查询发货单列表
+/shipping/delivery
+修改和取消发货单订单
+/shipping/modify-delivery-order-info
+发货单维度打印面单
+/shipping/delivery/print-package
+打印物流面单
+/pfmp/print-purchase-logisticsLabel
+商品打印条码
+/goods/print-barcode
+手工下备货单
+/idms/create-order
+备货单审核列表
+/idms/review-orders
+查询商品备货信息列表
+/openapi-business-backend/stock-goods-list
+打印箱唛或包裹面单
+/order/print-package
+物流公司信息查询（即将废弃）
+/shipping/express-company-list
+查询SHEIN仓库的收件信息
+/order/storage-receiver-info
+查询智能拆包结果接口
+/purchase/intelligent-packing-result
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（查询参数）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-03-31 10:29:19
+获取采购单信息
+GET
+/open-api/order/purchase-order-infos
+自运营
+全托管
+SHEIN自营
+半托管
+POP
+该接口适用于全托管、SHEIN自营以及POP三种店铺类型，可用来获取对应店铺的采购单列表，并进一步查询每个采购单的详细信息。
+
+通过该接口，可以查询到普通备货单和急采单两类采购单。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+x-lt-language
+string	是	
+指定出参语种，默认中文；支持语种:英语:US 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+请求参数（查询参数）
+收起
+参数名称	数据类型	是否必须	描述
+orderNos
+string	否	
+采购单号，支持批量以','间隔，一次最多请求200采购单号
+
+skcs
+string	否	
+skc列表
+
+type
+integer	否	
+采购单类型；1：急采/ 2：备货
+
+supplierCodes
+string	否	
+商家货号数组
+
+combineTimeStart
+string	否	
+备货单或急采单下发时间--开始; Date格式 2018-05-23 10:29:59； 查询不能超过60天
+
+combineTimeEnd
+string	否	
+备货单或急采单下发时间--结束; Date格式 2018-05-23 10:29:59； 查询不能超过60天
+
+pageNumber
+integer	否	
+页码
+pageSize
+integer	否	
+一页大小，最大200条
+
+updateTimeStart
+string	否	
+备货单或急采单更新时间--开始; Date格式 2018-05-23 10:29:59； 查询不能超过60天
+
+updateTimeEnd
+string	否	
+备货单或急采单更新时间--结束; Date格式 2018-05-23 10:29:59； 查询不能超过60天
+
+selectJitMother
+integer	否	
+Jit母单查询标识；1：返回所有采购单（含Jit母单）/ 2或不传：返回除Jit母单外的其他采购单（不含Jit母单）
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	否	
+状态码
+
+msg
+string	否	
+错误描述,成功：OK；支持指定语种出参；
+
+info
+object	否	
+响应信息
+
+count
+double	否	
+总数
+pageNo
+double	否	
+页码
+pageSize
+double	否	
+页面数量
+list
+object[]	否	
+数据列表
+orderNo
+string	否	
+订单编号
+
+typeName
+string	否	
+订单类型，1：急采，2：备货
+
+type
+int64	否	
+备货单类型，1：急采，2：备货
+
+orderExtends
+object[]	否	
+详情信息
+
+skc
+string	否	
+SHEIN skc
+
+price
+double	否	
+结算价格
+
+skuCode
+string	否	
+SHEIN sku
+
+suffixZh
+string	否	
+属性集是属性值的拼接，如Blue-L，最多三个属性值拼接
+
+needQuantity
+integer	否	
+需求数量
+
+orderQuantity
+integer	否	
+下单数量
+
+deliveryQuantity
+integer	否	
+送货数量
+
+receiptQuantity
+integer	否	
+收货数量
+storageQuantity
+integer	否	
+入仓数量
+
+defectiveQuantity
+integer	否	
+次品数量
+supplierCode
+string	否	
+商家货号（skc纬度）
+
+remark
+string	否	
+备注
+imgPath
+string	否	
+SKC图片
+skuImg
+string	否	
+sku图片；该字段仅全托管可用；
+
+requestDeliveryQuantity
+string	否	
+JIT母单中已下子备货单数量（适用Jit场景）；
+
+noRequestDeliveryQuantity
+string	否	
+JIT母单中未下子备货单数量（适用Jit场景）；
+
+alreadyDeliveryQuantity
+string	否	
+JIT母单中子备货单的总已发货单数量（适用Jit场景）；
+
+supplierSku
+string	否	
+商家sku
+
+currencyName
+string	否	
+币种名称；全托管（代运营）模式支持指定语种出参；
+
+currency
+string	否	
+币种代码
+currencyId
+integer	否	
+币种Id
+isPriorProductionName
+string	否	
+是否优先生产（枚举值：是、否；适用Jit场景）；
+
+isJitMotherName
+string	否	
+是否JIT母单（枚举值：是、否）
+
+场景示例：JIT母单是预下单，需要发货时，比如需要发货100，会产生一个JIT子单（即普通订单）数量100。
+
+updateTime
+datetime	否	
+更新时间；状态发生变更的采购单的时间
+supplierName
+string	否	
+商家名称
+
+orderSupervisor
+string	否	
+跟单员（适用Jit场景）；
+
+addUid
+string	否	
+添加人（适用Jit场景）；
+
+requestDeliveryTime
+datetime	否	
+要求发货时间（适用Jit场景）；
+
+orderLabelInfo
+object[]	否	
+备货单标签信息（暂只支持全托管模式返回）
+orderLabel
+integer	否	
+备货单标签枚举值；
+orderLabelName
+string	否	
+备货单标签名称；如“安检”等信息；支持按指定语种出参；
+goodsLevel
+object[]	否	
+备货单商品层次信息（暂只支持全托管模式返回）
+goodsLevel
+integer	否	
+商品层次名称枚举值；
+goodsLevelName
+string	否	
+商品层次名称；如“备货款A”，“新款A”等信息；支持按指定语种出参；
+requestReceiptTime
+datetime	是	
+要求收货时间，采购单下发后有值（备货&急采） 要求送至SHEIN仓的最晚时间
+requestTakeParcelTime
+string	否	
+要求取件时间，急采单下发后有值，备货单可能返回为空；送货方式选择“SHEIN合作物流”，商家超过该时效会交货给到物流，将会面临罚款
+addTime
+string	否	
+备货单的创建时间
+
+allocateTime
+string	否	
+备货单的下发时间
+
+reserveTime
+string	否	
+预约送货时间；全托管（代运营）模式无需关注
+
+receiptTime
+string	否	
+SHEIN仓库收货时间
+checkTime
+string	否	
+质检完成时间
+
+storageTime
+string	否	
+仓库确认入库的时间
+
+returnTime
+string	否	
+退货时间；质检失败，订单状态变为「已退货」，代表SHEIN确认要进行退货
+
+firstMarkName
+string	否	
+首单标识；首单要求发货80%以上，自主上新的订单首单要求订单所有尺码的送货数量>=1
+
+firstMark
+boolean	否	
+首单标识
+
+prepareTypeName
+string	否	
+备货类型名称 ，当采购单类型是备货时有值；备货类型一致才可以合单发货；当值=[JIT备货]时，代表该采购单为Jit采购单；
+
+prepareTypeId
+integer	否	
+备货类型值 ，当采购单类型是备货时有值；备货类型一致才可以合单发货；当值=[9]时代表该备货单为Jit子单；
+
+categoryName
+string	否	
+订单类型名称 (ODM单 线上单 线下单)；全托管（代运营）模式无需关注
+
+orderMarkName
+string	否	
+订单标识名称 (正常备货 样衣订单 退货再入仓)；全托管（代运营）模式无需关注
+
+warehouseName
+string	否	
+收货仓库id对应的仓库名称
+urgentTypeName
+string	否	
+紧急类型 (普通 紧急 特急)；表示订单的紧急程度
+urgentType
+integer	否	
+紧急标识；仅全托管（代运营）模式返回；
+
+storageId
+string	否	
+SHEIN收货仓库id
+recommendedSubWarehouseId
+string	否	
+预估收货仓id；只有一个枚举ID=1347（华东质检仓）或者0（华东转运仓）或者空，预估收货仓ID一致时才能合单发货；
+
+countryMarket
+int64	否	
+预销国家市场；0：默认/ 1：南大区/ 2：北大区；当type=2时才会返回，1和2的备货单不能合单发货，0可以和1或2合单发货；
+
+requestCompleteTime
+string	否	
+要求完工时间（适用Jit场景）；
+
+isProductionCompletionName
+string	否	
+是否生产完成（适用Jit场景）；
+
+isAllDeliveryName
+string	否	
+是否完全要求发货（适用Jit场景）；
+
+isDeliveryName
+string	否	
+是否送货（适用Jit场景）；
+
+status
+integer	否	
+订单状态；1:待下单/ 2:已下单/ 3:发货中/ 4:已送货/ 5:已收货/ 6:已查验/ 7:已退货/ 8:已完成/ 9:无货下架/ 10:已作废/ 11:待审核/ 12:分单中/ 13:待退货
+
+全托管（代运营）模式只有2、3、4、5、7、8、10状态；
+
+statusName
+string	否	
+状态名称；全托管（代运营）模式支持指定语种出参；
+
+deliveryTime
+datetime	否	
+发货时间
+customInfoId
+string	否	
+仅限订单为C端定制有数据，客单定制信息id
+customInfo
+json	否	
+仅限订单为C端定制有数据，客单定制信息
+attributeVersion
+integer	否	
+成份版本号；（当前仅OEM，ODM商家有返回值）
+isIncrementOnWay
+integer	否	
+是否增值中；1:是/ 2:否；（当前仅OEM，ODM商家有返回值）
+
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request GET 'https://openapi.sheincorp.cn/open-api/order/purchase-order-infos?orderNos=PB2505200000635' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'Content-Type: application/json;charset=UTF-8' \
+--header 'x-lt-timestamp: 1752570729613' \
+--header 'language: US' \
+--data-raw ''
+
+
+返回示例
+复制
+{
+    "code": "0", 
+    "msg": "OK", 
+    "info": {
+        "count": 1, 
+        "pageNo": 1, 
+        "pageSize": 20, 
+        "list": [
+            {
+                "orderNo": "PB2505200000635", 
+                "typeName": "急采", 
+                "currencyName": "人民币元", 
+                "currency": null, 
+                "supplierName": "H12", 
+                "orderSupervisor": "练红秀", 
+                "addUid": "dms-root", 
+                "requestDeliveryTime": "2025-04-23 23:59:59", 
+                "orderLabelInfo": [
+                    {
+                        "orderLabel": 163, 
+                        "orderLabelName": ""
+                    }, 
+                    {
+                        "orderLabel": 13, 
+                        "orderLabelName": "安检"
+                    }, 
+                    {
+                        "orderLabel": 193, 
+                        "orderLabelName": "履约评估考核订单"
+                    }
+                ], 
+                "goodsLevel": [
+                    {
+                        "goodsLevel": 228, 
+                        "goodsLevelName": "退供款"
+                    }
+                ], 
+                "addTime": "2025-04-23 06:17:38", 
+                "allocateTime": "2025-04-23 06:21:05", 
+                "reserveTime": "1970-01-01 08:00:01", 
+                "receiptTime": "1970-01-01 08:00:01", 
+                "checkTime": "1970-01-01 08:00:01", 
+                "storageTime": "2025-04-24 21:44:48", 
+                "returnTime": "1970-01-01 08:00:01", 
+                "requestTakeParcelTime": "2025-04-23 23:59:59", 
+                "requestReceiptTime": null, 
+                "firstMarkName": "否", 
+                "prepareTypeName": "备货单", 
+                "categoryName": "1急采", 
+                "orderMarkName": "正常备货", 
+                "warehouseName": "佛山仓", 
+                "urgentTypeName": "", 
+                "urgentType": null, 
+                "storageId": 1, 
+                "recommendedSubWarehouseId": 0, 
+                "requestCompleteTime": null, 
+                "isProductionCompletionName": null, 
+                "isAllDeliveryName": null, 
+                "isDeliveryName": null, 
+                "currencyId": 156, 
+                "firstMark": 2, 
+                "orderMarkId": 733, 
+                "prepareTypeId": 17, 
+                "category": 0, 
+                "type": 1, 
+                "status": 8, 
+                "statusName": "已完成", 
+                "updateTime": "2025-04-25 01:21:59", 
+                "isJitMotherName": "否", 
+                "isPriorProductionName": null, 
+                "orderExtends": [
+                    {
+                        "skc": "s255904", 
+                        "price": 73, 
+                        "needQuantity": null, 
+                        "orderQuantity": 1, 
+                        "deliveryQuantity": 1, 
+                        "receiptQuantity": 0, 
+                        "storageQuantity": 1, 
+                        "defectiveQuantity": 0, 
+                        "supplierCode": "SWLC1265-5BR28", 
+                        "remark": "", 
+                        "imgPath": "https://img.ltwebstatic.com/images3_spmp/2025/03/14/e2/1741946708842dfe053372c941778f161b55e09e60.jpg", 
+                        "skuImg": "", 
+                        "requestDeliveryQuantity": null, 
+                        "noRequestDeliveryQuantity": null, 
+                        "alreadyDeliveryQuantity": null, 
+                        "supplierSku": "SBR28", 
+                        "skuCode": "I2840edmz", 
+                        "suffixZh": "棕色-28 inch"
+                    }
+                ], 
+                "deliveryTime": "2025-04-23 17:13:16", 
+                "customInfoId": "", 
+                "customInfo": null
+            }
+        ]
+    }, 
+    "bbl": { }, 
+    "traceId": "b30354e8da18ea2e"
+}
+
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+pfmp90002	
+采购单号查询总数不能超过200
+入参字段“orderNos”采购单号查询总数不能超过200
+pfmp90003	
+skc查询总数不能超过200
+入参字段“skcs ”skc列表。查询总数不能超过200
+pfmp90004	
+供应商货号查询总数不能超过200
+入参字段“supplierCodes”商家货号数组查询总数不能超过200
+pfmp90005	
+至少需要填一个非必填字段
+更新或下单时间，必须填一个
+pfmp90012	
+查询急采订单不能传递分单时间
+只查询急采单请入参字段“addTimeStart”，”addTimeEnd“
+pfmp90013	
+查询备货订单不能传递下单时间
+只查询备货单请入参字段”allocateTimeStart” “allocateTimeEnd”
+pfmp90014	
+不能搜索超过60天的数据
+查询的时间范围不要超过60天
+pfmp90015	
+分单开始/结束时间必须同时传入
+查询需要同时传入分单开始时间和分单结束时间
+pfmp90016	
+下单开始/结束时间必须同时传入
+查询的时候需要同时传入下单开始时间和下单结束时间
+pfmp90018	
+更新开始/结束时间必须同时传入
+查询的时候需要同时传入更新开始时间和更新结束时间
+-1	
+未查询到供应商信息
+调用的openkey不符合当前业务类型，请检查！
+-1	
+至少需要填一个非必填字段
+更新或下单时间，必须填一个
+832215	
+没有API权限：请求未匹配任何api接口，请接口提供方=PMS给调用方=open_api开启接口权限
+请检查接口调用方法是否是GET
+共13条数据
+限流规则
+收起
+单个开发者接口限流频次：50次/秒
+FAQ
+Q：平台是否对订单有发货时效要求？
+2025-10-22
+A：
+
+无论是消费者订单还是 SHEIN 采购订单，平台对订单均有发货时效的要求，具体内容如下：1. 如果您指的是消费者订单：商家需在收到订单后，将仓库商品尽快发货给消费者。平台对订单有严格的时效要求，如果商家未在指定的时间内处理订单，平台将自动取消订单。为了避免资损，商家需要按照平台规定及时处理订单信息。
+开发者可通过接口 /open-api/order/order-detail 中的字段 timeOutTime 来判断发货时效，对应的逻辑如下：typeOutType=1：当商品为 "待处理" 状态（newGoodsStatus=1）时，若未在规定时间内流转到 "待发货" 状态（newGoodsStatus=2），平台将自动取消订单。typeOutType=2 且 performanceType=2：当商家负责自主发货时，如果客单为 "待发货" 状态（newGoodsStatus=2），但未在规定时间内流转到 "已发货" 状态（newGoodsStatus=4），平台将自动取消订单。typeOutType=7 且 performanceType=1：当 SHEIN 负责物流发货时，如果客单为 "待发货" 状态（newGoodsStatus=2），但未在规定时间内流转到 "已发货" 状态（newGoodsStatus=4），平台将自动取消订单。枚举值 typeOutType=100：若订单未在规定时限内流转到 "已签收" 状态（newGoodsStatus=5），平台会自动取消订单。
+2. 如果您指的是 SHEIN 采购订单：SHEIN 采购订单是指 SHEIN 向商家采购商品，商家需按要求将商品发往 SHEIN 指定仓库。
+开发者可通过接口 /open-api/order/purchase-order-infos 中的以下字段来查看相关时效：requestReceiptTime：要求的收货时间，采购单发放后会包含此字段（适用于备货和急采单），表示将商品送至 SHEIN 指定仓库的最晚时间。requestTakeParcelTime：要求取件时间，仅适用于急采单（备货单可能返回为空）。当采用 "SHEIN 合作物流" 方式时，商家若超过该时效未按要求交货至物流，将面临处罚
+查看详情
+Q：订单和采购单的区别
+2025-12-04
+A：
+订单：消费者在前端站点下单付款后生成的订单。采购单：SHEIN买手向商家进行采购的订单
+Q：订单有哪些状态？哪些状态可查询？
+2024-12-24
+A：
+可查询订单状态：已下单：订单下给商家；发货中：商家将订单加入发货台；已送货：商家操作完发货；已收货：我司仓库收货；已查验：我司质检部质检完成已退货：我司仓库退货；已完成：订单完成上架；无货下架、已作废：订单作废；待审核：订单发起作废申请等待审核
+不可查询订单状态：待下单：还未下单；分单中：订单补充信息中；待退货：订单价即将退货
+查看详情
+Q：「订单接口-获取采购单信息」中分单时间allocateTime，下单时间addTime，联合时间combineTime，更新时间updateTime分别代表什么意思？
+2024-02-19
+A：
+分单时间allocateTime为查询下备货单的时间，下单时间addTime为查询下急采单的时间，联合时间combineTime是能够查询下急采单和备货单的时间，更新时间updateTime为查询采购单发货变更的时间.
+查看详情
+Q：什么是预估收货仓？
+2025-06-16
+A：
+针对某些特定地区的商家，需要先经过shein的转运仓再发往佛山仓，预估收货仓指的是转运仓；现只有两个转运仓分别是：1347:华东质检仓/0:华东转运仓。
+查看详情
+Q：定制的采购单是一单一件的吗？
+2024-12-24
+A：
+定制采购单一般为一单一件，如果出现一单多件场景，定制信息是一样的.
+Q：为什么商家后台的采购单从接口没有请求到？
+2024-12-24
+A：
+SHEIN系统对刚下单的订单会做一些批处理操作，查询的接口会过滤该状态下的订单，处理时间不定，一般0-5分钟处理完.
+Q：为什么两个备货单的商品和定制内容是一模一样？
+2024-12-24
+A：
+是正常的
+Q：接口返回的定制字段的预览图是返回原图吗？
+2024-12-24
+A：
+接口返回的预览图为缩略图，暂时不支持返回原图
+Q：为什么SKU图片在接口里面没有返回？
+2024-12-24
+A：
+接口返回的为SKC维度的图片，如有获取SKU维度的图片可以参考链接： https://open.sheincorp.com/documents/system/4d96fc8f-4913-4211-8630-5d81e7fcc010
+查看详情
+Q：「订单接口-获取采购单信息」需求数量needQuantity和下单数量orderQuantity有什么区别？
+2024-12-24
+A：
+简易平台全托管的商家只需要关注下单数量即可，为采购单下单的数量
+Q：一次最多请求多少条数据？
+2024-12-24
+A：
+支持批量查询采购单信息，一次最多请求200skc/订单号/供方货号
+Q：如何查询集采和备货订单数据
+2025-05-26
+A：
+传递分单时间查询备货订单，传递下单时间查询急采订单，传递联合时间查询急采和备货类型订单非必填字段中（采购订单号、SKC、采购类型、供方货号、[分单时间-开始+分单时间-结束]【作一组】、[下单时间-开始+下单时间-结束]【作一组】、[联合时间-开始+联合时间-结束]【作一组】），至少需要填一个；(【“分单开始/结束时间”】【“下单开始/结束时间”】）与“联合开始/结束时间”互斥；“分单开始/结束时间”与“下单开始/结束时间”不互斥。
+查看详情
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

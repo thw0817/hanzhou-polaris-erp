@@ -1,0 +1,471 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+商品发布/编辑
+/goods/product/publishOrEdit
+商品部分编辑
+/goods/product/partialEdit
+确认店铺是否可发品
+/goods/product/check-publish-permission
+确认商品是否可编辑
+/goods/product/check-edit-permission
+查询商品审核状态
+/goods/query-document-state
+撤回商品审核
+/goods/revoke-product
+商品综合查询
+/goods/searchProduct
+商品列表接口
+/openapi-business-backend/product/query
+商品上下架
+/goods/modify-skc-shelf
+spu商品详情查询
+/goods/spu-info
+sku商品详情查询（即将作废）
+/openapi-business-backend/product/full-detail
+商品发布字段规范
+/goods/query-publish-fill-in-standard
+店铺查商品末级分类
+/goods/query-category-tree
+图文识别推荐类目
+/goods/image-category-suggestion
+查询分类可用属性
+/goods/query-attribute-template
+查询是否支持自定义属性值
+/goods/get-custom-attribute-permission-config
+添加自定义属性值
+/goods/add-custom-attribute-value
+查询关联属性填写规则
+/goods/get-associated-attribute-rules
+查询店铺站点和币种信息（新）
+/goods/query-site-list
+查询店铺站点和站点币种（旧）
+/openapi-business-backend/site/query
+查询可用品牌列表
+/goods/query-brand-list
+查询可用IP列表
+/goods/query-ip-list
+图片链接转换
+/goods/transform-pic
+本地图片上传
+/goods/upload-pic
+获取店铺上架额度
+/goods/query-shelf-quota
+查询商家sku是否已存在
+/goods/product/check-supplierSku-repeated
+商品删除预校验
+/goods/check-deletable
+提交商品删除申请
+/goods/delete/{skcName}
+查询商品删除审核记录
+/goods-delete-logs/search
+查询商品证书要求和审核状态
+/goods/get-certificate-rule
+查询证书所需上传资料（新）
+/goods/certificate/get-all-certificate-type-list-v2
+上传证书文件
+/goods/upload-certificate-file
+商品证书池创建/编辑
+/goods/save-or-update-certificate-pool
+店铺证书池创建/编辑
+/goods/save-or-update-supplier-certificate
+SKC绑定商品证书池
+/goods/save-certificate-pool-skc-bind
+商品接口-根据条码批量获取SKC与尺码
+/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表
+/goods/number-list
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新记录
+更新时间：2026-06-29 19:52:41
+查询商品证书要求和审核状态
+POST
+/open-api/goods/get-certificate-rule
+自运营
+全托管
+半托管
+POP
+该API支持查询证书要求及证书信息。
+
+2026年7月开放平台已推出资质证书新接口，建议对接新接口，详细方案请参考文档。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+language
+string	是	
+language
+Content-Type
+string	是	
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+
+请求参数（请求体）
+收起
+数据类型	是否必须	描述
+attributeList
+object[]	否	
+属性数组
+
+attributeId
+int64	否	
+商品的普通属性id，对接店铺可用属性接口中attribute_type=4的属性
+
+attributeValueId
+int64	否	
+商品的普通属性值id；商品的普通属性id，对接店铺可用属性接口中attribute_type=4的属性值
+
+categoryId
+int64	否	
+商品的末级分类id
+
+certificatePoolId
+int64[]	否	
+证书池ID；通过创建证书池获取，可用于查询证书池当前的审核状态
+
+siteArrList
+string[]	否	
+商品销售的站点信息
+
+spuName
+string	否	
+SHEIN平台生成的SPU，对应商品发布的spu_name；建议用spu查询商品所需证书以及证书的审核状态
+
+systemId
+string	否	
+来源系统:固定传spmp
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+bbl
+object	否	
+响应异常时的bbl相关信息
+info
+object	否	
+*
+object[]	否	
+key
+string	否	
+npid
+string	否	
+tag
+string	否	
+value
+string	否	
+npid
+string	否	
+code
+string	是	
+响应编码 成功：0
+info
+object	否	
+data
+object[]	否	
+结果
+certificateDimension
+integer	否	
+判断证书是否需要绑定商品；1、商品维度的证书，该类型的证书需要绑定skc；2、店铺维度的证书，该类型的证书上传后，不需要绑定skc商品
+
+certificateLabel
+string	否	
+字符标识： 0普通类型；1字符类型
+
+certificateMissStatus
+boolean	否	
+证书类型缺失状态 (true: 证书缺失 false：证书不缺)
+
+certificatePoolList
+object[]	否	
+证书信息集合
+
+auditStatus
+string	否	
+审核状态 1 待审核、2 审批成功、3 审批失败
+
+certificateExpireStatus
+string	否	
+证书过期状态：1：正常(未过期)， 2：证书即将过期 3：过期
+
+certificatePoolFileList
+object[]	否	
+证书文件集合
+
+certificateUrl
+string	否	
+证书url地址
+
+certificateUrlName
+string	否	
+证书url名称
+
+certificatePoolId
+int64	否	
+证书池id
+
+expireTime
+datetime	否	
+证书过期时间 (即有效期) 如果是 1970-01-01 00:00:00 则永不过期
+
+pqmsCertificateSn
+string	否	
+证书编号sn
+
+certificateTypeId
+int64	否	
+证书类型ID
+
+certificateTypeValue
+string	否	
+证书类型名称
+
+fileModelUrl
+string	否	
+CPC证书下载模板链接
+
+isRequired
+boolean	否	
+是否必须要有证书 true：必有  false：非必有
+
+mergeSiteInfoList
+object[]	否	
+管控的站点信息集合
+
+mergeSiteName
+string	否	
+管控的区域名称
+subSiteList
+string[]	否	
+管控的子站集合信息
+otherSourceCertInfoList
+object[]	否	
+其他系统来源证书集合
+
+auditStatus
+string	否	
+审核状态 1 待审核、2 审批成功、3 审批失败
+
+certificateExpireStatus
+string	否	
+证书过期状态：0：正常(未过期)， 1：证书即将过期 2：过期
+
+certificatePoolFileList
+object[]	否	
+证书文件集合
+
+certificateUrl
+string	否	
+证书url地址
+
+certificateUrlName
+string	否	
+证书url名称
+
+expireTime
+datetime	否	
+证书过期时间 (即有效期) 如果是 1970-01-01 00:00:00 则永不过期
+
+pqmsCertificateSn
+string	否	
+证书编号sn
+
+systemSource
+string	否	
+来源系统
+
+selfCertificateList
+object[]	否	
+字符声明类型下的普通证书类型信息
+certificateTypeId
+int64	否	
+证书类型id
+certificateTypeName
+string	否	
+证书池类型名称
+meta
+object	否	
+元数据
+count
+integer	否	
+数据记录数
+customObj
+object	否	
+用户自定义扩展
+
+msg
+string	否	
+错误描述,成功：OK
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/goods/get-certificate-rule' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1751009482524' \
+--header 'language: zh-cn' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi.sheincorp.com' \
+--data-raw '{
+  "spuName": "a250620506652"
+}'
+
+
+返回示例
+复制
+{
+  "code": "0",
+  "msg": "OK",
+  "info": {
+    "data": [
+      {
+        "certificateTypeId": 230,
+        "mergeSiteInfoList": [
+          {
+            "mergeSiteName": "欧洲",
+            "subSiteList": [
+              "SHEIN西班牙站"
+            ]
+          }
+        ],
+        "certificateTypeValue": "EN ISO16321检测报告",
+        "fileModelUrl": "",
+        "certificateDimension": 1,
+        "certificateLabel": 0,
+        "certificateMissStatus": false,
+        "isRequired": true,
+        "certificatePoolList": [
+          {
+            "certificatePoolId": 8623835,
+            "certificateExpireStatus": 1,
+            "expireTime": "2029-11-12 00:00:00",
+            "auditStatus": 3,
+            "pqmsCertificateSn": "spmp202411150553014",
+            "certificatePoolFileList": [
+              {
+                "certificateUrlName": "Doc.pdf",
+                "certificateUrl": "https://lt-pqms.oss-cn-shenzhen.aliyuncs.com/gpc202411150038838.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20250106T051757Z&X-Amz-SignedHeaders=host&X-Amz-Expires=431999&X-Amz-Credential=LTAI5tKvGuVMaYLBaMkpkiBr/20250106/oss-cn-shenzhen/s3/aws4_request&X-Amz-Signature=d29f718de41f5dd01555dadb89ddf22ad759917f6f31275a80dfa0ee39ebd407"
+              }
+            ]
+          }
+        ],
+        "otherSourceCertInfoList": [],
+        "selfCertificateList": []
+      },
+      {
+        "certificateTypeId": 456,
+        "mergeSiteInfoList": [
+          {
+            "mergeSiteName": "欧洲",
+            "subSiteList": [
+              "SHEIN西班牙站"
+            ]
+          }
+        ],
+        "certificateTypeValue": "GPSR欧盟责任人",
+        "fileModelUrl": "",
+        "certificateDimension": 1,
+        "certificateLabel": 0,
+        "certificateMissStatus": false,
+        "isRequired": false,
+        "certificatePoolList": [],
+        "otherSourceCertInfoList": null,
+        "selfCertificateList": []
+      }
+    ],
+    "meta": {
+      "count": 2,
+      "customObj": null
+    }
+  },
+  "bbl": null,
+  "traceId": "d7e2b83cdbd786ec"
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+832213	
+请求被限流:[提供方服务[spmp-service]对消费者服务:[open_api]的API[/spmp-service/spmp/out/open_api/certificate/get_certificate_rule]触发限流！]
+请开发者参考API文档中的限流规则，调整调用频次
+20006	
+证书要求获取失败， 请重试
+请稍后重试
+20001	
+bad reqeust:JSON parse error: Cannot deserialize value of type `com.shein.spmp.vo.request.certificate.openapi.GetCertificateRuleAndCertificateOutReq$ValidateAttribute` from Array value (token `JsonToken.START_ARRAY`); nested exception is com.fasterxml.jackson.databind.exc.MismatchedInputException: Cannot deserialize value of type `com.shein.spmp.vo.request.certificate.openapi.GetCertificateRuleAndCertificateOutReq$ValidateAttribute` from Array value (token `JsonToken.START_ARRAY`) at [Source: (org.springframework.util.StreamUtils$NonClosingInputStream); line: 1, column: 19] (through reference chain: com.shein.spmp.vo.request.certificate.openapi.GetCertificateRuleAndCertificateOutReq["attributeList"]->java.util.ArrayList[0])
+请检查您的入参是否符合JSON规范
+共3条数据
+限流规则
+收起
+单个开发者接口限流频次：40次/秒
+FAQ
+No Data
+暂无数据
+更新记录
+更新时间	更新内容
+2026-06-29	
+2026年7月开放平台已推出资质证书新接口，建议对接新接口，详细方案请参考文档：https://open.sheincorp.com/documents/system/05911185-74f1-48d6-a620-fdfb756f6a86
+共1条数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

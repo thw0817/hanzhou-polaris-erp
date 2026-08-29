@@ -1,0 +1,358 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+获取采购单信息
+/order/purchase-order-infos
+JIT母单及子单对应关系查询接口
+/order/get-mothe-child-orders
+发货基本信息查询接口
+/shipping/basic
+物流产品查询
+/shipping/express-company-list-v2
+查shein合作物流预估运费
+/openapi-business-backend/purchase-estimated-fee
+​查询货代信息
+/pfmp/shipping/thirdPartyAndChannelList
+收货仓信息查询
+/shipping/warehouse
+创建发货单
+/shipping/orderToShipping
+查询发货单列表
+/shipping/delivery
+修改和取消发货单订单
+/shipping/modify-delivery-order-info
+发货单维度打印面单
+/shipping/delivery/print-package
+打印物流面单
+/pfmp/print-purchase-logisticsLabel
+商品打印条码
+/goods/print-barcode
+手工下备货单
+/idms/create-order
+备货单审核列表
+/idms/review-orders
+查询商品备货信息列表
+/openapi-business-backend/stock-goods-list
+打印箱唛或包裹面单
+/order/print-package
+物流公司信息查询（即将废弃）
+/shipping/express-company-list
+查询SHEIN仓库的收件信息
+/order/storage-receiver-info
+查询智能拆包结果接口
+/purchase/intelligent-packing-result
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（查询参数）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-03-31 21:31:39
+发货基本信息查询接口
+GET
+/open-api/shipping/basic
+自运营
+全托管
+SHEIN自营
+半托管
+POP
+通过该接口获取商家发货地址，发货仓，支持的发货方式，打包方式，车队，自行委托第三方的物流服务商信息；
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+x-lt-language
+string	否	
+指定出参语种，默认中文；支持语种:英语:US 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+请求参数（查询参数）
+收起
+参数名称	数据类型	是否必须	描述
+orderType
+integer	是	
+订单类型，1：急采，2：备货
+
+addressId
+integer	否	
+不同的发货地址可匹配不同的快递物流，不选择发货地址某些物流公司无法匹配
+
+orderNoList
+string	否	
+订单号list
+includeSharedAddr
+integer	否	
+是否查询共享发货地址，1：是，2：否，默认为1
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码 成功：0
+info
+object	否	
+addressList
+object[]	否	
+发货地址
+addressId
+integer	否	
+地址ID
+addressName
+string	否	
+地址名称
+isSharedAddress
+integer	否	
+是否为共享发货地址
+deliveryTypeList
+object[]	否	
+发货方式
+deliveryTypeName
+string	否	
+发货方式名称，支持按指定语种出参
+
+deliveryTypeValue
+integer	否	
+发货方式值
+expressCompanyList
+object[]	否	
+获取商家自行联系的物流服务商信息；SHEIN集成的物流服务商信息请通过物流产品查询接口获取
+
+companyCode
+string	否	
+快递编码
+companyName
+string	否	
+快递公司名称
+isSupport
+boolean	否	
+服务商类型；true:SHEIN集成物流服务商；false：商家自行委托第三方物流服务商；
+
+isRecommend
+string	否	
+是否推荐物流，1：是，2：否
+
+motorcadeList
+object[]	否	
+车队列表；快递发货商家无需关注
+
+isSupport
+boolean	否	
+服务商类型；true:SHEIN集成车队；false：商家自行委托第三方车队；
+
+motorcadeId
+string	否	
+车队编码
+motorcadeName
+string	否	
+车队名称
+packageType
+integer	否	
+打包类型 1:包裹 2：箱唛
+shippingRouteList
+string	否	
+发货路径，0：直送路径，无需装箱明细。1：直送路径，需要装箱明细。2：集货路径
+
+supplierWarehouseList
+object[]	否	
+商家仓库
+
+supplierWarehouseId
+int64	否	
+商家仓库id
+
+warehouseName
+string	否	
+仓库名称
+
+msg
+string	否	
+错误描述,成功：OK
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request GET 'https://openapi.sheincorp.cn/open-api/shipping/basic?orderType=1' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'Content-Type: application/json;charset=UTF-8' \
+--header 'x-lt-timestamp: 1752570464986' \
+--data-raw ''
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "deliveryTypeList": [
+            {
+                "deliveryTypeName": "快递/物流送货",
+                "deliveryTypeValue": 1
+            },
+            {
+                "deliveryTypeName": "送货上门",
+                "deliveryTypeValue": 2
+            },
+            {
+                "deliveryTypeName": "定点收货",
+                "deliveryTypeValue": 3
+            },
+            {
+                "deliveryTypeName": "新增发货方式",
+                "deliveryTypeValue": 4
+            },
+            {
+                "deliveryTypeName": "上门查货",
+                "deliveryTypeValue": 21
+            },
+            {
+                "deliveryTypeName": "送货上门",
+                "deliveryTypeValue": 10
+            }
+        ],
+        "addressList": [
+            {
+                "addressName": "河南地址",
+                "addressId": 4722
+            },
+            {
+                "addressName": "青羊地址",
+                "addressId": 4721
+            },
+            {
+                "addressName": "宝鸡",
+                "addressId": 4720
+            }
+        ],
+        "supplierWarehouseList": [
+            {
+                "warehouseName": "323432",
+                "supplierWarehouseId": 78377
+            },
+            {
+                "warehouseName": "仓库kkiki",
+                "supplierWarehouseId": 78376
+            },
+            {
+                "warehouseName": "总仓",
+                "supplierWarehouseId": 78359
+            }
+        ],
+        "expressCompanyList": [
+            {
+                "companyName": "提前我认为其他完全放弃",
+                "companyCode": "afasfsag",
+                "isSupport": true
+            },
+            {
+                "companyName": "车门",
+                "companyCode": "chemen",
+                "isSupport": true
+            },
+            {
+                "companyName": "dhl",
+                "companyCode": "dhl",
+                "isSupport": false
+            },
+            {
+                "companyName": "fedex",
+                "companyCode
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+pfmp0009	
+发货地址不存在
+入参字段“addressId”发货地址ID 请从发货基本信息接口/open-api/shipping/basic获取
+pfmp99400	
+订单类型不能为空
+查的入参字段orderType必填，填入1或2
+pfmp99400	
+订单类型参数错误
+查的入参字段orderType必填，填入1或2
+pfmp0009	
+未查询到地址信息
+入参字段“addressId”发货地址ID 请从发货基本信息接口/open-api/shipping/basic获取
+共4条数据
+限流规则
+收起
+单个开发者接口限流频次：50次/秒
+FAQ
+Q：返回信息发货地址和商家仓库有什么关系？
+2025-12-04
+A：
+商家在商家后台设置了多个商家仓库，商家仓库和发货地址时一对多的关系.
+Q：当发货方式为快递，接口字段【是否在线运单】是什么意思？
+2024-12-24
+A：
+SHEIN合作的物流在线运单为【是】，非SHEIN合作的快递在线运单【否】
+Q：入参的「addressId」怎么来？有什么用？
+2025-12-04
+A：
+先查询「发货基本信息查询接口」，了解不同站点有哪些发货地址「addressId」。找到合适的地址，查询可发货的方式/快递公司/车队列表以及商家仓库
+查看详情
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

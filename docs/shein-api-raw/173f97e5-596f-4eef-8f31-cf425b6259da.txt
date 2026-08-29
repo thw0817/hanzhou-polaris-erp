@@ -1,0 +1,363 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+查询退货申请单列表
+/purchase/return-application-list
+查询退货申请单商品明细
+/purchase/return-application-detail
+查询商家可选择的处理方式
+/purchase/return-disposals
+查询退货方式
+/purchase/return-pickup-methods
+查询商家退货地址
+/purchase/query-return-address
+查询退货可选择的物流
+/purchase/return-carriers
+确认退货申请单
+/purchase/confirm-return-application
+查询商品可退库存数
+/purchase/returnable-inventory
+创建退货申请单
+/purchase/create-return-application
+查询退货与报废单列表
+/purchase/return-list
+查询退货与报废单商品明细
+/purchase/return-product-detail
+查询退货与报废单包裹明细
+/purchase/return-package-detail
+修改退货单的退货方式
+/purchase/update-pickup-methods
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-06-09 14:51:56
+查询退货申请单商品明细
+POST
+/open-api/purchase/return-application-detail
+全托管
+查询指定退货申请单的商品明细
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+bblLang
+string	否	
+page
+integer	否	
+页码，不传默认1
+
+pageSize
+integer	否	
+分页大小，1-100，不传默认20
+
+returnPlanNo
+string	是	
+退货申请单
+
+skcNames
+string[]	否	
+SKC
+
+skuCodes
+string[]	否	
+平台SKU
+
+supplierCode
+string	否	
+货号
+
+supplierSkus
+string[]	否	
+商家SKU
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码，成功：0
+
+msg
+string	是	
+错误描述,成功：OK
+traceId
+string	是	
+请求的唯一标识；用于异常报错跟踪
+info
+object	否	
+data
+object[]	否	
+detailInfoList
+object[]	否	
+明细
+
+orderType
+integer	否	
+订单类型
+
+platformSku
+string	否	
+平台SKU
+
+quantity
+integer	否	
+申请数量
+
+sellerOrderNo
+string	否	
+采购单号
+
+subSuffixZh
+string	否	
+商品属性集
+
+supplierSku
+string	否	
+商家SKU
+
+warehouseId
+integer	否	
+备货仓库ID
+
+warehouseName
+string	否	
+备货仓库名称
+
+goodsThumb
+string[]	否	
+商品主图
+
+skcCopyFlag
+integer	否	
+是否专供SHEIN：1-是，2-否
+
+skcMarkFlagName
+string	否	
+skc退供标识
+
+skcName
+string	否	
+SKC
+
+skcSlowMovingFlag
+integer	否	
+是否是不动销skc：1-是，2-否
+
+supplierCode
+string	否	
+货号
+
+totalApplyQuantity
+integer	否	
+合计
+
+meta
+object	否	
+count
+integer	否	
+customObj
+object	否	
+
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/purchase/return-application-detail' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'Content-Type: application/json;charset=UTF-8' \
+--header 'x-lt-timestamp: 1752570849017' \
+--data-raw '{
+    "returnPlanNo": "JH26060300000009"
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "goodsThumb": [
+                    null
+                ],
+                "skcName": "sMM23121180897184",
+                "skcCopyFlag": 2,
+                "supplierCode": null,
+                "detailInfoList": [
+                    {
+                        "subSuffixZh": "XL中文-1pc",
+                        "platformSku": "I6445ww5yg3u",
+                        "supplierSku": "asd1231231311",
+                        "quantity": 1,
+                        "warehouseName": "佛山仓",
+                        "warehouseId": 1,
+                        "sellerOrderNo": "J240408600020",
+                        "orderType": 1
+                    }
+                ],
+                "totalApplyQuantity": 1,
+                "skcMarkFlagName": "",
+                "skcSlowMovingFlag": 2
+            },
+            {
+                "goodsThumb": [
+                    null
+                ],
+                "skcName": "sh2305166869555115",
+                "skcCopyFlag": 2,
+                "supplierCode": null,
+                "detailInfoList": [
+                    {
+                        "subSuffixZh": "S",
+                        "platformSku": "I12vvgjg2osy",
+                        "supplierSku": "光滑浴室壁挂盒-透明-小号",
+                        "quantity": 1,
+                        "warehouseName": "佛山仓",
+                        "warehouseId": 1,
+                        "sellerOrderNo": "",
+                        "orderType": 0
+                    }
+                ],
+                "totalApplyQuantity": 1,
+                "skcMarkFlagName": "",
+                "skcSlowMovingFlag": 2
+            },
+            {
+                "goodsThumb": [
+                    ""
+                ],
+                "skcName": "ss24013144626648",
+                "skcCopyFlag": 2,
+                "supplierCode": "jing001",
+                "detailInfoList": [
+                    {
+                        "subSuffixZh": "XXXL-2pc",
+                        "platformSku": "I924qkl0nnk2",
+                        "supplierSku": "",
+                        "quantity": 1,
+                        "warehouseName": "佛山仓",
+                        "warehouseId": 1,
+                        "sellerOrderNo": "PB2604300000025-3",
+                        "orderType": 2
+                    }
+                ],
+                "totalApplyQuantity": 1,
+                "skcMarkFlagName": "不动销sku退供哈哈",
+                "skcSlowMovingFlag": 1
+            },
+            {
+                "goodsThumb": [
+                    "http://imgdeal-test01.shein.com/v4/j/sxfs/2025/09/25/e8/1758787664a31d69f5789c9f6b2bf6b0d857f68dfe.jpg"
+                ],
+                "skcName": "ss25092374866787944",
+                "skcCopyFlag": 2,
+                "supplierCode": "12",
+                "detailInfoList": [
+                    {
+                        "subSuffixZh": "blackk-单一尺寸",
+                        "platformSku": "I521hc0tv9xq",
+                        "supplierSku": "",
+                        "quantity": 1,
+                        "warehouseName": "佛山仓",
+                        "warehouseId": 1,
+                        "sellerOrderNo": "PB2604210000140-2",
+                        "orderType": 2
+                    }
+                ],
+                "totalApplyQuantity": 1,
+                "skcMarkFlagName": "",
+                "skcSlowMovingFlag": 2
+            }
+        ],
+        "meta": {
+            "count": 4,
+            "customObj": {}
+        }
+    },
+    "bbl": {},
+    "traceId": "a91a1bc00a342d3b"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：50次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

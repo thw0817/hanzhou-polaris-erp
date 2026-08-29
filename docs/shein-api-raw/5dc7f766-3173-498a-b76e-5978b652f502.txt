@@ -1,0 +1,413 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+商品发布/编辑
+/goods/product/publishOrEdit
+商品部分编辑
+/goods/product/partialEdit
+确认店铺是否可发品
+/goods/product/check-publish-permission
+确认商品是否可编辑
+/goods/product/check-edit-permission
+查询商品审核状态
+/goods/query-document-state
+撤回商品审核
+/goods/revoke-product
+商品综合查询
+/goods/searchProduct
+商品列表接口
+/openapi-business-backend/product/query
+商品上下架
+/goods/modify-skc-shelf
+spu商品详情查询
+/goods/spu-info
+sku商品详情查询（即将作废）
+/openapi-business-backend/product/full-detail
+商品发布字段规范
+/goods/query-publish-fill-in-standard
+店铺查商品末级分类
+/goods/query-category-tree
+图文识别推荐类目
+/goods/image-category-suggestion
+查询分类可用属性
+/goods/query-attribute-template
+查询是否支持自定义属性值
+/goods/get-custom-attribute-permission-config
+添加自定义属性值
+/goods/add-custom-attribute-value
+查询关联属性填写规则
+/goods/get-associated-attribute-rules
+查询店铺站点和币种信息（新）
+/goods/query-site-list
+查询店铺站点和站点币种（旧）
+/openapi-business-backend/site/query
+查询可用品牌列表
+/goods/query-brand-list
+查询可用IP列表
+/goods/query-ip-list
+图片链接转换
+/goods/transform-pic
+本地图片上传
+/goods/upload-pic
+获取店铺上架额度
+/goods/query-shelf-quota
+查询商家sku是否已存在
+/goods/product/check-supplierSku-repeated
+商品删除预校验
+/goods/check-deletable
+提交商品删除申请
+/goods/delete/{skcName}
+查询商品删除审核记录
+/goods-delete-logs/search
+查询商品证书要求和审核状态
+/goods/get-certificate-rule
+查询证书所需上传资料（新）
+/goods/certificate/get-all-certificate-type-list-v2
+上传证书文件
+/goods/upload-certificate-file
+商品证书池创建/编辑
+/goods/save-or-update-certificate-pool
+店铺证书池创建/编辑
+/goods/save-or-update-supplier-certificate
+SKC绑定商品证书池
+/goods/save-certificate-pool-skc-bind
+商品接口-根据条码批量获取SKC与尺码
+/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表
+/goods/number-list
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-04-21 17:39:13
+查询关联属性填写规则
+POST
+/open-api/goods/get-associated-attribute-rules
+自运营
+全托管
+半托管
+发布或编辑商品时，某个商品属性（attribute_type=3/4）或尺码属性（attribute_type=2）是否必填有两层规则：基础规则、关联规则。
+
+基础规则：通过/open-api/goods/query-attribute-template获取，attribute_status=3代表属性必填。
+
+关联规则：在基础规则上，部分非必填属性因业务要求也会变成必填。
+
+   规则1：选择A属性的A1属性值，导致B属性必填（B属性原本可能是非必填）
+
+   规则2：选择A属性的A1属性值、B属性的B1属性值，导致C属性必填，且可能存在必填属性值C1、C2、C3范围（C属性原本可能是非必填）
+
+此接口可查询关联规则，建议在商品发布之前调用，将填写的所有商品属性&属性值作为入参，查看是否存在需要填写的关联属性。（不要输入销售、尺码属性）
+
+
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+application/json
+
+x-lt-signature
+string	是	
+接口签名
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+
+language
+string	否	
+支持返回的多语言报错信息，例如：language:en。默认返回中文多语言信息 英语:en 法语: fr 西班牙语:es 德语:de 中文简体:zh-cn 泰语:th 巴西葡语:pt-br
+
+请求参数（请求体）
+收起
+数据类型	是否必须	描述
+get_linked_rule_req_list
+object[]	是	
+输入所有已填写的商品属性（不要给销售、尺码属性），接口会返回这些属性组合情况下，会有哪些关联属性必填。
+
+支持同时查询多个商品的关联属性规则，每个商品信息记为一组，例如同时查询商品A、商品B的关联规则，则A的信息作为group1，B的信息作为group2查询。
+
+group_id
+string	否	
+组别id，开发者自定义值即可，批量查询商品时用于定位，单次请求最多支持10个group。
+
+category_id
+int64	是	
+商品末级分类id
+
+product_type_id
+int64	是	
+商品末级分类对应的类型id
+
+attribute_list
+object[]	是	
+已填写的商品属性列表。列表内可填写的attribute_id数量没有限制。
+
+attribute_id
+int64	是	
+属性名id
+
+attribute_value_id
+int64	否	
+属性值id；如果属性名下都多个属性值，需提供多组信息。
+
+当属性值的输入方式attribute_mode=4（下拉选择+手动输入）时，将下拉选择的value id入参至此处，手动输入的attribute_extra_value不用录入
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应码。响应正常为0。
+
+msg
+string	是	
+响应信息。响应正常为OK。
+
+info
+object	是	
+响应详情
+
+data
+object[]	是	
+规则信息
+
+group_id
+string	否	
+组别id。内容和入参时保持一致。
+
+link_rule_attribute_list
+object[]	否	
+关联属性必填规则。
+
+此对象下若无值，则代表没有必填的关联属性。若有值，则所有的attribute_id都是必填。若attribute_value_list或attribute_value_pre_fill_list有值，则代表必须在2个list的合集范围内选择属性值。
+
+结果中出现入参中填入的attribute_id是正常现象。
+
+attribute_id
+int64	否	
+属性名id。
+
+可能会出现商品属性或尺码属性。
+
+attribute_value_list
+int64[]	否	
+属性值id；若此字段有值（可能1个或多个），代表必须在list范围内选择属性值。若无值，代表属性值没有范围要求。
+
+此列表和attribute_value_pre_fill_list里都可能会有值，需要取两者的合集。
+
+attribute_value_pre_fill_list
+int64[]	否	
+属性值id；若此字段有值（可能1个或多个），代表必须在list范围内选择属性值。若无值，代表属性值没有范围要求。
+
+此列表和attribute_value_list里都可能会有值，需要取两者的合集。
+
+meta
+object	是	
+数据统计
+
+count
+integer	否	
+count对象为group_id
+
+traceId
+string	是	
+请求追踪码
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/goods/get-associated-attribute-rules' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1753682806205' \
+--header 'language: en' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi.sheincorp.com' \
+--data-raw '{
+   "get_linked_rule_req_list":[
+    {
+        
+        "group_id":1,
+        "category_id": 20039919,
+        "product_type_id": 2147503231,
+        "attribute_list":[
+            {
+                "attribute_id":2147484223,
+                "attribute_value_id":2147488193
+            },
+            {
+                "attribute_id":2147484194,
+                "attribute_value_id":7627286
+            },
+            {
+                "attribute_id": 2147484194,
+                "attribute_value_id":7627280
+            }
+        ]
+    },
+     {
+        
+        "group_id":2,
+        "category_id": 20039919,
+        "product_type_id": 2147503231,
+        "attribute_list":[
+            {
+                "attribute_id":2147484223,
+                "attribute_value_id":21474881945
+            },
+            {
+                "attribute_id":2147484194,
+                "attribute_value_id":762725546
+            },
+            {
+                "attribute_id": 21474841954,
+                "attribute_value_id":762280
+            }
+        ]
+    }
+   ]
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "group_id": "1",
+                "link_rule_attribute_list": [
+                    {
+                        "attribute_id": 2147484196,
+                        "attribute_value_list": [
+                            440,
+                            442
+                        ],
+                        "attribute_value_pre_fill_list": []
+                    },
+                    {
+                        "attribute_id": 2147484188,
+                        "attribute_value_list": [
+                            290,
+                            372,
+                            325,
+                            327,
+                            62,
+                            154,
+                            91
+                        ],
+                        "attribute_value_pre_fill_list": [
+                            154,
+                            91
+                        ]
+                    }
+                ]
+            },
+            {
+                "group_id": "2",
+                "link_rule_attribute_list": [
+                    {
+                        "attribute_id": 2147484196,
+                        "attribute_value_list": [
+                            440,
+                            442
+                        ],
+                        "attribute_value_pre_fill_list": []
+                    },
+                    {
+                        "attribute_id": 2147484188,
+                        "attribute_value_list": [
+                            290,
+                            372,
+                            325,
+                            327,
+                            62,
+                            154,
+                            91
+                        ],
+                        "attribute_value_pre_fill_list": [
+                            154,
+                            91
+                        ]
+                    }
+                ]
+            }
+        ],
+        "meta": {
+            "count": 2,
+            "customObj": null
+        }
+    },
+    "bbl": null,
+    "traceId": "55d05009ca82c48f"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：60次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

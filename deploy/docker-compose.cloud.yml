@@ -1,0 +1,361 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shein_console
+      POSTGRES_USER: shein
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - shein_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shein -d shein_console"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1200M
+
+  migration:
+    profiles: ["migration"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    restart: "no"
+    command: ["npm", "run", "db:migrate"]
+    environment:
+      SHEIN_RUNTIME_MODE: cloud
+      DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
+      SHEIN_MIGRATION_DATABASE_URL: ${SHEIN_MIGRATION_DATABASE_URL:?SHEIN_MIGRATION_DATABASE_URL is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  runtime-database-audit:
+    profiles: ["audit"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    restart: "no"
+    command: ["npm", "run", "db:audit:runtime-role"]
+    environment:
+      SHEIN_RUNTIME_MODE: cloud
+      DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 192mb
+      - --maxmemory-policy
+      - noeviction
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - shein_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  control:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    restart: unless-stopped
+    environment:
+      SHEIN_RUNTIME_MODE: cloud
+      SHEIN_CLOUD_CONTROL_HOST: 0.0.0.0
+      SHEIN_CLOUD_CONTROL_PORT: 8790
+      SHEIN_CLOUD_ALLOWED_ORIGINS: ${SHEIN_CLOUD_ALLOWED_ORIGINS:-}
+      SHEIN_APP_ID: ${SHEIN_APP_ID:-}
+      SHEIN_APP_SECRET: ${SHEIN_APP_SECRET:-}
+      SHEIN_API_BASE_URL: ${SHEIN_API_BASE_URL:-https://openapi.sheincorp.cn}
+      SHEIN_AUTHORIZATION_HOST: ${SHEIN_AUTHORIZATION_HOST:-openapi-sem.sheincorp.com}
+      SHEIN_DESKTOP_REDIRECT_URL: ${SHEIN_DESKTOP_REDIRECT_URL:-http://127.0.0.1:8787/api/shein/auth/callback}
+      SHEIN_WEB_AUTHORIZATION_REDIRECT_URL: ${SHEIN_WEB_AUTHORIZATION_REDIRECT_URL:-https://app.hanzhou.icu/v1/web/shein/auth/callback}
+      SHEIN_WEB_APP_BASE_URL: ${SHEIN_WEB_APP_BASE_URL:-https://app.hanzhou.icu}
+      SHEIN_CLOUD_ENCRYPTION_KEY: ${SHEIN_CLOUD_ENCRYPTION_KEY:-}
+      SHEIN_WEB_COOKIE_NAME: ${SHEIN_WEB_COOKIE_NAME:-shein_web_session}
+      SHEIN_WEB_COOKIE_SECURE: ${SHEIN_WEB_COOKIE_SECURE:-true}
+      SHEIN_PUBLIC_REGISTRATION_TENANT_ID: ${SHEIN_PUBLIC_REGISTRATION_TENANT_ID:-}
+      SHEIN_EMAIL_PROVIDER: ${SHEIN_EMAIL_PROVIDER:-}
+      SHEIN_EMAIL_API_KEY: ${SHEIN_EMAIL_API_KEY:-}
+      SHEIN_EMAIL_FROM: ${SHEIN_EMAIL_FROM:-}
+      SHEIN_EMAIL_REPLY_TO: ${SHEIN_EMAIL_REPLY_TO:-}
+      SHEIN_SMTP_HOST: ${SHEIN_SMTP_HOST:-smtp.163.com}
+      SHEIN_SMTP_PORT: ${SHEIN_SMTP_PORT:-465}
+      SHEIN_SMTP_SECURE: ${SHEIN_SMTP_SECURE:-true}
+      SHEIN_SMTP_USER: ${SHEIN_SMTP_USER:-}
+      SHEIN_SMTP_PASSWORD: ${SHEIN_SMTP_PASSWORD:-}
+      SHEIN_WEB_SHEIN_MODULE_ENABLED: ${SHEIN_WEB_SHEIN_MODULE_ENABLED:-false}
+      SHEIN_TITLE_AI_API_URL: ${SHEIN_TITLE_AI_API_URL:-}
+      SHEIN_TITLE_AI_API_KEY: ${SHEIN_TITLE_AI_API_KEY:-}
+      SHEIN_TITLE_AI_MODEL: ${SHEIN_TITLE_AI_MODEL:-}
+      SHEIN_TITLE_AI_MODEL_URL: ${SHEIN_TITLE_AI_MODEL_URL:-}
+      SHEIN_TITLE_AI_TIMEOUT_MS: ${SHEIN_TITLE_AI_TIMEOUT_MS:-30000}
+      SHEIN_TITLE_AI_MAX_CONCURRENT: ${SHEIN_TITLE_AI_MAX_CONCURRENT:-2}
+      SHEIN_TITLE_AI_MAX_QUEUE: ${SHEIN_TITLE_AI_MAX_QUEUE:-8}
+      SHEIN_STORE_BUSINESS_REFRESH_ENABLED: ${SHEIN_STORE_BUSINESS_REFRESH_ENABLED:-false}
+      SHEIN_RULE_REFRESH_ENABLED: ${SHEIN_RULE_REFRESH_ENABLED:-false}
+      SHEIN_COMPLIANCE_SYNC_ENABLED: ${SHEIN_COMPLIANCE_SYNC_ENABLED:-false}
+      SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED: ${SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED:-false}
+      SHEIN_COMPLIANCE_WRITES_ENABLED: ${SHEIN_COMPLIANCE_WRITES_ENABLED:-false}
+      SHEIN_COMPLIANCE_CONFIRMATION_SECRET: ${SHEIN_COMPLIANCE_CONFIRMATION_SECRET:-}
+      SHEIN_MEDIA_STORAGE_PROVIDER: ${SHEIN_MEDIA_STORAGE_PROVIDER:-}
+      SHEIN_MEDIA_S3_ENDPOINT: ${SHEIN_MEDIA_S3_ENDPOINT:-}
+      SHEIN_MEDIA_S3_REGION: ${SHEIN_MEDIA_S3_REGION:-}
+      SHEIN_MEDIA_S3_BUCKET: ${SHEIN_MEDIA_S3_BUCKET:-}
+      SHEIN_MEDIA_S3_ACCESS_KEY_ID: ${SHEIN_MEDIA_S3_ACCESS_KEY_ID:-}
+      SHEIN_MEDIA_S3_SECRET_ACCESS_KEY: ${SHEIN_MEDIA_S3_SECRET_ACCESS_KEY:-}
+      SHEIN_MEDIA_MAX_UPLOAD_BYTES: ${SHEIN_MEDIA_MAX_UPLOAD_BYTES:-20971520}
+      SHEIN_DRAFT_LIMIT_PER_STORE: ${SHEIN_DRAFT_LIMIT_PER_STORE:-100}
+      SHEIN_DRAFT_LIMIT_PER_ACCOUNT: ${SHEIN_DRAFT_LIMIT_PER_ACCOUNT:-1000}
+      SHEIN_MEDIA_LIMIT_PER_STORE: ${SHEIN_MEDIA_LIMIT_PER_STORE:-1000}
+      SHEIN_MEDIA_LIMIT_PER_ACCOUNT: ${SHEIN_MEDIA_LIMIT_PER_ACCOUNT:-10000}
+      SHEIN_MEDIA_BYTES_LIMIT_PER_STORE: ${SHEIN_MEDIA_BYTES_LIMIT_PER_STORE:-4294967296}
+      SHEIN_MEDIA_BYTES_LIMIT_PER_ACCOUNT: ${SHEIN_MEDIA_BYTES_LIMIT_PER_ACCOUNT:-42949672960}
+      DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "127.0.0.1:8790:8790"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch("http://127.0.0.1:8790/ready").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  store-business-refresh-worker:
+    profiles: ["sync"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    restart: unless-stopped
+    command: ["npm", "run", "store-business-refresh-worker:cloud"]
+    environment:
+      SHEIN_RUNTIME_MODE: cloud
+      SHEIN_APP_ID: ${SHEIN_APP_ID:-}
+      SHEIN_APP_SECRET: ${SHEIN_APP_SECRET:-}
+      SHEIN_API_BASE_URL: ${SHEIN_API_BASE_URL:-https://openapi.sheincorp.cn}
+      SHEIN_CLOUD_ENCRYPTION_KEY: ${SHEIN_CLOUD_ENCRYPTION_KEY:-}
+      SHEIN_STORE_BUSINESS_REFRESH_ENABLED: ${SHEIN_STORE_BUSINESS_REFRESH_ENABLED:-false}
+      SHEIN_STORE_BUSINESS_REFRESH_CONCURRENCY: ${SHEIN_STORE_BUSINESS_REFRESH_CONCURRENCY:-1}
+      SHEIN_STORE_BUSINESS_SCHEDULER_ENABLED: ${SHEIN_STORE_BUSINESS_SCHEDULER_ENABLED:-false}
+      SHEIN_STORE_BUSINESS_SCHEDULE_INTERVAL_MS: ${SHEIN_STORE_BUSINESS_SCHEDULE_INTERVAL_MS:-900000}
+      DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  rule-refresh-worker:
+    profiles: ["sync"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    restart: unless-stopped
+    command: ["npm", "run", "rule-refresh-worker:cloud"]
+    environment:
+      SHEIN_RUNTIME_MODE: cloud
+      SHEIN_APP_ID: ${SHEIN_APP_ID:-}
+      SHEIN_APP_SECRET: ${SHEIN_APP_SECRET:-}
+      SHEIN_API_BASE_URL: ${SHEIN_API_BASE_URL:-https://openapi.sheincorp.cn}
+      SHEIN_CLOUD_ENCRYPTION_KEY: ${SHEIN_CLOUD_ENCRYPTION_KEY:-}
+      SHEIN_RULE_REFRESH_ENABLED: ${SHEIN_RULE_REFRESH_ENABLED:-false}
+      SHEIN_RULE_REFRESH_CONCURRENCY: ${SHEIN_RULE_REFRESH_CONCURRENCY:-1}
+      SHEIN_RULE_REFRESH_TARGET_CONCURRENCY: ${SHEIN_RULE_REFRESH_TARGET_CONCURRENCY:-4}
+      SHEIN_RULE_REFRESH_SCHEDULE_ENABLED: ${SHEIN_RULE_REFRESH_SCHEDULE_ENABLED:-false}
+      SHEIN_RULE_REFRESH_SCHEDULE_INTERVAL_MS: ${SHEIN_RULE_REFRESH_SCHEDULE_INTERVAL_MS:-60000}
+      SHEIN_RULE_REFRESH_SCHEDULE_DAY: ${SHEIN_RULE_REFRESH_SCHEDULE_DAY:-1}
+      SHEIN_RULE_REFRESH_SCHEDULE_START_HOUR: ${SHEIN_RULE_REFRESH_SCHEDULE_START_HOUR:-3}
+      SHEIN_RULE_REFRESH_SCHEDULE_END_HOUR: ${SHEIN_RULE_REFRESH_SCHEDULE_END_HOUR:-4}
+      SHEIN_RULE_REFRESH_SCHEDULE_TIME_ZONE: ${SHEIN_RULE_REFRESH_SCHEDULE_TIME_ZONE:-Asia/Shanghai}
+      DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  compliance-sync-worker:
+    profiles: ["sync"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    restart: unless-stopped
+    command: ["npm", "run", "compliance-sync-worker:cloud"]
+    environment:
+      SHEIN_RUNTIME_MODE: cloud
+      SHEIN_APP_ID: ${SHEIN_APP_ID:-}
+      SHEIN_APP_SECRET: ${SHEIN_APP_SECRET:-}
+      SHEIN_API_BASE_URL: ${SHEIN_API_BASE_URL:-https://openapi.sheincorp.cn}
+      SHEIN_CLOUD_ENCRYPTION_KEY: ${SHEIN_CLOUD_ENCRYPTION_KEY:-}
+      SHEIN_COMPLIANCE_SYNC_ENABLED: ${SHEIN_COMPLIANCE_SYNC_ENABLED:-false}
+      SHEIN_COMPLIANCE_SYNC_CONCURRENCY: ${SHEIN_COMPLIANCE_SYNC_CONCURRENCY:-1}
+      DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  product-publish-worker:
+    profiles: ["publish"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    restart: unless-stopped
+    command: ["npm", "run", "product-publish-worker:cloud"]
+    environment:
+      SHEIN_RUNTIME_MODE: cloud
+      SHEIN_API_BASE_URL: ${SHEIN_API_BASE_URL:-https://openapi.sheincorp.cn}
+      SHEIN_CLOUD_ENCRYPTION_KEY: ${SHEIN_CLOUD_ENCRYPTION_KEY:-}
+      SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED: ${SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED:-false}
+      SHEIN_COMPLIANCE_WRITES_ENABLED: ${SHEIN_COMPLIANCE_WRITES_ENABLED:-false}
+      SHEIN_PRODUCT_PUBLISH_CONCURRENCY: ${SHEIN_PRODUCT_PUBLISH_CONCURRENCY:-1}
+      DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  webhook:
+    profiles: ["webhook"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    restart: unless-stopped
+    command: ["npm", "run", "webhook:cloud"]
+    environment:
+      SHEIN_RUNTIME_MODE: cloud
+      SHEIN_APP_ID: ${SHEIN_APP_ID:-}
+      SHEIN_APP_SECRET: ${SHEIN_APP_SECRET:-}
+      SHEIN_WEBHOOK_HOST: 0.0.0.0
+      SHEIN_WEBHOOK_PORT: 8791
+      SHEIN_WEBHOOK_INGRESS_ENABLED: ${SHEIN_WEBHOOK_INGRESS_ENABLED:-false}
+      SHEIN_WEBHOOK_VERIFICATION_MODE: ${SHEIN_WEBHOOK_VERIFICATION_MODE:-disabled}
+      SHEIN_WEBHOOK_MAX_CLOCK_SKEW_MS: ${SHEIN_WEBHOOK_MAX_CLOCK_SKEW_MS:-300000}
+      DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "127.0.0.1:8791:8791"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch("http://127.0.0.1:8791/health").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+
+  webhook-worker:
+    profiles: ["webhook"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    restart: unless-stopped
+    command: ["npm", "run", "webhook-worker:cloud"]
+    environment:
+      SHEIN_RUNTIME_MODE: cloud
+      DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+
+  media-cleanup:
+    profiles: ["media"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    restart: unless-stopped
+    command: ["npm", "run", "media-cleanup:cloud"]
+    environment:
+      SHEIN_RUNTIME_MODE: cloud
+      DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
+      SHEIN_MEDIA_STORAGE_PROVIDER: ${SHEIN_MEDIA_STORAGE_PROVIDER:-}
+      SHEIN_MEDIA_S3_ENDPOINT: ${SHEIN_MEDIA_S3_ENDPOINT:-}
+      SHEIN_MEDIA_S3_REGION: ${SHEIN_MEDIA_S3_REGION:-}
+      SHEIN_MEDIA_S3_BUCKET: ${SHEIN_MEDIA_S3_BUCKET:-}
+      SHEIN_MEDIA_S3_ACCESS_KEY_ID: ${SHEIN_MEDIA_S3_ACCESS_KEY_ID:-}
+      SHEIN_MEDIA_S3_SECRET_ACCESS_KEY: ${SHEIN_MEDIA_S3_SECRET_ACCESS_KEY:-}
+      SHEIN_MEDIA_CLEANUP_INTERVAL_MS: ${SHEIN_MEDIA_CLEANUP_INTERVAL_MS:-60000}
+      SHEIN_MEDIA_CLEANUP_BATCH_SIZE: ${SHEIN_MEDIA_CLEANUP_BATCH_SIZE:-100}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+volumes:
+  shein_postgres_data:
+  shein_redis_data:

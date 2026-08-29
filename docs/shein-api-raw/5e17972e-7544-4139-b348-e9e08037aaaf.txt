@@ -1,0 +1,318 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+商品发布/编辑
+/goods/product/publishOrEdit
+商品部分编辑
+/goods/product/partialEdit
+确认店铺是否可发品
+/goods/product/check-publish-permission
+确认商品是否可编辑
+/goods/product/check-edit-permission
+查询商品审核状态
+/goods/query-document-state
+撤回商品审核
+/goods/revoke-product
+商品综合查询
+/goods/searchProduct
+商品列表接口
+/openapi-business-backend/product/query
+商品上下架
+/goods/modify-skc-shelf
+spu商品详情查询
+/goods/spu-info
+sku商品详情查询（即将作废）
+/openapi-business-backend/product/full-detail
+商品发布字段规范
+/goods/query-publish-fill-in-standard
+店铺查商品末级分类
+/goods/query-category-tree
+图文识别推荐类目
+/goods/image-category-suggestion
+查询分类可用属性
+/goods/query-attribute-template
+查询是否支持自定义属性值
+/goods/get-custom-attribute-permission-config
+添加自定义属性值
+/goods/add-custom-attribute-value
+查询关联属性填写规则
+/goods/get-associated-attribute-rules
+查询店铺站点和币种信息（新）
+/goods/query-site-list
+查询店铺站点和站点币种（旧）
+/openapi-business-backend/site/query
+查询可用品牌列表
+/goods/query-brand-list
+查询可用IP列表
+/goods/query-ip-list
+图片链接转换
+/goods/transform-pic
+本地图片上传
+/goods/upload-pic
+获取店铺上架额度
+/goods/query-shelf-quota
+查询商家sku是否已存在
+/goods/product/check-supplierSku-repeated
+商品删除预校验
+/goods/check-deletable
+提交商品删除申请
+/goods/delete/{skcName}
+查询商品删除审核记录
+/goods-delete-logs/search
+查询商品证书要求和审核状态
+/goods/get-certificate-rule
+查询证书所需上传资料（新）
+/goods/certificate/get-all-certificate-type-list-v2
+上传证书文件
+/goods/upload-certificate-file
+商品证书池创建/编辑
+/goods/save-or-update-certificate-pool
+店铺证书池创建/编辑
+/goods/save-or-update-supplier-certificate
+SKC绑定商品证书池
+/goods/save-certificate-pool-skc-bind
+商品接口-根据条码批量获取SKC与尺码
+/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表
+/goods/number-list
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2025-07-17 11:56:50
+商品列表接口
+POST
+/open-api/openapi-business-backend/product/query
+自运营
+全托管
+半托管
+POP
+该API支持查询已发布成功的商品列表数据，接口一次最多返回50000条数据。如果商家发布的商品数量超过50000条，请增加时间范围进行查询。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+pageNum
+integer	否	
+页面数量，默认：1
+
+pageSize
+integer	否	
+页面大小，默认：50
+
+insertTimeEnd
+string	否	
+商品上新的结束时间（商品首次审核通过），示例：2024-11-15 19:00:00
+insertTimeStart
+string	否	
+商品上新的开始时间（商品首次审核通过）示例：2024-11-15 20:00:00
+updateTimeEnd
+string	否	
+商品的更新结束时间（更新范围不仅是商品信息变动，包括系统内部更新时间）.示例：2024-11-15 19:00:00
+updateTimeStart
+string	否	
+商品的更新开始时间（更新范围不仅是商品信息变动，包括系统内部更新时间）.示例：2024-11-15 19:00:00
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	否	
+编码(0:success)
+
+info
+object	否	
+data
+object[]	否	
+skcName
+string	否	
+skcName，skcName是SHEIN生成的系统编码
+
+skuCodeList
+string[]	否	
+sku维度数据，一个skc下最多40个sku；skuCode，skuCode是SHEIN生成的系统编码
+
+spuName
+string	否	
+spuName，spuName是SHEIN生成的系统编码
+
+msg
+string	否	
+错误信息
+
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+
+
+curl --location --request POST 'https://openapi-test01.sheincorp.cn/open-api/openapi-business-backend/product/query' \
+--header 'language: zh-cn' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-timestamp: 1752724525405' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+    "pageNum": 1, "pageSize": 50
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "skcName": "sM22040955900525",
+                "skuCodeList": [
+                    "I065lggbkwpe",
+                    "I065lggbejle",
+                    "I065lggb9yr6",
+                    "I065lggbivg3",
+                    "I065lggbg9pt",
+                    "I065lggbclpa",
+                    "I065lggb4uy5"
+                ],
+                "spuName": "M2204095590"
+            },
+            {
+                "skcName": "sM22120115814401",
+                "skuCodeList": [
+                    "I9bqt81qmsv0"
+                ],
+                "spuName": "M2212011581"
+            }
+        ]
+    }
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+-1	
+page_num不能为空,且需为大于0的整数
+page_num必填
+-1	
+查询总数超过限定值:50000
+减少page_num或page_size的数量
+-1	
+获取商品列表失败
+稍后再试
+共3条数据
+限流规则
+收起
+单个开发者接口限流频次：100次/秒
+FAQ
+Q：什么是product_id和goods_id？SHEIN平台商品唯一标识是什么？
+2025-11-12
+A：
+
+SHEIN平台没有叫做product_id的标识。常见的商品唯一标识有：SPU（字段：spu_name）：平台生成的SPU唯一编码，代表一个商品型号或款式，包含多种颜色、尺码等变体。SPU标识用于接口查询商品信息。SKC（字段：skc_name）：平台生成的SKC唯一编码，在SPU基础上增加了主销售属性（通常为颜色）。SHEIN的商品层级关系有3层，其中SKC是销售属性，也叫主规格属性，例如一个商品有黑色和白色两种颜色，黑色和白色会分别生成skc_name；SKC标识一般用于接口修改商品上下架。SKU（字段：sku_code）：平台生成的SKU唯一编码，是最小产品单元，区分每个具体规格，如款式、颜色、尺寸。SKU是最小的产品单元，但也是销售属性，也叫次规格属性，比如黑色有S、M、L三个尺码，S、M、L三个尺码分别对应不同sku_code；SKU标识一般用于接口修改库存和价格。
+商品标识可通过商品列表接口获取：/open-api/openapi-business-backend/product/query。⚠️注意：商品列表接口只返回审核通过的商品信息。平台未提供接口获取审核中或审核失败的商品标识。开发者使用商品发布接口 /open-api/goods/product/publishOrEdit 上传商品后，接口会返回spu_name、skc_name、sku_code参数，但此时商品处于审核中或可能审核失败，因此不会通过商品列表接口返回。商品标识之间的关系（spu、skc、sku）可通过商品详情接口获取：/open-api/goods/spu-info
+SHEIN平台也没有goods_id的标识。但是有订单详情接口有goodsid字段；接口：/open-api/order/order-detail订单详情里面的商品数量可以根据goodsid来统计，每件商品的唯一ID。如果一个 SKU 有多件，每一件的goodsId都是唯一的
+查看详情
+Q：关于【流量概览】数据，如何通过API接口获取？
+2026-01-04
+A：
+
+关于【流量概览】数据，目前平台暂未开放API接口获取相关数据事项，诸如曝光及曝光人数、商品详情访客、加购访客、支付人数、点击率、加购率和支付率等均无法通过API获取。如有需要，建议商家直接登录SHEIN商家后台进行查询。对于半托管和自主运营的商家，平台同样未开放交易分析数据的API接口。不过，开发者可以通过获取订单数据，自行统计分析所需的运营数据。如果您有此类需求，请基于订单数据，开发并搭建相关的统计或分析功能。针对全托管商家，由于属于SHEIN平台供货商身份，无法直接获取商品在站点的销售订单数据。为了协助供货商了解商品销量及及时备货，平台提供了根据SKU查询销量的接口：/open-api/goods/query-sku-sales，便于供货商预估商品销售情况、更好地计划库存和补货，确保消费者购物需求得到满足。此外，为了不断完善平台生态、优化商家和开发者体验，如现有API接口无法覆盖您的运营需求，欢迎联系SHEIN开放平台产品（邮箱：nerowang@shein.com），或通过提交工单的方式咨询与反馈。非常感谢您的支持与理解！
+
+查看详情
+Q：在创建商品时，“insertTimeStart”是否等于“updateTimeStart”，而“insertTimeEnd”是否等于“updateTimeEnd”？如果是这样，在查询商品列表时，我们是否可以仅使用“updateTimeStart”和“updateTimeEnd”作为过滤条件，因为它们可以涵盖新创建和更新的产品？
+2025-05-20
+A：
+平台建议首先使用 "insertTimeStart" 和 "insertTimeEnd" 来获取店铺历史创建并发布成功的商品，然后 ERP 使用 "updateTimeStart" 定期获取已更新的商品。
+查看详情
+Q：是否有字段可以获取商品的原产国？
+2025-05-20
+A：
+目前平台不提供该字段。
+Q：商品促销活动如何设置及管理？
+2025-05-26
+A：
+目前暂不支持通过接口创建商品促销活动。
+Q：如何获取消费者访问 SHEIN 商品的链接？
+2025-05-26
+A：
+目前暂不支持查询商品在 SHEIN 站点的商品详情链接。
+Q：如何批量上传商品？
+2025-05-26
+A：
+目前仅支持单次调用商品发布接口，暂不支持批量上传商品。
+Q：通过查询商品列表的接口拉取到该商品吗？
+2024-12-24
+A：
+列表只查询「已审核通过」的商品
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

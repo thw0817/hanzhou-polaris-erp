@@ -1,0 +1,358 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+商品发布/编辑
+/goods/product/publishOrEdit
+商品部分编辑
+/goods/product/partialEdit
+确认店铺是否可发品
+/goods/product/check-publish-permission
+确认商品是否可编辑
+/goods/product/check-edit-permission
+查询商品审核状态
+/goods/query-document-state
+撤回商品审核
+/goods/revoke-product
+商品综合查询
+/goods/searchProduct
+商品列表接口
+/openapi-business-backend/product/query
+商品上下架
+/goods/modify-skc-shelf
+spu商品详情查询
+/goods/spu-info
+sku商品详情查询（即将作废）
+/openapi-business-backend/product/full-detail
+商品发布字段规范
+/goods/query-publish-fill-in-standard
+店铺查商品末级分类
+/goods/query-category-tree
+图文识别推荐类目
+/goods/image-category-suggestion
+查询分类可用属性
+/goods/query-attribute-template
+查询是否支持自定义属性值
+/goods/get-custom-attribute-permission-config
+添加自定义属性值
+/goods/add-custom-attribute-value
+查询关联属性填写规则
+/goods/get-associated-attribute-rules
+查询店铺站点和币种信息（新）
+/goods/query-site-list
+查询店铺站点和站点币种（旧）
+/openapi-business-backend/site/query
+查询可用品牌列表
+/goods/query-brand-list
+查询可用IP列表
+/goods/query-ip-list
+图片链接转换
+/goods/transform-pic
+本地图片上传
+/goods/upload-pic
+获取店铺上架额度
+/goods/query-shelf-quota
+查询商家sku是否已存在
+/goods/product/check-supplierSku-repeated
+商品删除预校验
+/goods/check-deletable
+提交商品删除申请
+/goods/delete/{skcName}
+查询商品删除审核记录
+/goods-delete-logs/search
+查询商品证书要求和审核状态
+/goods/get-certificate-rule
+查询证书所需上传资料（新）
+/goods/certificate/get-all-certificate-type-list-v2
+上传证书文件
+/goods/upload-certificate-file
+商品证书池创建/编辑
+/goods/save-or-update-certificate-pool
+店铺证书池创建/编辑
+/goods/save-or-update-supplier-certificate
+SKC绑定商品证书池
+/goods/save-certificate-pool-skc-bind
+商品接口-根据条码批量获取SKC与尺码
+/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表
+/goods/number-list
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新记录
+更新时间：2026-07-21 20:27:37
+商品上下架
+POST
+/open-api/goods/modify-skc-shelf
+自运营
+半托管
+POP
+该API支持根据SKC维度修改商品上下架状态
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+language
+string	是	
+默认返回中文多语言信息，支持语种：英语:en 法语: fr 西班牙语:es 德语:de 中文简体:zh-cn 泰语:th 巴西葡语:pt-br
+
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+
+请求参数（请求体）
+收起
+数据类型	是否必须	描述
+skc_site_info_list
+object[]	是	
+上下架站点信息，1次调用最多支持100条数据。
+
+重要：对于【同SKC+同站点】的操作，必须间隔20分钟以上，否则将操作失败。请不要高频对相同数据发起操作。
+
+shelf_state
+integer	是	
+上下架操作；1.上架,2.下架
+site_list
+string[]	是	
+需要修改的商品站点
+skc_name
+string	是	
+skc_name，skc_name是商品发布SHEIN生成的系统编码
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+bbl
+object	否	
+bbl
+info
+object	否	
+*
+object[]	否	
+code
+string	是	
+成功: 0
+
+info
+object	否	
+failure_count
+integer	否	
+失败数
+
+failure_results
+object[]	否	
+失败详情
+
+code
+string	否	
+错误码
+
+identity
+string	否	
+返回失败的skc_name
+
+line_index
+integer	否	
+无需关注
+
+msg
+string	否	
+错误信息
+
+success_count
+integer	否	
+成功数
+
+total_count
+integer	否	
+总数量
+
+msg
+string	否	
+错误描述, 成功: OK
+
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi-test01.sheincorp.cn/open-api/goods/modify-skc-shelf' \
+--header 'language: zh-cn' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-timestamp: 1752733538805' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+    "skc_site_info_list": [
+        {
+            "shelf_state": 2,
+            "site_list": [
+                "shein-fr"
+            ],
+            "skc_name":"sMM23072039123259"
+        }
+    ]
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "success_count": 1,
+        "failure_count": 0,
+        "total_count": 1,
+        "failure_results": []
+    },
+    "bbl": null
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+-1	
+该skc不属于该商家
+一般会存在两种情况：1、skc_name不属于这个店铺，即skc_name和openkey没有关联；2、skc_name没有审核通过，只有审核通过的商品才能调用接口进行上下架
+439	
+上架站点不在店铺销售站点范围内
+site_list异常，开发者需要调用接口查询店铺可销售的站点：/open-api/goods/query-site-list
+20003	
+上下架站点信息不能为空
+skc_site_info_list不能为空
+20003	
+子站点不能为空
+site_list不能为空
+407	
+在回收站中
+商品由于合规或者证书缺失等问题，进入SHEIN回收站中，暂时无法上架
+416	
+规则:强电商品上架拦截规则
+由于合规要求，某些类目展示无法上架到指定站点，请引导商家联系shein平台客服咨询
+20103	
+申请上架站点售价未维护
+商品未设置站点对应的价格，因此无法上架
+0	
+商品无库存无法上架
+SKU必须在站点中有库存和价格才允许上架，请先使用接口/open-api/gsp/goods/change-inventory维护站点库存。
+0	
+上下架操作失败
+请勿对同一个商品发起高频上下架操作，至少间隔10秒以上。
+0	
+上架失败，未上站点
+商品命中了平台的动态治理策略，暂时无法上架。
+0	
+活动中商品禁止下架
+商品参加了营销活动时，不允许下架
+0	
+为确保整体商品曝光度和转化率，平台将对商品数量进行合理管理，因此您需要相应调整上架商品的数量。
+平台对商家可上架的商品数量有管控，请在上下架之前先查询额度接口：/open-api/goods/query-shelf-quota
+0	
+SKC不允许自主上架
+有两种情况会导致此报错。1、部分特定商家。2、发布时选择按期望时间上架，且当前还没有上架的商品。大多情况是后者导致，建议商家等待到指定时间。
+0	
+SKC不存在
+SKC已被删除或SKC尚未审核通过。
+440	
+店铺已被禁用
+店铺已禁用，无法上下架，开发者可以通过以下方式了解店铺是否关闭：1、根据接口判断，可查看店铺信息判断店铺是否关闭；2、通过webhook判断，如果店铺关闭，shein平台会对开发者进行消息通知：/authorization_change_notice
+416	
+因违规被平台下架
+商品因不符合平台治理要求已被强制下架，建议商家登录商家后台查看具体原因，申诉后再尝试上架
+共16条数据
+限流规则
+收起
+单个开发者接口限流频次：40次/秒
+FAQ
+Q：OBM可以更新商品上下架吗？
+2026-01-08
+A：
+
+OBM 即店铺类型为全托管模式，也称为代运营类型店铺。针对全托管店铺（OBM），不支持通过后台或接口更新商品的上下架状态。同时，SHEIN自营店铺同样不支持商品上下架操作。原因说明：
+全托管店铺和SHEIN自营店铺实质上是SHEIN平台的供货商，其商品上线、下线及站点授权均由SHEIN内部团队统一管理和操作。因此，商家无法通过自有后台或开放接口进行商品上下架的自主操作
+查看详情
+Q：什么是回收站？
+2025-05-26
+A：
+商品由于不满足合规或法务要求，会自动进入回收站。进入回收站的商品无法上架，需要满足合规或法务要求才能移除回收站。移除回收站的商品才可以上架。
+查看详情
+Q：如何针对某个SKU进行下架？
+2025-05-26
+A：
+上架是基于SKC维度进行的，下架时商家可以选择蓝色或红色的商品。例如，商家有蓝色和红色两款商品，可以通过上下架接口将其中之一下架。如果商家拥有蓝色-S码和红色-L码的商品，可以通过商品发布接口中的mall_state参数进行停售，其中mall_state=2表示停售，mall_state=1表示在售。
+查看详情
+Q：上下架如果超时，未获得响应结果，如何知道商品是否上架？
+2024-12-24
+A：
+如果你调用上下架接口，但是超时没有获得响应结果，可以调用商品详情结果查询上下架状态接口地址： https://open.sheincorp.com/documents/apidoc/detail/3000254-1000001
+查看详情
+更新记录
+更新时间	更新内容
+2026-07-21	
+增加【同SKC+同站点】的调用间隔说明
+共1条数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

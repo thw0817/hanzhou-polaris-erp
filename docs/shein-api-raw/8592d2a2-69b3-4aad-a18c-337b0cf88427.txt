@@ -1,0 +1,523 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+查询SKC的合规信息要求
+/goods-compliance-requirements/list
+查询资质证书列表
+/goods-certificates/search
+查询资质证书填写规则
+/goods-certificate-schemas/detail
+上传资质证书文件
+/goods-certificate-files/upload
+创建/编辑资质证书
+/goods-certificates/save
+SKC绑定资质证书
+/goods-certificates/bind
+查询代理公司列表
+/goods-compliance/agency-list
+绑定SKC和代理公司
+/goods-compliance/save-skc-agency
+查询SKC的代理公司绑定要求
+/goods-compliance/skc-agency-detail
+查询警告语证书的填写规则
+/goods-compliance/query-warning-certificate-rules
+更新SKC的警告语
+/goods-compliance/update-skc-warning-certificate
+查询SKC的警告语绑定状态
+/goods-compliance/query-skc-warning-status
+查询SKC的实拍图要求
+/goods-compliance/skc-label-list
+查询SKC可用的标签模板
+/goods-compliance/get-label-template
+获取全量环保耗材信息
+/goods-quality/environmental-label-rule/material-quality-tree-v2
+打印合规标签
+/goods-compliance/label-print
+上传实拍图图片
+/goods-compliance/upload-skc-label-picture
+绑定SKC和实拍图
+/goods-compliance/skc-save-label
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新记录
+更新时间：2026-06-29 17:39:21
+查询代理公司列表
+POST
+/open-api/goods-compliance/agency-list
+自运营
+全托管
+半托管
+POP
+查询商家申报的代理公司信息，包括欧盟责任人、制造商、美国代理、英国代理，此接口的返回信息在SKC绑定代理公司时会使用。
+
+代理公司的整体解决方案，可点击查看文档。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：158339876400
+
+x-lt-signature
+string	是	
+查看签名生成规则
+
+language
+string	否	
+指定出参语种，默认中文；支持语种:英语:EN 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+agencyId
+int64	否	
+代理公司ID
+agencyName
+string	否	
+代理公司名称（精确匹配，不支持模糊匹配）
+pageNum
+integer	是	
+页码，从1开始
+
+pageSize
+integer	是	
+每页大小，最多100
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码 成功：0
+msg
+string	否	
+错误描述,成功：OK
+info
+object[]	否	
+代理公司信息响应
+
+agencyAgreementName
+string	否	
+代理协议名称
+agencyAgreementUrl
+string	否	
+代理协议url
+agencyCityName
+string	否	
+城市
+agencyCountryName
+string	否	
+国家/地区
+agencyDetailAddress
+string	否	
+详细地址
+agencyEndTime
+string	否	
+代理期限结束时间
+agencyId
+int64	否	
+代理公司ID
+
+agencyName
+string	否	
+代理公司名称
+agencyProvinceName
+string	否	
+省/州
+agencyStartTime
+string	否	
+代理期限开始时间
+agencyStatus
+integer	否	
+代理公司状态，基于代理期限时间生成的状态。0-生效中，1-已过期，2-未生效。
+
+agencyStatus=0，且applyStatus=1/2的代理公司才可以和SKC绑定。
+
+agencySubType
+integer	否	
+代理公司的二级类型。只有0-欧盟责任人有二级类型：20-欧洲代理；21-欧盟制造商；22-欧盟进口商；23-欧盟配送服务提供商
+
+agencyType
+integer	否	
+代理公司的一级类型。0-欧盟责任人；1-英国代理；2-美国代理；3-制造商
+
+applyStatus
+integer	否	
+代理申报的审核状态。0-待补充；1-待审核（商家后台页面会展示申报成功，接口层可认为此状态的代理公司可以和SKC绑定）；2-申报成功；3-审核失败；
+
+agencyStatus=1，且applyStatus=1/2的代理公司才可以和SKC绑定。
+
+areaCode
+string	否	
+联系电话区号
+
+brandCodes
+string[]	否	
+品牌编码列表
+contactName
+string	否	
+联系人姓名
+coveredProductRange
+integer	否	
+代理公司覆盖的商品范围。1-全部商品；2-部分商品；
+
+覆盖范围是1-全部商品时，SKC生成后将自动和代理公司完成绑定，不需要手动绑定。
+
+createTime
+datetime	否	
+代理公司的创建时间
+email
+string	否	
+电子邮箱
+originType
+integer	否	
+来源类型：0-手动创建，1-线上办理
+postalCode
+string	否	
+邮政编码
+supplierId
+int64	否	
+商家ID
+telephone
+string	否	
+联系电话
+title
+string	否	
+责任人/公司名称
+updateTime
+datetime	否	
+代理公司信息的更新时间
+traceId
+string	否	
+追踪码
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'http://openapi-test01.sheincorp.cn/open-api/goods-compliance/agency-list' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1782367299697' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+    "pageSize":10,
+    "pageNum":1
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": [
+        {
+            "agencyId": 456646002,
+            "agencyType": 4,
+            "agencySubType": 40,
+            "agencyStartTime": "2026-04-21",
+            "agencyEndTime": "2099-12-31",
+            "agencyStatus": 0,
+            "coveredProductRange": 2,
+            "brandCodes": [],
+            "applyStatus": 1,
+            "supplierId": 38109363,
+            "createTime": "2026-04-21 15:23:41",
+            "updateTime": "2026-04-21 15:23:41",
+            "originType": 2,
+            "agencyAgreementName": "默认SHEIN土代信息（Evon Sai）.pdf",
+            "agencyAgreementUrl": "https://pqms-1259571579.cos.ap-nanjing.myqcloud.com/gpc3175762243675432960.pdf",
+            "agencyName": "Evon Sai Depolama Hizmetleri Ve Ticaret Limited Şirketi",
+            "title": "Evon Sai Depolama Hizmetleri Ve Ticaret Limited Şirketi(456646002)",
+            "contactName": "",
+            "areaCode": "+86",
+            "telephone": "",
+            "email": "urun.guvenligi@sheingroup.com",
+            "agencyDetailAddress": "BAHCELIEVLER MAH. SAKLIVADI SK. MY CLUB FITNISS LIFE CENTERS BLOK NO: 28 IC KAPI NO: Z3 BAHCELIEVLER / ISTANBUL, TURKEY",
+            "postalCode": "34180",
+            "agencyCountryName": "Turkey",
+            "agencyProvinceName": "İstanbul",
+            "agencyCityName": "Bahçelievler"
+        },
+        {
+            "agencyId": 118021903,
+            "agencyType": 0,
+            "agencySubType": 20,
+            "agencyStartTime": "2025-11-05",
+            "agencyEndTime": "2031-11-30",
+            "agencyStatus": 0,
+            "coveredProductRange": 2,
+            "brandCodes": null,
+            "applyStatus": 2,
+            "supplierId": 38109363,
+            "createTime": "2025-11-05 17:48:00",
+            "updateTime": "2025-11-05 17:48:00",
+            "originType": 1,
+            "agencyAgreementName": "2200_2200.jpg",
+            "agencyAgreementUrl": "https://pqms-1259571579.cos.ap-nanjing.myqcloud.com/gpc3095863570711977984.jpg",
+            "agencyName": "测试代理0903",
+            "title": "测试代理0903",
+            "contactName": "../../../../WEB-INF/web.xml;张三",
+            "areaCode": "86",
+            "telephone": "18212340001",
+            "email": "5123@456.com",
+            "agencyDetailAddress": "天会111",
+            "postalCode": "010",
+            "agencyCountryName": "中国",
+            "agencyProvinceName": "上海",
+            "agencyCityName": "长宁"
+        },
+        {
+            "agencyId": 117985610,
+            "agencyType": 0,
+            "agencySubType": 20,
+            "agencyStartTime": "2025-10-28",
+            "agencyEndTime": "2025-11-28",
+            "agencyStatus": 0,
+            "coveredProductRange": 2,
+            "brandCodes": [],
+            "applyStatus": 1,
+            "supplierId": 38109363,
+            "createTime": "2025-10-29 22:44:01",
+            "updateTime": "2025-10-29 22:44:01",
+            "originType": 0,
+            "agencyAgreementName": "label-39.png",
+            "agencyAgreementUrl": "https://pqms-1259571579.cos.ap-nanjing.myqcloud.com/gpc3086018410268368896.png",
+            "agencyName": "neossmscompany01",
+            "title": "neossmscompany01",
+            "contactName": "11",
+            "areaCode": "+32",
+            "telephone": "1111111",
+            "email": "111@qq.com",
+            "agencyDetailAddress": "11",
+            "postalCode": "1111",
+            "agencyCountryName": "Belgium",
+            "agencyProvinceName": "1",
+            "agencyCityName": "1"
+        },
+        {
+            "agencyId": 39664769,
+            "agencyType": 0,
+            "agencySubType": 20,
+            "agencyStartTime": "2025-09-01",
+            "agencyEndTime": "2026-09-30",
+            "agencyStatus": 0,
+            "coveredProductRange": 1,
+            "brandCodes": [],
+            "applyStatus": 1,
+            "supplierId": 38109363,
+            "createTime": "2025-09-05 15:00:22",
+            "updateTime": "2026-06-18 14:54:03",
+            "originType": 0,
+            "agencyAgreementName": "色块图.jpg",
+            "agencyAgreementUrl": "https://pqms-1259571579.cos.ap-nanjing.myqcloud.com/gpc3007275897269561344.jpg",
+            "agencyName": "EU agency 2",
+            "title": "EU agency 2",
+            "contactName": "5343524",
+            "areaCode": "+43",
+            "telephone": "45454",
+            "email": "45435@qq.com",
+            "agencyDetailAddress": "45345425342",
+            "postalCode": "4545",
+            "agencyCountryName": "Austria",
+            "agencyProvinceName": "Burgenland",
+            "agencyCityName": "Gattendorf"
+        },
+        {
+            "agencyId": 39258755,
+            "agencyType": 3,
+            "agencySubType": 0,
+            "agencyStartTime": null,
+            "agencyEndTime": null,
+            "agencyStatus": 0,
+            "coveredProductRange": 1,
+            "brandCodes": null,
+            "applyStatus": 3,
+            "supplierId": 38109363,
+            "createTime": "2025-06-20 16:54:14",
+            "updateTime": "2025-10-11 18:21:17",
+            "originType": 0,
+            "agencyAgreementName": "",
+            "agencyAgreementUrl": "",
+            "agencyName": "this is manufacture name",
+            "title": "this is manufacture name",
+            "contactName": "",
+            "areaCode": "+355",
+            "telephone": "4545",
+            "email": "manufacture@email.com",
+            "agencyDetailAddress": "this is manufacture address",
+            "postalCode": "039333",
+            "agencyCountryName": "Albania",
+            "agencyProvinceName": "testlq",
+            "agencyCityName": "asdfsadf"
+        },
+        {
+            "agencyId": 39142599,
+            "agencyType": 2,
+            "agencySubType": 0,
+            "agencyStartTime": "2025-05-19",
+            "agencyEndTime": "2026-05-31",
+            "agencyStatus": 0,
+            "coveredProductRange": 1,
+            "brandCodes": null,
+            "applyStatus": 3,
+            "supplierId": 38109363,
+            "createTime": "2025-05-19 15:50:42",
+            "updateTime": "2026-04-02 20:21:48",
+            "originType": 0,
+            "agencyAgreementName": "色块图.jpg",
+            "agencyAgreementUrl": "https://pqms-1259571579.cos.ap-nanjing.myqcloud.com/gpc2849325473162930176.jpg",
+            "agencyName": "US agency",
+            "title": "US agency",
+            "contactName": "name",
+            "areaCode": "+1",
+            "telephone": "4534543",
+            "email": "test@gmail.com",
+            "agencyDetailAddress": "test content",
+            "postalCode": "20001",
+            "agencyCountryName": "United States",
+            "agencyProvinceName": "test",
+            "agencyCityName": "test"
+        },
+        {
+            "agencyId": 39142598,
+            "agencyType": 2,
+            "agencySubType": 0,
+            "agencyStartTime": null,
+            "agencyEndTime": null,
+            "agencyStatus": -1,
+            "coveredProductRange": 2,
+            "brandCodes": null,
+            "applyStatus": 1,
+            "supplierId": 38109363,
+            "createTime": "2025-05-19 15:49:34",
+            "updateTime": "2025-10-22 14:06:12",
+            "originType": 0,
+            "agencyAgreementName": "",
+            "agencyAgreementUrl": "",
+            "agencyName": "Test Manufacture",
+            "title": "Test Manufacture",
+            "contactName": "",
+            "areaCode": "+501",
+            "telephone": "34354",
+            "email": "test@gmail.com",
+            "agencyDetailAddress": "test content",
+            "postalCode": "00000",
+            "agencyCountryName": "Belize",
+            "agencyProvinceName": "test",
+            "agencyCityName": "test"
+        },
+        {
+            "agencyId": 39141848,
+            "agencyType": 0,
+            "agencySubType": 20,
+            "agencyStartTime": "2025-05-08",
+            "agencyEndTime": "2025-10-31",
+            "agencyStatus": 0,
+            "coveredProductRange": 1,
+            "brandCodes": null,
+            "applyStatus": 1,
+            "supplierId": 38109363,
+            "createTime": "2025-05-08 09:44:02",
+            "updateTime": "2025-08-27 14:55:00",
+            "originType": 0,
+            "agencyAgreementName": "方块图.jpeg",
+            "agencyAgreementUrl": "https://pqms-1259571579.cos.ap-nanjing.myqcloud.com/gpc2833011290120695808.jpeg",
+            "agencyName": "EU agency",
+            "title": "EU agency",
+            "contactName": "bennie",
+            "areaCode": "+43",
+            "telephone": "343545",
+            "email": "2374504@gmail.com",
+            "agencyDetailAddress": "Test content",
+            "postalCode": "12345",
+            "agencyCountryName": "Germany",
+            "agencyProvinceName":"Frankfurt",
+            "agencyCityName": "am"
+        }
+    ],
+    "bbl": null,
+    "traceId": "9eb97279936d05aa"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：20次/秒
+FAQ
+Q：商品未绑定证书会有什么影响？
+2025-05-26
+A：
+商品未绑定证书，有可能会因为合规要求而自动下架，商品由于合规规则下架后无法上架，需要补充证书后才能上架。更多信息可查看商品证书解决方案：商品证书解决方案。
+查看详情
+更新记录
+更新时间	更新内容
+2026-06-29	
+新增出参字段，支持更多代理公司详细字段。
+共1条数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

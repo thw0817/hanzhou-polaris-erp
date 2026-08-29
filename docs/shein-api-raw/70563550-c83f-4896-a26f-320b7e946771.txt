@@ -1,0 +1,1193 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+商品发布/编辑
+/goods/product/publishOrEdit
+商品部分编辑
+/goods/product/partialEdit
+确认店铺是否可发品
+/goods/product/check-publish-permission
+确认商品是否可编辑
+/goods/product/check-edit-permission
+查询商品审核状态
+/goods/query-document-state
+撤回商品审核
+/goods/revoke-product
+商品综合查询
+/goods/searchProduct
+商品列表接口
+/openapi-business-backend/product/query
+商品上下架
+/goods/modify-skc-shelf
+spu商品详情查询
+/goods/spu-info
+sku商品详情查询（即将作废）
+/openapi-business-backend/product/full-detail
+商品发布字段规范
+/goods/query-publish-fill-in-standard
+店铺查商品末级分类
+/goods/query-category-tree
+图文识别推荐类目
+/goods/image-category-suggestion
+查询分类可用属性
+/goods/query-attribute-template
+查询是否支持自定义属性值
+/goods/get-custom-attribute-permission-config
+添加自定义属性值
+/goods/add-custom-attribute-value
+查询关联属性填写规则
+/goods/get-associated-attribute-rules
+查询店铺站点和币种信息（新）
+/goods/query-site-list
+查询店铺站点和站点币种（旧）
+/openapi-business-backend/site/query
+查询可用品牌列表
+/goods/query-brand-list
+查询可用IP列表
+/goods/query-ip-list
+图片链接转换
+/goods/transform-pic
+本地图片上传
+/goods/upload-pic
+获取店铺上架额度
+/goods/query-shelf-quota
+查询商家sku是否已存在
+/goods/product/check-supplierSku-repeated
+商品删除预校验
+/goods/check-deletable
+提交商品删除申请
+/goods/delete/{skcName}
+查询商品删除审核记录
+/goods-delete-logs/search
+查询商品证书要求和审核状态
+/goods/get-certificate-rule
+查询证书所需上传资料（新）
+/goods/certificate/get-all-certificate-type-list-v2
+上传证书文件
+/goods/upload-certificate-file
+商品证书池创建/编辑
+/goods/save-or-update-certificate-pool
+店铺证书池创建/编辑
+/goods/save-or-update-supplier-certificate
+SKC绑定商品证书池
+/goods/save-certificate-pool-skc-bind
+商品接口-根据条码批量获取SKC与尺码
+/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表
+/goods/number-list
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新记录
+更新时间：2026-07-10 10:46:54
+spu商品详情查询
+POST
+/open-api/goods/spu-info
+自运营
+全托管
+半托管
+POP
+支持通过SPU查询商品信息。只有发布且已通过平台审核的SPU才能查到信息。
+
+可查信息：SPU/SKC/SKU维度品牌、名称、图片、属性、上架状态、价格、样品信息。
+
+不可查询信息：商品库存、属性排序。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+application/json
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+languageList
+string[]	是	
+语种列表。指的是商品名称、商品描述、属性名称会返回哪些语种信息。建议入参商家的默认语种，确保能拿到有效数据，默认语种通过商品发布规范获取。
+
+最多可给5个语种，支持语种包括：英语:en、法语:fr、西班牙语:es、德语:de、中文简体:zh-cn、泰语:th、巴西葡语:pt-br、日语:ja、韩语:ko
+
+spuName
+string	是	
+平台生成的唯一编码。商品发布时会返回，或通过商品列表接口获取。只有发布且已通过平台审核的SPU才能查到信息。
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+bbl
+object	否	
+bbl info
+
+info
+object	否	
+
+
+*
+object[]	否	
+code
+string	是	
+success:0
+info
+object	否	
+商品详情
+
+brandCode
+string	否	
+品牌code
+
+categoryId
+int64	否	
+末级分类id
+
+ipCharacterList
+object[]	否	
+IP列表（目前1个商品只有1个IP）
+
+ipCharacterId
+int64	否	
+IP id
+
+ipCharacterName
+string	否	
+ip名称（英文）
+
+ipCharacterNameCn
+string	否	
+ip名称（中文）
+dimensionAttributeInfoList
+object[]	否	
+尺寸属性（尺码表）。
+
+对应商品发布接口中的：size_attribute_list。
+
+attributeId
+int64	否	
+属性ID
+
+attributeMultiList
+object[]	否	
+属性ID的名称（包含多语言）。
+
+仅返回请求体中languageList中给出的语种。
+
+attributeName
+string	否	
+属性名称
+
+language
+string	否	
+语种
+
+dimensionAttributeAdditionList
+object[]	否	
+尺码属性的手动输入值。
+
+对应商品发布接口中size_attribute_list -> attribute_extra_value。
+
+additionValue
+string	否	
+手动输入值
+
+relateSaleAttributeId
+int64	否	
+尺码属性关联的销售属性ID
+
+relateSaleAttributeValueId
+int64	否	
+尺码属性关联的销售属性值ID
+
+productAttributeInfoList
+object[]	否	
+商品属性列表。
+
+对应商品发布接口中的product_attribute_list（仅可入参attribute_type=3/4）。注意：此列表中包含了attribute_type=3/4（商品属性）、attribute_type=1（销售属性）信息。开发者需主动剔除下方skc/sku的销售属性，才能获得准确的商品属性。
+
+attributeId
+int64	否	
+属性ID
+
+attributeMultiList
+object[]	否	
+属性ID的多语言名称。
+
+仅返回请求体中languageList中给出的语种。
+
+attributeName
+string	否	
+属性名称
+
+language
+string	否	
+语种
+attributeValue
+string	否	
+属性值（手动输入类型）。
+
+对应商品发布接口的product_attribute_list -> attribute_extra_value。
+
+attributeValueId
+int64	否	
+属性值ID（下拉选择类型）。
+
+对应商品发布接口的product_attribute_list -> attribute_value_id。
+
+attributeValueMultiList
+object[]	否	
+属性值的多语言名称。
+
+仅返回请求体中languageList中给出的语种。
+
+attributeValueName
+string	否	
+属性值名称
+language
+string	否	
+语种
+productMultiDescList
+object[]	否	
+商品多语言描述。
+
+仅返回请求体中languageList中给出的语种。
+
+language
+string	否	
+语种
+productDesc
+string	否	
+商品描述
+
+productMultiNameList
+object[]	否	
+商品多语言名称。
+
+仅返回请求体中languageList中给出的语种。
+
+language
+string	否	
+语种
+productName
+string	否	
+商品名称
+productTypeId
+int64	否	
+商品类型ID
+
+skcInfoList
+object[]	否	
+SKC明细信息
+
+attributeId
+int64	否	
+SKC销售属性ID
+
+attributeMultiList
+object[]	否	
+SKC销售属性多语言名称。
+
+仅返回请求体中languageList中给出的语种。
+
+attributeName
+string	否	
+属性名称
+
+language
+string	否	
+语种
+attributeValueId
+int64	否	
+SKC销售属性值ID
+
+attributeValueMultiList
+object[]	否	
+SKC销售属性值多语言名称。
+
+仅返回请求体中languageList中给出的语种。
+
+attributeValueName
+string	否	
+属性值名称
+language
+string	否	
+语种
+productMultiNameList
+object[]	否	
+SKC维度的商品名称多语言。
+
+仅返回请求体中languageList中给出的语种。
+
+language
+string	否	
+语种
+productName
+string	否	
+商品名称
+
+proofOfStockInfoList
+object[]	否	
+库存证明文件信息
+
+fileName
+string	否	
+文件名称
+type
+integer	否	
+文件类型，1-图片 2-PDF
+
+url
+string	否	
+文件链接
+shelfStatusInfoList
+object[]	否	
+上下架信息
+
+firstShelfTime
+datetime	否	
+首次上架时间
+
+lastShelfTime
+datetime	否	
+最近上架时间
+lastUpdateTime
+datetime	否	
+最近更新时间
+shelfStatus
+integer	否	
+上下架状态:0下架;1上架
+
+siteAbbr
+string	否	
+站点
+recycleInfoList
+object[]	否	
+回收站状态信息
+
+recycleStatus
+integer	否	
+回收站状态:0未回收，1已回收
+subSite
+string	否	
+子站点
+
+siteDetailImageInfoList
+object[]	否	
+SKC站点详情图列表。
+
+对应商品发布接口中的site_detail_image_info_list
+
+imageGroupCode
+string	否	
+图片组编码
+
+imageInfoList
+object[]	否	
+详情图列表
+
+imageItemId
+int64	否	
+图片ID
+imageSort
+integer	否	
+图片顺序
+imageUrl
+string	否	
+图片URL
+siteInfoList
+object[]	否	
+详情图站点信息列表
+channel
+string	否	
+渠道
+
+mainSite
+string	否	
+主站
+site
+string	否	
+子站
+sampleInfo
+object	否	
+样品信息
+
+reserveSampleFlag
+integer	否	
+是否需留样(1是 2否)
+
+sampleJudgeType
+integer	否	
+审版类型
+sampleCode
+string	否	
+样衣SKU
+
+spotFlag
+integer	否	
+是否现货(1是 2否)
+skcImageInfoList
+object[]	否	
+SKC图片列表。
+
+对应商品发布接口的skc_list -> image_info。
+
+groupCode
+string	否	
+图片组编码
+imageItemId
+int64	否	
+图片ID
+imageMediumUrl
+string	否	
+中图链接
+
+imageSmallUrl
+string	否	
+小图链接
+imageType
+string	否	
+图片类型
+imageUrl
+string	否	
+原图链接
+sort
+integer	否	
+图片排序
+skcName
+string	否	
+skcName，skcName是SHEIN生成的系统编码
+
+skuInfoList
+object[]	否	
+sku信息列表
+
+height
+string	否	
+含包装的尺寸：高(cm)
+
+此字段输出的是cm单位下的数值。如果需要换算成其他单位，可参考： https://open.sheincorp.com/documents/faq-detail/292
+
+length
+string	否	
+含包装的尺寸：长(cm)
+
+此字段输出的是cm单位下的数值。如果需要换算成其他单位，可参考： https://open.sheincorp.com/documents/faq-detail/292
+
+mallState
+integer	否	
+商城销售状态，1-在售 2-停售
+
+stopPurchase
+integer	否	
+采购状态，1-在采 2-停采
+
+saleAttributeList
+object[]	否	
+SKU销售属性列表
+
+attributeId
+int64	否	
+SKU销售属性ID
+
+attributeValueId
+int64	否	
+SKU销售属性值ID
+
+attributeValueMultiList
+object[]	否	
+SKU销售属性值多语言名称。
+
+仅返回请求体中languageList中给出的语种。
+
+attributeValueName
+string	否	
+属性值名称
+language
+string	否	
+语种
+productSkuAttributeList
+object[]	否	
+sku的普通属性列表（attribute_type=3/4）
+
+attributeId
+int64	否	
+属性ID
+
+attributeMultiList
+object[]	否	
+属性ID多语言名称
+
+attributeName
+string	否	
+属性名
+language
+string	否	
+语种
+attributeType
+integer	否	
+属性类型
+
+attributeValueId
+int64	否	
+属性值id
+
+attributeValueMultiList
+object[]	否	
+属性值多语言名称
+
+attributeValueName
+string	否	
+属性值名称
+
+language
+string	否	
+语种
+additionValue
+string	否	
+属性值（手动输入值）
+
+priceInfoList
+object[]	否	
+售价信息列表
+basePrice
+double	否	
+原价
+
+currency
+string	否	
+币种
+site
+string	否	
+子站点
+specialPrice
+double	否	
+特价
+
+skuCode
+string	否	
+skuCode，skuCode是SHEIN生成的系统编码
+
+skuImageInfoList
+object	否	
+sku图片组信息
+
+groupCode
+string	否	
+图片组编码
+imageItemId
+int64	否	
+图片ID
+imageMediumUrl
+string	否	
+中图链接
+imageSmallUrl
+string	否	
+小图链接
+imageType
+string	否	
+图片类型
+imageUrl
+string	否	
+原图链接
+sort
+integer	否	
+图片排序
+costInfoList
+object[]	否	
+供货价信息列表
+costPrice
+double	否	
+供货价
+
+currency
+string	否	
+币种
+skuSupplierInfo
+object	否	
+sku供应信息
+supplierBarcodeEnabled
+boolean	否	
+是否启用供应条码
+supplierBarcodeList
+object[]	否	
+商家条码列表
+
+barcode_list
+string[]	否	
+条码列表
+barcode_type
+string	否	
+条码类型:EAN、UPC
+supplierSku
+string	否	
+卖家SKU，创建商品时需要商家维护。
+
+weight
+integer	否	
+含包装的尺寸：重量(g)。
+
+此字段输出的是g单位下的重量。如果需要换算成其他单位，可参考： https://open.sheincorp.com/documents/faq-detail/292
+
+width
+string	否	
+含包装的尺寸：宽(cm)
+
+此字段输出的是cm单位下的数值。如果需要换算成其他单位，可参考： https://open.sheincorp.com/documents/faq-detail/292
+
+quantityType
+integer	否	
+件数类型。1-单件 2-同品多件
+
+quantityUnit
+integer	否	
+件数单位。1-件 2-双
+
+quantity
+integer	否	
+件数值
+
+packageType
+integer	否	
+包装类型 0-空 1-软包装+软物 2-软包装+硬物 3-硬包装 4-真空
+srpPriceInfo
+object	否	
+建议零售价信息
+
+currency
+string	否	
+币种
+
+srpPrice
+double	否	
+建议零售价
+
+supplierCode
+string	否	
+卖家SKC编码，创建商品时需要商家维护，没有维护则不返回
+
+spuName
+string	否	
+spuName，spuName是SHEIN生成的系统编码
+
+spuImageInfoList
+object	否	
+spu图片列表。
+
+对应商品发布接口中的最外层image_info。
+
+groupCode
+string	否	
+图片组编码
+imageItemId
+int64	否	
+图片ID
+imageMediumUrl
+string	否	
+中图链接
+imageSmallUrl
+string	否	
+小图链接
+imageType
+string	否	
+图片类型
+imageUrl
+string	否	
+图片链接
+
+sort
+string	否	
+图片排序
+
+supplierCode
+string	否	
+卖家SPU编码，创建商品时需要商家维护，没有维护则不返回
+
+msg
+string	否	
+message, success:OK
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi-test01.sheincorp.cn/open-api/goods/spu-info' \
+--header 'language: zh-cn' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-timestamp: 1752732946244' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+    "languageList": [
+        "zh-cn"],
+    "spuName": "MM2404163183"
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "spuName": "MM2404163183",
+        "categoryId": 1980,
+        "productTypeId": 71,
+        "brandCode": "",
+        "supplierCode": "openapimx",
+        "productMultiNameList": [
+            {
+                "productName": "Produto De Teste Openapi Mx custom valuesdsd",
+                "language": "zh-cn"
+            }
+        ],
+        "productMultiDescList": [
+            {
+                "productDesc": "",
+                "language": "zh-cn"
+            }
+        ],
+        "productAttributeInfoList": [
+            {
+                "attributeId": 40,
+                "attributeMultiList": [
+                    {
+                        "attributeName": "适合类型",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValueId": 132,
+                "attributeValueMultiList": [
+                    {
+                        "attributeValueName": "男朋友",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValue": null
+            },
+            {
+                "attributeId": 39,
+                "attributeMultiList": [
+                    {
+                        "attributeName": "面料弹性-id39",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValueId": 279,
+                "attributeValueMultiList": [
+                    {
+                        "attributeValueName": "面料无弹性.",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValue": null
+            },
+            {
+                "attributeId": 54,
+                "attributeMultiList": [
+                    {
+                        "attributeName": "长度（54）",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValueId": 408,
+                "attributeValueMultiList": [
+                    {
+                        "attributeValueName": "长款",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValue": null
+            },
+            {
+                "attributeId": 90,
+                "attributeMultiList": [
+                    {
+                        "attributeName": "袖长id90",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValueId": 409,
+                "attributeValueMultiList": [
+                    {
+                        "attributeValueName": "长袖",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValue": null
+            },
+            {
+                "attributeId": 87,
+                "attributeMultiList": [
+                    {
+                        "attributeName": "尺寸",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValueId": 756,
+                "attributeValueMultiList": [
+                    {
+                        "attributeValueName": "XXL",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValue": null
+            },
+            {
+                "attributeId": 58,
+                "attributeMultiList": [
+                    {
+                        "attributeName": "是否带里衬58",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValueId": 1001808,
+                "attributeValueMultiList": [
+                    {
+                        "attributeValueName": "无内衬",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValue": null
+            },
+            {
+                "attributeId": 87,
+                "attributeMultiList": [
+                    {
+                        "attributeName": "尺寸",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValueId": 2147484569,
+                "attributeValueMultiList": [
+                    {
+                        "attributeValueName": "323分",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValue": null
+            },
+            {
+                "attributeId": 27,
+                "attributeMultiList": [
+                    {
+                        "attributeName": "颜色",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValueId": 2147484570,
+                "attributeValueMultiList": [
+                    {
+                        "attributeValueName": "黑色434",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValue": null
+            }
+        ],
+        "dimensionAttributeInfoList": [],
+        "spuImageInfoList": null,
+        "skcInfoList": [
+            {
+                "skcName": "sMM24041631833322",
+                "supplierCode": "openapimx",
+                "sampleInfo": {
+                    "sampleCode": "",
+                    "reserveSampleFlag": 0,
+                    "spotFlag": 0,
+                    "sampleJudgeType": 2
+                },
+                "productMultiNameList": [
+                    {
+                        "productName": "Produto De Teste Openapi Mx custom valuesdsd",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeId": 27,
+                "attributeMultiList": [
+                    {
+                        "attributeName": "颜色",
+                        "language": "zh-cn"
+                    }
+                ],
+                "attributeValueId": 2147484570,
+                "attributeValueMultiList": [
+                    {
+                        "attributeValueName": "黑色434",
+                        "language": "zh-cn"
+                    }
+                ],
+                "skuInfoList": [
+                    {
+                        "skuCode": "I05xh21a82o5",
+                        "supplierSku": "black-XXL",
+                        "length": "11.00",
+                        "width": "11.00",
+                        "height": "11.00",
+                        "weight": 222,
+                        "mallState": 1,
+                        "stopPurchase": 1,
+                        "saleAttributeList": [
+                            {
+                                "attributeId": 87,
+                                "attributeValueId": 756,
+                                "attributeValueMultiList": [
+                                    {
+                                        "attributeValueName": "XXL",
+                                        "language": "zh-cn"
+                                    }
+                                ]
+                            }
+                        ],
+                        "priceInfoList": [
+                            {
+                                "site": "shein-mx",
+                                "basePrice": 23.00,
+                                "specialPrice": 0.00,
+                                "currency": "MXN"
+                            }
+                        ],
+                        "costInfoList": [],
+                        "skuImageInfoList": null
+                    },
+                    {
+                        "skuCode": "I05xh21am74l",
+                        "supplierSku": "black-323分",
+                        "length": "11.00",
+                        "width": "11.00",
+                        "height": "11.00",
+                        "weight": 222,
+                        "mallState": 1,
+                        "stopPurchase": 1,
+                        "saleAttributeList": [
+                            {
+                                "attributeId": 87,
+                                "attributeValueId": 2147484569,
+                                "attributeValueMultiList": [
+                                    {
+                                        "attributeValueName": "323分",
+                                        "language": "zh-cn"
+                                    }
+                                ]
+                            }
+                        ],
+                        "priceInfoList": [
+                            {
+                                "site": "shein-mx",
+                                "basePrice": 333.00,
+                                "specialPrice": 0.00,
+                                "currency": "MXN"
+                            }
+                        ],
+                        "costInfoList": [],
+                        "skuImageInfoList": null
+                    }
+                ],
+                "shelfStatusInfoList": [
+                    {
+                        "siteAbbr": "shein-mx",
+                        "shelfStatus": 0,
+                        "lastShelfTime": "2018-08-28 00:00:00",
+                        "firstShelfTime": "1970-01-01 08:00:01",
+                        "lastUpdateTime": "2024-04-18 19:44:38"
+                    }
+                ],
+                "skcImageInfoList": [
+                    {
+                        "groupCode": "G772lhlxbqpk",
+                        "imageItemId": 2147571028,
+                        "imageType": "MAIN",
+                        "imageMediumUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/1b/17132456933631648684_thumbnail_405x552.jpg",
+                        "imageSmallUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/1b/17132456933631648684_thumbnail_220x293.jpg",
+                        "imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/1b/17132456933631648684.jpg",
+                        "sort": 1
+                    },
+                    {
+                        "groupCode": "G772lhlxbqpk",
+                        "imageItemId": 2147571029,
+                        "imageType": "DETAIL",
+                        "imageMediumUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/54/17132456951187015405_thumbnail_405x552.jpg",
+                        "imageSmallUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/54/17132456951187015405_thumbnail_220x293.jpg",
+                        "imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/54/17132456951187015405.jpg",
+                        "sort": 2
+                    },
+                    {
+                        "groupCode": "G772lhlxbqpk",
+                        "imageItemId": 2147571030,
+                        "imageType": "SQUARE",
+                        "imageMediumUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/dc/17132457012319655615_thumbnail_405x552.jpg",
+                        "imageSmallUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/dc/17132457012319655615_thumbnail_220x293.jpg",
+                        "imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/dc/17132457012319655615.jpg",
+                        "sort": 3
+                    },
+                    {
+                        "groupCode": "G772lhlxbqpk",
+                        "imageItemId": 2147571031,
+                        "imageType": "PIECE",
+                        "imageMediumUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/dc/17132457012755121747_thumbnail_405x552.jpg",
+                        "imageSmallUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/dc/17132457012755121747_thumbnail_220x293.jpg",
+                        "imageUrl": "http://imgdeal-test01.shein.com/images3_pi/2024/04/16/dc/17132457012755121747.jpg",
+                        "sort": 4
+                    }
+                ],
+                "siteDetailImageInfoList": null,
+                "proofOfStockInfoList": [],
+                "srpPriceInfo": null
+            }
+        ]
+    },
+    "bbl": null
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+0003	
+spu 下 skc 的供应商不一致
+此报错通常出现在【SHEIN自营】场景下。请注意，此接口不支持查询SHEIN自营商家的商品，请停止错误调用。
+0003	
+无法根据SPU获取skc数据
+请确认SPU是有效数据
+832213	
+请求被限流:[提供方服务[gpc-pqb-readslave]对消费者服务:[open_api]的API[/gpc/pqb/aggregation/openapi/find_spu_wrapper_info]触发精确限流！]
+接口触发限流，请稍后再试
+0003	
+SPU 下的 SKC 供应商不一致。
+SPU不属于调用商家
+020003	
+语种列表最多5个
+减少入参中的语种数量
+20003	
+不能为空
+spu和语种均为必填信息
+0003	
+筛选冻结状态后无可用的 SKC
+平台支持商家主动删除商品，被删商品将不再支持查询详情。出现此报错说明SPU已被删除。
+共7条数据
+限流规则
+收起
+单个开发者接口限流频次：100次/秒
+FAQ
+Q：什么是product_id和goods_id？SHEIN平台商品唯一标识是什么？
+2025-11-12
+A：
+
+SHEIN平台没有叫做product_id的标识。常见的商品唯一标识有：SPU（字段：spu_name）：平台生成的SPU唯一编码，代表一个商品型号或款式，包含多种颜色、尺码等变体。SPU标识用于接口查询商品信息。SKC（字段：skc_name）：平台生成的SKC唯一编码，在SPU基础上增加了主销售属性（通常为颜色）。SHEIN的商品层级关系有3层，其中SKC是销售属性，也叫主规格属性，例如一个商品有黑色和白色两种颜色，黑色和白色会分别生成skc_name；SKC标识一般用于接口修改商品上下架。SKU（字段：sku_code）：平台生成的SKU唯一编码，是最小产品单元，区分每个具体规格，如款式、颜色、尺寸。SKU是最小的产品单元，但也是销售属性，也叫次规格属性，比如黑色有S、M、L三个尺码，S、M、L三个尺码分别对应不同sku_code；SKU标识一般用于接口修改库存和价格。
+商品标识可通过商品列表接口获取：/open-api/openapi-business-backend/product/query。⚠️注意：商品列表接口只返回审核通过的商品信息。平台未提供接口获取审核中或审核失败的商品标识。开发者使用商品发布接口 /open-api/goods/product/publishOrEdit 上传商品后，接口会返回spu_name、skc_name、sku_code参数，但此时商品处于审核中或可能审核失败，因此不会通过商品列表接口返回。商品标识之间的关系（spu、skc、sku）可通过商品详情接口获取：/open-api/goods/spu-info
+SHEIN平台也没有goods_id的标识。但是有订单详情接口有goodsid字段；接口：/open-api/order/order-detail订单详情里面的商品数量可以根据goodsid来统计，每件商品的唯一ID。如果一个 SKU 有多件，每一件的goodsId都是唯一的
+查看详情
+Q：是否有字段可以获取商品的原产国？
+2025-05-20
+A：
+目前平台不提供该字段。
+Q：如何获取商品的上架时间？
+2025-05-26
+A：
+可以通过商品详情接口获取商品上下架时间；lastShelfTime 为最新的上架时间。
+Q：如何获取消费者访问 SHEIN 商品的链接？
+2025-05-26
+A：
+目前暂不支持查询商品在 SHEIN 站点的商品详情链接。
+Q：如何判断商品上架状态？
+2025-05-26
+A：
+可以通过商品详情接口获取商品上下架状态；shelfStatusInfoList字段为商品上下架状态；shelfStatus=0为下架，shelfStatus=1为上架状态。
+Q：如何获取sku或spu商品图片？
+2025-05-26
+A：
+可以通过spu详情接口获取，前提是spu已经成功提交并审核通过。商品详情接口仅返回审核通过的商品信息。
+Q：商品特价和原价的区别？
+2025-05-26
+A：
+商品原价就是消费者在站点看到的商品价格，商家特价就是商家设置的折扣价格。注意：由于平台活动和规则，销售站点显示的价格不一定会跟商家设置的完全一样。
+查看详情
+Q：如何获取SellerSku和SupplierCode？
+2025-05-26
+A：
+SellerSku是SKU的外部编码；SupplierCode目前有两层，分别是SPU维度的外部编码和SKC维度的外部编码。
+Q：spu维度的supplier_code和skc维度的supplier_code怎么传值？
+2024-12-10
+A：
+SHEIN货号管理是到skc维度，店铺维护货号支持spu维度维或skc维度维护两种模式：若店铺支持spu维度，则取用户填写的spu维度的supplier_code，作为skc的supplier_code，并忽略用户填写的skc维度supplier_code；若店铺支持skc维度，则取用户填写的skc维度的supplier_code，作为skc的supplier_code，并忽略用户填写的spu维度supplier_code；目前没有规则透传出哪个需要传，因此发布商品两个都需要传，需要注意的是通过spu商品详情查询（新）API获取到的spu维度的supplier_code、skc维度的supplier_code会和发布商品入参存在不一致的情况；
+查看详情
+Q：调用接口为什么报错 “inconsistent suppliers of skc under spu ”
+2024-11-13
+A：
+商家的合作模式为SHEIN自营，接口只支持平台类型的商家调用
+Q：SKU 重量 & 长宽高单位换算规则
+2026-06-12
+A：
+前提SPU 详情接口返回的重量单位固定为 g（克），长宽高单位固定为 cm（厘米）。商家在发布商品时可以选择自己偏好的单位（如 lb、Inch 等），ERP 若需展示与发品时使用一样的单位，需按以下规则换算。换算公式展示值 = SPU详情接口返回值 ÷ 换算系数，结果保留 2 位小数，四舍五入
+换算系数表维度商家单位换算系数重量g（克，接口原值）不换算，直接使用lb（磅）453.59237Oz（盎司）28.349523125长宽高cm（厘米，接口原值）不换算，直接使用Inch（英寸）2.54Ft（英尺）30.48示例接口返回值商家单位时的单位计算过程展示值500 glb500 ÷ 453.592371.10 lb500 gOz500 ÷ 28.34952312517.64 Oz30 cmInch30 ÷ 2.5411.81 Inch30 cmFt30 ÷ 30.480.98 Ft
+查看详情
+Q：为什么查询报错“spu不属于这个商家”
+2025-12-04
+A：
+请检查是否为SHEIN自营的商家，商品详情查询接口不支持SHEIN自营商家使用
+更新记录
+更新时间	更新内容
+2026-07-10	
+新增出参：productSkuAttributeList，可查看商品SKU维度的商品属性信息
+共1条数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

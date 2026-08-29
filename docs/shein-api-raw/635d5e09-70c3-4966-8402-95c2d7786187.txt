@@ -1,0 +1,373 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+查询退货申请单列表
+/purchase/return-application-list
+查询退货申请单商品明细
+/purchase/return-application-detail
+查询商家可选择的处理方式
+/purchase/return-disposals
+查询退货方式
+/purchase/return-pickup-methods
+查询商家退货地址
+/purchase/query-return-address
+查询退货可选择的物流
+/purchase/return-carriers
+确认退货申请单
+/purchase/confirm-return-application
+查询商品可退库存数
+/purchase/returnable-inventory
+创建退货申请单
+/purchase/create-return-application
+查询退货与报废单列表
+/purchase/return-list
+查询退货与报废单商品明细
+/purchase/return-product-detail
+查询退货与报废单包裹明细
+/purchase/return-package-detail
+修改退货单的退货方式
+/purchase/update-pickup-methods
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-06-04 13:50:23
+查询退货与报废单包裹明细
+POST
+/open-api/purchase/return-package-detail
+全托管
+查询退货单对应的包裹打包明细信息
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+application/json
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+page
+integer	否	
+页码，不传默认1
+
+pageSize
+integer	否	
+分页大小，1-100，不传默认20
+
+returnOrderNo
+string	否	
+查询的退货单号
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码，成功：0
+
+msg
+string	否	
+错误描述,成功：OK
+
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+info
+object	否	
+
+
+data
+object[]	否	
+boxList
+object[]	否	
+包裹明细
+
+goods
+object[]	否	
+商品明细
+
+details
+object[]	否	
+商品明细(按sku)
+
+platformSku
+string	否	
+平台SKU
+
+returnQuantity
+integer	否	
+执行退货数量
+
+suffixZh
+string	否	
+SKU属性集-销售属性拼接
+
+supplierSku
+string	否	
+商家SKU
+
+imgPath
+string	否	
+主图
+
+skc
+string	否	
+SKC
+
+skcCopyFlag
+integer	否	
+是否专供SHEIN：1-是，2-否
+
+supplierCode
+string	否	
+货号
+
+packageName
+string	否	
+包裹名
+
+returnBoxNo
+string	否	
+出库箱号
+
+deliveryTime
+string	否	
+退货发出时间
+
+expressCode
+string	否	
+运单号
+
+expressCompanyCode
+string	否	
+物流公司编码
+
+expressCompanyName
+string	否	
+物流公司名称
+
+selfPickStartTime
+string	否	
+自提开始时间
+
+supplierCategoryTypeFlag
+boolean	否	
+商家一级分类标志,一级分类=BRAND自营、US-SPP、美国SFS、巴西SFS等取值为true
+
+meta
+object	否	
+count
+integer	否	
+customObj
+object	否	
+
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/purchase/return-package-detail' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'Content-Type: application/json;charset=UTF-8' \
+--header 'x-lt-timestamp: 1752570817402' \
+--data-raw '{
+  "returnOrderNo": "TG26010600020"
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "expressCode": "SF0000021102501",
+                "expressCompanyCode": "",
+                "expressCompanyName": "",
+                "deliveryTime": "2025-04-30 14:48:21",
+                "selfPickStartTime": "2026-01-01 14:47:34",
+                "supplierCategoryTypeFlag": false,
+                "boxList": [
+                    {
+                        "packageName": "包裹1",
+                        "returnBoxNo": "ZZBFH261210000029-01",
+                        "goods": [
+                            {
+                                "imgPath": "http://imgdeal-test01.shein.com/images3_pi/2023/11/07/a9/16993415152939413749.jpg",
+                                "skc": "ss21101356992632",
+                                "skcCopyFlag": 2,
+                                "supplierCode": "1232",
+                                "details": [
+                                    {
+                                        "platformSku": "I71jhxynch7w",
+                                        "supplierSku": "T-113",
+                                        "suffixZh": "焦糖色-S",
+                                        "returnQuantity": 1
+                                    },
+                                    {
+                                        "platformSku": "I23a7r204688",
+                                        "supplierSku": "",
+                                        "suffixZh": "焦糖色-L(中文)",
+                                        "returnQuantity": 1
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "expressCode": "SF0000021102502",
+                "expressCompanyCode": "",
+                "expressCompanyName": "",
+                "deliveryTime": null,
+                "selfPickStartTime": "2026-01-10 17:20:17",
+                "supplierCategoryTypeFlag": false,
+                "boxList": [
+                    {
+                        "packageName": "包裹2",
+                        "returnBoxNo": "ZZBFH261210000029-02",
+                        "goods": [
+                            {
+                                "imgPath": "http://imgdeal-test01.shein.com/images3_pi/2023/11/07/a9/16993415152939413749.jpg",
+                                "skc": "ss21101356992632",
+                                "skcCopyFlag": 2,
+                                "supplierCode": "1232",
+                                "details": [
+                                    {
+                                        "platformSku": "I71jhxynch7w",
+                                        "supplierSku": "T-113",
+                                        "suffixZh": "焦糖色-S",
+                                        "returnQuantity": 1
+                                    },
+                                    {
+                                        "platformSku": "I23a7r204688",
+                                        "supplierSku": "",
+                                        "suffixZh": "焦糖色-L(中文)",
+                                        "returnQuantity": 1
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "expressCode": "SF0000021102503",
+                "expressCompanyCode": "",
+                "expressCompanyName": "",
+                "deliveryTime": null,
+                "selfPickStartTime": "2026-01-03 14:47:59",
+                "supplierCategoryTypeFlag": false,
+                "boxList": [
+                    {
+                        "packageName": "包裹3",
+                        "returnBoxNo": "ZZBFH261210000029-03",
+                        "goods": [
+                            {
+                                "imgPath": "http://imgdeal-test01.shein.com/images3_pi/2023/11/07/a9/16993415152939413749.jpg",
+                                "skc": "ss21101356992632",
+                                "skcCopyFlag": 2,
+                                "supplierCode": "1232",
+                                "details": [
+                                    {
+                                        "platformSku": "I71jhxynch7w",
+                                        "supplierSku": "T-113",
+                                        "suffixZh": "焦糖色-S",
+                                        "returnQuantity": 1
+                                    },
+                                    {
+                                        "platformSku": "I23a7r204688",
+                                        "supplierSku": "",
+                                        "suffixZh": "焦糖色-L(中文)",
+                                        "returnQuantity": 1
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "meta": {
+            "count": 3,
+            "customObj": {}
+        }
+    },
+    "bbl": {},
+    "traceId": "19808d733b0163e0"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：50次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

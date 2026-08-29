@@ -1,0 +1,389 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+查询SKC的合规信息要求
+/goods-compliance-requirements/list
+查询资质证书列表
+/goods-certificates/search
+查询资质证书填写规则
+/goods-certificate-schemas/detail
+上传资质证书文件
+/goods-certificate-files/upload
+创建/编辑资质证书
+/goods-certificates/save
+SKC绑定资质证书
+/goods-certificates/bind
+查询代理公司列表
+/goods-compliance/agency-list
+绑定SKC和代理公司
+/goods-compliance/save-skc-agency
+查询SKC的代理公司绑定要求
+/goods-compliance/skc-agency-detail
+查询警告语证书的填写规则
+/goods-compliance/query-warning-certificate-rules
+更新SKC的警告语
+/goods-compliance/update-skc-warning-certificate
+查询SKC的警告语绑定状态
+/goods-compliance/query-skc-warning-status
+查询SKC的实拍图要求
+/goods-compliance/skc-label-list
+查询SKC可用的标签模板
+/goods-compliance/get-label-template
+获取全量环保耗材信息
+/goods-quality/environmental-label-rule/material-quality-tree-v2
+打印合规标签
+/goods-compliance/label-print
+上传实拍图图片
+/goods-compliance/upload-skc-label-picture
+绑定SKC和实拍图
+/goods-compliance/skc-save-label
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-07-03 14:20:15
+查询资质证书列表
+POST
+/open-api/goods-certificates/search
+自运营
+全托管
+半托管
+POP
+获取店铺内已经创建好的资质证书列表（对应商家后台-合规-商品合规管理-证书库tab列表）。
+
+完整的资质证书场景接口调用方式，详见文档
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+
+x-lt-signature
+string	是	
+接口签名
+
+language
+string	否	
+响应msg的语种。不传时默认为中文，枚举值支持语种:英语:US 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+certificateTypeCodeList
+string[]	否	
+证书类型编码列表，单次最多查询10个。
+
+fileName
+string	否	
+证书文件名称（即证书中图片或pdf文件的名称），模糊查询
+
+pageNum
+integer	是	
+页码，从1开始
+
+pageSize
+integer	是	
+每页大小，最大100。
+
+poolSnList
+string[]	否	
+证书编号列表（即平台对每份证书的唯一编码）
+
+statusList
+integer[]	否	
+证书状态列表：1-待生效，2-已生效，3-已失效，4-待填写，5-即将失效，6-草稿。
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码 成功：0
+
+msg
+string	否	
+错误描述,成功：OK
+info
+object	否	
+响应信息
+
+data
+object[]	否	
+列表数据
+
+alertTime
+datetime	否	
+证书预警日期
+
+bindSkcFlag
+integer	否	
+是否已绑定SKC：1-是，0-否
+
+certificateDimension
+integer	否	
+适用范围维度：1-部分商品，2-全部商品
+
+certificateTypeCode
+string	否	
+证书类型编码
+
+certificateTypeId
+int64	否	
+证书类型ID
+
+certificateTypeName
+string	否	
+证书类型名称
+
+effectiveTime
+datetime	否	
+证书生效日期
+
+fileList
+object[]	否	
+证书中包含的文件列表
+
+fileGroup
+integer	否	
+文件分组：0-默认值，1-本体，2-包装，41-PDF简版文件，42-PDF完整版文件。
+
+fileMd5
+string	否	
+文件MD5
+
+fileName
+string	否	
+文件名称
+
+fileUrl
+string	否	
+文件URL
+
+insertTime
+datetime	否	
+新增时间
+
+langs
+string[]	否	
+文件语种列表
+
+insertTime
+datetime	否	
+记录插入时间
+
+invalidTime
+datetime	否	
+证书失效日期
+lastUpdateTime
+datetime	否	
+证书信息更新时间
+
+poolId
+int64	否	
+证书ID。此字段使用场景较少，更多使用的是poolSn。
+
+poolSn
+string	否	
+证书编号。更多接口里使用的证书唯一编码是这个字段。
+
+presetInfoList
+object[]	否	
+证书中的字段信息列表。
+
+presetId
+int64	否	
+字段ID
+
+valueList
+object[]	否	
+字段值列表
+
+value
+string	否	
+字段值。覆盖两种情况。
+
+1、检验机构字段（归属于otherPresetInfoList且sourceFrom=SRM），此处是实验室id（srmDetectionAgencyList-laboratoryId）
+
+2、非检测结构字段（归属于presetInfoList，inputType=3/4，如生效时间），此处是手动输入值
+
+valueId
+int64	否	
+字段值ID。覆盖两种情况。
+
+1、检验机构字段（归属于otherPresetInfoList且sourceFrom=SRM），此处是检测结构id（srmDetectionAgencyList-detectionAgencyId）
+
+2、非检测结构的字段（归属于presetInfoList，inputType=1/2），此处是所选id（presetInfoList-presetValueList-presetValueId）
+
+status
+integer	否	
+证书状态：1-待生效，2-已生效，3-已失效，4-待填写，5-即将失效，6-草稿
+
+supplierId
+int64	否	
+商家ID
+
+meta
+object	否	
+元数据
+
+count
+integer	否	
+数据记录数
+
+customObj
+object	否	
+用户自定义扩展
+traceId
+string	否	
+追踪码
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/goods-certificates/search' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1782700321104' \
+--header 'language: US' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi.sheincorp.com' \
+--data-raw '{
+  "pageNum": 1,
+  "pageSize": 10,
+  "certificateTypeCodeList":["3DD70084B6997DF"]
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "poolId": 11482836,
+                "poolSn": "ocp3437520192426127360",
+                "supplierId": 5416450,
+                "certificateTypeId": 7,
+                "certificateTypeCode": "3DD70084B6997DF",
+                "certificateTypeName": "RSL Chemical Test Report",
+                "status": 1,
+                "certificateDimension": 1,
+                "effectiveTime": "2027-01-01 00:00:00",
+                "invalidTime": "2031-12-31 00:00:00",
+                "alertTime": "2031-12-01 00:00:00",
+                "bindSkcFlag": 0,
+                "insertTime": "2026-06-29 10:29:30",
+                "lastUpdateTime": "2026-06-29 10:29:30",
+                "fileList": [
+                    {
+                        "fileName": "test",
+                        "fileUrl": "https://pqms-1259571579.cos.ap-nanjing.myqcloud.com/erp3430849440189104128.jpeg",
+                        "fileMd5": "2230eacf3617c2a4604758ea3ae871b9",
+                        "fileGroup": 0,
+                        "langs": [
+                            "en"
+                        ],
+                        "insertTime": "2026-06-29 10:29:30"
+                    }
+                ],
+                "presetInfoList": [
+                    {
+                        "presetId": 175,
+                        "valueList": [
+                            {
+                                "valueId": null,
+                                "value": "2027-01-01 00:00:00"
+                            }
+                        ]
+                    },
+                    {
+                        "presetId": 183,
+                        "valueList": [
+                            {
+                                "valueId": 16886285,
+                                "value": "16997191"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "meta": {
+            "count": 1,
+            "customObj": null
+        }
+    },
+    "bbl": null,
+    "traceId": "1e51dfd2935e20b1"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+限流规则
+收起
+单个开发者接口限流频次：20次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

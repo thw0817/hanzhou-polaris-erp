@@ -1,0 +1,316 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+查询退货申请单列表
+/purchase/return-application-list
+查询退货申请单商品明细
+/purchase/return-application-detail
+查询商家可选择的处理方式
+/purchase/return-disposals
+查询退货方式
+/purchase/return-pickup-methods
+查询商家退货地址
+/purchase/query-return-address
+查询退货可选择的物流
+/purchase/return-carriers
+确认退货申请单
+/purchase/confirm-return-application
+查询商品可退库存数
+/purchase/returnable-inventory
+创建退货申请单
+/purchase/create-return-application
+查询退货与报废单列表
+/purchase/return-list
+查询退货与报废单商品明细
+/purchase/return-product-detail
+查询退货与报废单包裹明细
+/purchase/return-package-detail
+修改退货单的退货方式
+/purchase/update-pickup-methods
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-06-04 13:50:36
+查询退货与报废单商品明细
+POST
+/open-api/purchase/return-product-detail
+全托管
+查询退货单、报废中商品的明细信息
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	否	
+application/json
+x-lt-openKeyId
+string	否	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	否	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+
+x-lt-signature
+string	否	
+接口签名
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+page
+integer	否	
+页码，不传默认1
+
+pageSize
+integer	否	
+分页大小，1-100，不传默认20
+
+returnOrderNo
+string	是	
+查询的退货单号
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码，成功：0
+
+msg
+string	否	
+错误描述,成功：OK
+traceId
+string	是	
+请求的唯一标识；用于异常报错跟踪
+info
+object	否	
+data
+object[]	否	
+details
+object[]	否	
+按平台sku的商品明细
+
+orderType
+integer	否	
+正常采购单类型，1-急采单，2-备货单，3-JIT备货单
+
+platformSku
+string	否	
+平台SKU
+
+preReturnQuantity
+integer	否	
+预计退货数量
+
+returnQuantity
+integer	否	
+执行退货数量
+
+scrapQuantity
+integer	否	
+执行报废数量
+
+sellerDeliveryNo
+string	否	
+卖家发货单号
+
+sellerOrderNo
+string	否	
+平台卖家单号
+
+suffixZh
+string	否	
+SKU属性集-销售属性拼接
+
+supplierSku
+string	否	
+商家SKU
+
+imgPath
+string	否	
+主图
+
+preReturnQuantity
+integer	否	
+预计退货数量
+
+returnQuantity
+integer	否	
+执行退货数量
+
+scrapQuantity
+integer	否	
+执行报废数量
+
+skc
+string	否	
+SKC
+skcCopyFlag
+integer	否	
+是否专供SHEIN：1-是，2-否
+
+skcMarkFlagName
+string	否	
+skc退供标识：1-是，2-否
+
+skcSlowMovingFlag
+integer	否	
+是否是不动销skc：1-是，2-否
+
+supplierCode
+string	否	
+货号
+
+meta
+object	否	
+count
+integer	否	
+customObj
+object	否	
+
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/purchase/return-product-detail' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'Content-Type: application/json;charset=UTF-8' \
+--header 'x-lt-timestamp: 1752570817402' \
+--data-raw '{
+  "returnOrderNo": "TG26010600020"
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "imgPath": "http://imgdeal-test01.shein.com/images3_pi/2023/11/07/a9/16993415152939413749.jpg",
+                "skc": "ss21101356992632",
+                "skcCopyFlag": 2,
+                "supplierCode": "1232",
+                "preReturnQuantity": 35,
+                "returnQuantity": 0,
+                "scrapQuantity": null,
+                "details": [
+                    {
+                        "platformSku": "I71jhxynch7w",
+                        "supplierSku": "T-113",
+                        "suffixZh": "焦糖色-S",
+                        "preReturnQuantity": 20,
+                        "returnQuantity": 0,
+                        "scrapQuantity": null,
+                        "sellerOrderNo": "PB2601070000105",
+                        "sellerDeliveryNo": "VF260107000008",
+                        "orderType": 2,
+                        "pricingCurrencyId": null,
+                        "currencyCode": "",
+                        "price": null,
+                        "billCurrencyId": null,
+                        "billCurrencyCode": "",
+                        "salePrice": null,
+                        "salePriceMin": null,
+                        "salePriceMax": null
+                    },
+                    {
+                        "platformSku": "I23a7r204688",
+                        "supplierSku": "",
+                        "suffixZh": "焦糖色-L(中文)",
+                        "preReturnQuantity": 15,
+                        "returnQuantity": 0,
+                        "scrapQuantity": null,
+                        "sellerOrderNo": "PB2601070000105",
+                        "sellerDeliveryNo": "VF260107000008",
+                        "orderType": 2,
+                        "pricingCurrencyId": null,
+                        "currencyCode": "",
+                        "price": null,
+                        "billCurrencyId": null,
+                        "billCurrencyCode": "",
+                        "salePrice": null,
+                        "salePriceMin": null,
+                        "salePriceMax": null
+                    }
+                ],
+                "skcMarkFlagName": "",
+                "skcSlowMovingFlag": 2,
+                "showSalePrice": 2,
+                "scrapConfig": {}
+            }
+        ],
+        "meta": {
+            "count": 1,
+            "customObj": {}
+        }
+    },
+    "bbl": {},
+    "traceId": "3f3ffd6c76a3e23b"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：50次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

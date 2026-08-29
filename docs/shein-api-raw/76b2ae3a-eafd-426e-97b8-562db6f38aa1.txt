@@ -1,0 +1,554 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+商品发布/编辑
+/goods/product/publishOrEdit
+商品部分编辑
+/goods/product/partialEdit
+确认店铺是否可发品
+/goods/product/check-publish-permission
+确认商品是否可编辑
+/goods/product/check-edit-permission
+查询商品审核状态
+/goods/query-document-state
+撤回商品审核
+/goods/revoke-product
+商品综合查询
+/goods/searchProduct
+商品列表接口
+/openapi-business-backend/product/query
+商品上下架
+/goods/modify-skc-shelf
+spu商品详情查询
+/goods/spu-info
+sku商品详情查询（即将作废）
+/openapi-business-backend/product/full-detail
+商品发布字段规范
+/goods/query-publish-fill-in-standard
+店铺查商品末级分类
+/goods/query-category-tree
+图文识别推荐类目
+/goods/image-category-suggestion
+查询分类可用属性
+/goods/query-attribute-template
+查询是否支持自定义属性值
+/goods/get-custom-attribute-permission-config
+添加自定义属性值
+/goods/add-custom-attribute-value
+查询关联属性填写规则
+/goods/get-associated-attribute-rules
+查询店铺站点和币种信息（新）
+/goods/query-site-list
+查询店铺站点和站点币种（旧）
+/openapi-business-backend/site/query
+查询可用品牌列表
+/goods/query-brand-list
+查询可用IP列表
+/goods/query-ip-list
+图片链接转换
+/goods/transform-pic
+本地图片上传
+/goods/upload-pic
+获取店铺上架额度
+/goods/query-shelf-quota
+查询商家sku是否已存在
+/goods/product/check-supplierSku-repeated
+商品删除预校验
+/goods/check-deletable
+提交商品删除申请
+/goods/delete/{skcName}
+查询商品删除审核记录
+/goods-delete-logs/search
+查询商品证书要求和审核状态
+/goods/get-certificate-rule
+查询证书所需上传资料（新）
+/goods/certificate/get-all-certificate-type-list-v2
+上传证书文件
+/goods/upload-certificate-file
+商品证书池创建/编辑
+/goods/save-or-update-certificate-pool
+店铺证书池创建/编辑
+/goods/save-or-update-supplier-certificate
+SKC绑定商品证书池
+/goods/save-certificate-pool-skc-bind
+商品接口-根据条码批量获取SKC与尺码
+/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表
+/goods/number-list
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新记录
+更新时间：2026-06-29 19:52:48
+查询证书所需上传资料（新）
+POST
+/open-api/goods/certificate/get-all-certificate-type-list-v2
+自运营
+全托管
+半托管
+POP
+该API支持查询全量证书所需的资料，用于让开发者了解上传证书所需要填写的信息，比如：检测机构、电池型号、产品型号、证书编号、证书生效时间、证书失效时间等信息。
+
+2026年7月开放平台已推出资质证书新接口，建议对接新接口，详细方案请参考文档。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+language
+string	是	
+language
+Content-Type
+string	是	
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+bbl
+object	否	
+info
+object	否	
+*
+object[]	否	
+npid
+string	否	
+code
+string	是	
+响应编码 成功：0
+info
+object	否	
+结果
+data
+object	否	
+获取证书类型列表响应
+
+certificateTypeInfoList
+object[]	否	
+证书类型信息
+
+certificateDimension
+integer	否	
+判断证书是否需要绑定商品；1、商品维度的证书，该类型的证书需要绑定skc；2、店铺维度的证书，该类型的证书上传后，不需要绑定skc商品
+
+certificateLabel
+string	否	
+证书类型标识(0:普通类型 1:自符类型)
+
+certificateType
+string	否	
+证书类型名称；比如欧洲食品接触类检测报告
+
+certificateTypeId
+int64	否	
+证书类型id
+
+注意：certificateTypeId=844（产品标识符）目前不支持通过API上传，请过滤此类证书。
+
+fileModelUrl
+string	否	
+CPC证书下载模板链接
+
+isEnabled
+integer	否	
+证书类型状态（0:不启用 1:启用)
+
+otherPresetInfoList
+object[]	否	
+证书关联的字段信息
+
+inputType
+integer	否	
+证书信息录入方式(1:单选,2:多选,3:手动录入,4:日期格式)；日期格式示例：2025-01-01 00:00:00
+
+isRequired
+integer	否	
+证书字段是否必填(0:否,1:是)
+
+presetId
+int64	否	
+证书字段id
+
+presetName
+string	否	
+证书字段名CODE
+
+presetRemark
+string	否	
+证书字段名的描述
+
+presetValueList
+object[]	否	
+证书字段所需填写的字段值信息；比如 危险品分类（证书字段），可选择爆炸品、易燃液体、易燃固体等字段值
+
+presetValue
+string	否	
+证书字段值的描述
+
+presetValueId
+int64	否	
+证书字段值ID
+
+sourceFrom
+string	否	
+证书字段来源
+
+unit
+string	否	
+证书字段的单位
+
+presetInfoList
+object[]	否	
+证书关联的字段信息
+
+inputType
+integer	否	
+证书信息录入方式(1:单选,2:多选,3:手动录入,4:日期格式)；日期格式示例：2025-01-01 00:00:00
+
+isRequired
+integer	否	
+证书字段是否必填(0:否,1:是)
+
+presetId
+int64	否	
+【注意！！以下信息更新时间为2023-08-24号，梳理只是为了外围更好对接，请以最新线上证书类型配置为准，】关联字段id : 169:出证日期 [手填-日期格式] 170:产品名称 [手填] 171:电池型号 [手填] 172:证书编号 [手填] 173:检测机构 [下拉 可选项: BV(240094316) | ITS(240094317) | SGS(240094315) | TUV(240094318) | UL(240094319) | 上海化工院检测有限公司(240094499) | 其他(240094322) | 广检(240094321) | 广电(240094320) | 立标检测认证集团（天津津检）(240094500) | 谱尼(240094324) | 迪捷姆(240094325)] 175:证书生效时间 [手填-日期格式] 176:证书更新提示时间 [手填]177:产品型号 [手填]178:证书失效时间 [手填-日期格式]183:检测机构（SRM的）[查srm检测机构 + 实验室]184:签署方式 [下拉 可选项: 本地上传(240094422) | 线上签署(240094423)]185:证书类型标识 [下拉 可选项:自符声明(240094424)]186:检测机构判定结论 [下拉 可选项: 运输危险品(240094501) | 非运输危险品(240094502)]187:危险品分类 [下拉 可选项: 第一类（爆炸品）(240094503) | 第二类（气体）(240094504) | 第三类（易燃液体）(240094505) | 第四类（易燃固体）(240094506) | 第五类（氧化剂和有机过氧化物）(240094507) | 第六类（毒性物质和感染性物质）(240094508) | 第七类（放射性物质）(240094509) | 第八类（腐蚀性物质）(240094510) | 第九类（杂项危险品）(240094511)]
+
+presetName
+string	否	
+证书字段名CODE
+
+presetRemark
+string	否	
+证书字段名的描述
+
+presetValueList
+object[]	否	
+证书字段所需填写的字段值信息；比如 危险品分类（证书字段），可选择爆炸品、易燃液体、易燃固体等字段值
+
+presetValue
+string	否	
+证书字段值的描述
+
+presetValueId
+int64	否	
+证书字段值ID
+
+unit
+string	否	
+证书字段的单位
+
+srmDetectionAgencyList
+object[]	否	
+srm检测机构和实验室信息
+
+detectionAgency
+object	否	
+获取SRM检测机构列表
+detectionAgencyId
+int64	否	
+检测机构id
+detectionAgencyName
+string	否	
+检测机构名称
+laboratoryList
+object[]	否	
+SRM检测机构下所有实验室
+
+laboratoryId
+int64	否	
+实验室id
+laboratoryName
+string	否	
+实验室名称
+
+msg
+string	否	
+错误描述,成功：OK
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/goods/certificate/get-all-certificate-type-list-v2' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1751009366889' \
+--header 'language: zh-cn' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi.sheincorp.com' \
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "certificateTypeId": 1,
+                "certificateLabel": 1,
+                "certificateType": "自符类型证书-01certificate_type_id1",
+                "certificateDimension": 1,
+                "fileModelUrl": "http://filetest.ltwebstatic.com/pqmsfile/2023/12/11/78/17022631422752902183.jpg",
+                "isEnabled": 1,
+                "srmDetectionAgencyList": null,
+                "presetInfoList": [
+                    {
+                        "presetId": 230,
+                        "presetName": "signing_method",
+                        "presetRemark": "signing_methodpreset_name230",
+                        "inputType": 1,
+                        "unit": "",
+                        "isRequired": 1,
+                        "presetValueList": [
+                            {
+                                "presetValueId": 240108177,
+                                "presetValue": "线上签署preset_value240108177"
+                            },
+                            {
+                                "presetValueId": 240108176,
+                                "presetValue": "本地上传preset_value240108176"
+                            }
+                        ]
+                    },
+                    {
+                        "presetId": 232,
+                        "presetName": "Certificate label",
+                        "presetRemark": "Certificate labelpreset_name232",
+                        "inputType": 2,
+                        "unit": "",
+                        "isRequired": 1,
+                        "presetValueList": [
+                            {
+                                "presetValueId": 240108180,
+                                "presetValue": "自符声明preset_value240108180"
+                            }
+                        ]
+                    }
+                ],
+                "otherPresetInfoList": []
+            },
+            {
+                "certificateTypeId": 2,
+                "certificateLabel": 1,
+                "certificateType": "自符类型证书-02certificate_type_id2",
+                "certificateDimension": 1,
+                "fileModelUrl": "",
+                "isEnabled": 1,
+                "srmDetectionAgencyList": null,
+                "presetInfoList": [
+                    {
+                        "presetId": 232,
+                        "presetName": "Certificate label",
+                        "presetRemark": "Certificate labelpreset_name232",
+                        "inputType": 2,
+                        "unit": "",
+                        "isRequired": 1,
+                        "presetValueList": [
+                            {
+                                "presetValueId": 240108180,
+                                "presetValue": "自符声明preset_value240108180"
+                            }
+                        ]
+                    },
+                    {
+                        "presetId": 230,
+                        "presetName": "signing_method",
+                        "presetRemark": "signing_methodpreset_name230",
+                        "inputType": 1,
+                        "unit": "",
+                        "isRequired": 1,
+                        "presetValueList": [
+                            {
+                                "presetValueId": 240108176,
+                                "presetValue": "本地上传preset_value240108176"
+                            },
+                            {
+                                "presetValueId": 240108177,
+                                "presetValue": "线上签署preset_value240108177"
+                            }
+                        ]
+                    }
+                ],
+                "otherPresetInfoList": []
+            },
+            {
+                "certificateTypeId": 3,
+                "certificateLabel": 0,
+                "certificateType": "我是证书类型id3certificate_type_id3",
+                "certificateDimension": 1,
+                "fileModelUrl": "",
+                "isEnabled": 1,
+                "srmDetectionAgencyList": null,
+                "presetInfoList": [
+                    {
+                        "presetId": 213,
+                        "presetName": "product_description",
+                        "presetRemark": "product_descriptionpreset_name213",
+                        "inputType": 3,
+                        "unit": "",
+                        "isRequired": 0,
+                        "presetValueList": null
+                    },
+                    {
+                        "presetId": 210,
+                        "presetName": "testing_organization",
+                        "presetRemark": "testing_organizationpreset_name210",
+                        "inputType": 1,
+                        "unit": "",
+                        "isRequired": 0,
+                        "presetValueList": [
+                            {
+                                "presetValueId": 240108094,
+                                "presetValue": "ITSpreset_value240108094"
+                            },
+                            {
+                                "presetValueId": 240108092,
+                                "presetValue": "SGSpreset_value240108092"
+                            },
+                            {
+                                "presetValueId": 240108093,
+                                "presetValue": "BVpreset_value240108093"
+                            }
+                        ]
+                    },
+                    {
+                        "presetId": 216,
+                        "presetName": "certificate_effective_time",
+                        "presetRemark": "certificate_effective_timepreset_name216",
+                        "inputType": 4,
+                        "unit": "",
+                        "isRequired": 1,
+                        "presetValueList": null
+                    },
+                    {
+                        "presetId": 187,
+                        "presetName": "Dangerous_goods_classification",
+                        "presetRemark": "危险品分类",
+                        "inputType": 1,
+                        "unit": "",
+                        "isRequired": 1,
+                        "presetValueList": [
+                            {
+                                "presetValueId": 240094503,
+                                "presetValue": "第一类（爆炸品）"
+                            }
+                        ]
+                    }
+                ],
+                "otherPresetInfoList": [
+                    {
+                        "sourceFrom": "SRM",
+                        "presetId": 229,
+                        "presetName": "Testing organization",
+                        "presetRemark": "Testing organizationpreset_name229",
+                        "inputType": 1,
+                        "unit": "",
+                        "isRequired": 0,
+                        "presetValueList": [
+                            {
+                                "presetValueId": 456549082,
+                                "presetValue": "天津津检危险品技术品有限公司preset_value456549082"
+                            },
+                            {
+                                "presetValueId": 456549074,
+                                "presetValue": "检测项目变更机构55preset_value456549074"
+                            },
+                            {
+                                "presetValueId": 456549060,
+                                "presetValue": "新机构4preset_value456549060"
+                            },
+                            {
+                                "presetValueId": 456549056,
+                                "presetValue": "新机构3preset_value456549056"
+                            },
+                            {
+                                "presetValueId": 456549052,
+                                "presetValue": "新机构2preset_value456549052"
+                            }
+                        ]
+                    }
+                ]
+            },
+         ],
+        "meta": {
+            "count": 270,
+            "customObj": null
+        }
+    },
+    "bbl": null
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：20次/秒
+FAQ
+No Data
+暂无数据
+更新记录
+更新时间	更新内容
+2026-06-29	
+2026年7月开放平台已推出资质证书新接口，建议对接新接口，详细方案请参考文档：https://open.sheincorp.com/documents/system/05911185-74f1-48d6-a620-fdfb756f6a86
+共1条数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

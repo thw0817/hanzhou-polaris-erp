@@ -1,0 +1,554 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+商品发布/编辑
+/goods/product/publishOrEdit
+商品部分编辑
+/goods/product/partialEdit
+确认店铺是否可发品
+/goods/product/check-publish-permission
+确认商品是否可编辑
+/goods/product/check-edit-permission
+查询商品审核状态
+/goods/query-document-state
+撤回商品审核
+/goods/revoke-product
+商品综合查询
+/goods/searchProduct
+商品列表接口
+/openapi-business-backend/product/query
+商品上下架
+/goods/modify-skc-shelf
+spu商品详情查询
+/goods/spu-info
+sku商品详情查询（即将作废）
+/openapi-business-backend/product/full-detail
+商品发布字段规范
+/goods/query-publish-fill-in-standard
+店铺查商品末级分类
+/goods/query-category-tree
+图文识别推荐类目
+/goods/image-category-suggestion
+查询分类可用属性
+/goods/query-attribute-template
+查询是否支持自定义属性值
+/goods/get-custom-attribute-permission-config
+添加自定义属性值
+/goods/add-custom-attribute-value
+查询关联属性填写规则
+/goods/get-associated-attribute-rules
+查询店铺站点和币种信息（新）
+/goods/query-site-list
+查询店铺站点和站点币种（旧）
+/openapi-business-backend/site/query
+查询可用品牌列表
+/goods/query-brand-list
+查询可用IP列表
+/goods/query-ip-list
+图片链接转换
+/goods/transform-pic
+本地图片上传
+/goods/upload-pic
+获取店铺上架额度
+/goods/query-shelf-quota
+查询商家sku是否已存在
+/goods/product/check-supplierSku-repeated
+商品删除预校验
+/goods/check-deletable
+提交商品删除申请
+/goods/delete/{skcName}
+查询商品删除审核记录
+/goods-delete-logs/search
+查询商品证书要求和审核状态
+/goods/get-certificate-rule
+查询证书所需上传资料（新）
+/goods/certificate/get-all-certificate-type-list-v2
+上传证书文件
+/goods/upload-certificate-file
+商品证书池创建/编辑
+/goods/save-or-update-certificate-pool
+店铺证书池创建/编辑
+/goods/save-or-update-supplier-certificate
+SKC绑定商品证书池
+/goods/save-certificate-pool-skc-bind
+商品接口-根据条码批量获取SKC与尺码
+/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表
+/goods/number-list
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新记录
+更新时间：2026-07-02 21:00:12
+商品发布字段规范
+POST
+/open-api/goods/query-publish-fill-in-standard
+自运营
+全托管
+半托管
+每个店铺在各个分类下有不同的商品发布字段填写规范（要求）。建议在调用商品发布接口前，先调用此接口。本接口可查询的要求范围包括：
+
+1、商品标题和商品描述的必填默认语种（default_language）
+
+2、商品发布时是否必传竞品链接和库存证明（reference_product_link和proof_of_stock）
+
+3、商品发布时是否必传样品信息（sample_info）
+
+4、商品发布时是否必传品牌（brand_code）
+
+5、商品发布时是否必传skc标题（skc_title）
+
+6、半托管和全托管的供货价币种（currency）
+
+7、商品是否支持sku和spu维度的图片（picture_config_list）
+
+8、商品发布时是否必传最小备货数量（minimum_stock_quantity）
+
+9、商品是否支持上传详情图（product_detail_picture）
+
+10、商品是否支持在SKU维度传件数（quantity_info)
+
+11、商品是否支持传SKC建议零售价（suggest_price）
+
+12、商品是否支持填写商家条码（supplier_barcode）
+
+13、商品是否支持填写SKU包装类型（package_type）
+
+14、商品是否支持上传IP信息（ip_character）
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+language
+string	是	
+默认返回中文多语言信息，支持语种：英语:en 法语: fr 西班牙语:es 德语:de 中文简体:zh-cn 泰语:th 巴西葡语:pt-br
+
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+category_id
+long	否	
+末级分类id。查询以下信息的填写规范时需要入参末级分类ID:
+
+分类是否支持SPU维度图片、样品信息、SKU包装类型、SKU维度件数、站点详情图、标题默认语种的最大字符数
+
+spu_name
+string	否	
+SHEIN生成的SKC编码。
+
+该入参仅用于查询某个SPU当前是否正在使用图片新方案，其它场景不需要传；使用场景较少。
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+bbl
+object	否	
+bbl
+info
+object	否	
+*
+object[]	否	
+npid
+string	否	
+code
+string	是	
+result(success: 0)
+
+info
+object	否	
+fill_in_standard_list
+object[]	是	
+商品发布接口中字段的填写规范列表。
+
+每个field_key值会对应发布接口中的一个入参字段，可确认某个入参能否传值、是否必传。
+
+field_key
+string	是	
+规范内容。以下是此接口枚举值 - 对应的发布接口入参字段名
+
+1、reference_product_link - competing_product_link
+
+2、sample_spec - sample_info
+
+3、proof_of_stock - proof_of_stock_list
+
+4、shelf_require - shelf_require
+
+5、brand_code  -brand_code
+
+6、skc_title - skc_title
+
+7、minimum_stock_quantity - minimum_stock_quantity
+
+8、product_detail_picture - site_detail_image_info_list
+
+9、quantity_info - filled_quantity_to_sku和quantity_info
+
+10、suggest_price - suggested_retail_price
+
+11、supplier_barcode -supplier_barcode
+
+12、package_type -package_type
+
+13、ip_character - ip_character_list
+
+module
+string	是	
+该模块是对应shein后台发品页面的模块，对应以下模块:
+
+1、基本信息
+
+2、供应信息
+
+3、参考信息
+
+4、样品信息
+
+required
+boolean	是	
+field key中内容是否必填。
+
+true-必填，false非必填
+
+show
+boolean	是	
+field key中内容是否可传。
+
+true可传，false不可传（传了反而会报错）。
+
+currency
+string	是	
+商品供货价币种。
+
+半托管和全托管使用，在发布接口的cost_info -> currency 中使用。
+
+default_language
+string	是	
+商家的默认语言。
+
+在发布接口的multi_language_desc_list、multi_language_name_list中使用。默认语种的商品名称必填，
+
+default_language_title_max_length
+integer	否	
+商品标题的默认语种的最大字符数。
+
+平台从26年6月开始对默认语种字符数进行管控，不同商品分类+语种，默认语种的字符数限制不同。请入参category_id后获取最大字符数。
+
+language_title_max_length_list
+object[]	否	
+商品标题的所有语种的字符数限制（含默认语种）
+
+language
+string	否	
+语种
+max_length
+double	否	
+语种的最大字符数（含空格）
+picture_config_list
+object[]	否	
+查询店铺是否支持SPU、SKC、SKU维度上传图片
+
+field_key
+string	否	
+字段Code
+
+is_true
+boolean	否	
+枚举：是/否
+weight_config
+object	否	
+SKU的重量填写规则。只有在传入 category_id 时返回，否则为 null。
+
+is_required
+boolean	否	
+SKU重量是否必填
+
+available_units
+string[]	否	
+SKU重量可用单位列表。不同商家和分类可能会有所不同。
+
+length_width_height_config
+object	否	
+SKU的长宽高填写规则。只有在传入 category_id 时返回，否则为 null。
+
+is_required
+string	否	
+是否必填
+available_units
+string[]	否	
+可用单位标识符列表，枚举值：cm / Inch / Ft
+support_sale_attribute_sort
+boolean	否	
+该字段判断是否支持次销售属性值排序；主销售属性值默认都支持排序
+
+msg
+string	否	
+错误描述， success: OK
+
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'http://openapi-test01.sheincorp.cn/open-api/goods/query-publish-fill-in-standard' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1781167217591' \
+--header 'language: en' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+    "category_id":20039919
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "fill_in_standard_list": [
+            {
+                "module": "supplier_info",
+                "field_key": "minimum_stock_quantity",
+                "required": false,
+                "show": false
+            },
+            {
+                "module": "basic_info",
+                "field_key": "skc_title",
+                "required": false,
+                "show": true
+            },
+            {
+                "module": "supplier_info",
+                "field_key": "quantity_info",
+                "required": false,
+                "show": false
+            },
+            {
+                "module": "package_info",
+                "field_key": "package_type",
+                "required": false,
+                "show": true
+            },
+            {
+                "module": "supplier_info",
+                "field_key": "supplier_barcode",
+                "required": false,
+                "show": false
+            },
+            {
+                "module": "reference_info",
+                "field_key": "reference_product_link",
+                "required": false,
+                "show": false
+            },
+            {
+                "module": "reference_info",
+                "field_key": "proof_of_stock",
+                "required": false,
+                "show": false
+            },
+            {
+                "module": "sales_info",
+                "field_key": "shelf_require",
+                "required": false,
+                "show": false
+            },
+            {
+                "module": "basic_info",
+                "field_key": "brand_code",
+                "required": false,
+                "show": true
+            },
+            {
+                "module": "basic_info",
+                "field_key": "brand_series",
+                "required": false,
+                "show": true
+            },
+            {
+                "module": "supplier_info",
+                "field_key": "stop_purchase",
+                "required": false,
+                "show": false
+            },
+            {
+                "module": "supplier_info",
+                "field_key": "mall_state",
+                "required": true,
+                "show": true
+            },
+            {
+                "module": "sales_info",
+                "field_key": "suggest_price",
+                "required": true,
+                "show": true
+            },
+            {
+                "module": "product_detail_pic",
+                "field_key": "product_detail_pic",
+                "required": false,
+                "show": true
+            },
+            {
+                "module": "original_image",
+                "field_key": "original_image",
+                "required": false,
+                "show": true
+            },
+            {
+                "module": "basic_info",
+                "field_key": "ip_character",
+                "required": false,
+                "show": true
+            },
+            {
+                "module": "product_video",
+                "field_key": "product_video",
+                "required": false,
+                "show": true
+            },
+            {
+                "module": "sample_info",
+                "field_key": "sample_spec",
+                "required": false,
+                "show": false
+            }
+        ],
+        "default_language": "en",
+        "picture_config_list": [
+            {
+                "field_key": "switch_spu_picture",
+                "is_true": false
+            }
+        ],
+        "currency": "USD",
+        "support_sale_attribute_sort": false,
+        "default_language_title_max_length": 1000,
+        "weight_config": {
+            "is_required": true,
+            "available_units": [
+                "lb",
+                "g",
+                "Oz"
+            ]
+        },
+        "length_width_height_config": {
+            "is_required": false,
+            "available_units": [
+                "Inch",
+                "cm",
+                "Ft"
+            ]
+        }
+    },
+    "bbl": null,
+    "traceId": "638379f78fafef29"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：40次/秒
+FAQ
+Q：半托管的商品币种如何获取？
+2025-05-26
+A：
+店铺可用币种需要通过接口获取：/open-api/goods/query-publish-fill-in-standard；返回参数中的“currency”代表供货价币种，即半托管和代运营业务货币种类。
+查看详情
+Q：商品发布报错"样品信息不能为空"，ERP如何知道这个字段是否必填？
+2024-12-24
+A：
+可调用商品发布规范确认店铺是否需要上传样品信息接口地址： https://open.sheincorp.com/documents/apidoc/detail/3000293-1000001
+Q：Item title cannot be empty这个报错是什么原因？
+2025-10-23
+A：
+
+报错 “Item title cannot be empty” 表示在调用商品上传接口时出现以下问题之一：未上传商品标题字段：即 multi_language_name_list -> name 字段为空或未提供。未上传店铺默认语种的标题：即 multi_language_name_list -> language 中未包含店铺的默认语种。每个店铺都有其默认语种，商家在设置商品标题和名称时，必须提供该默认语种的商品标题（name）和语言标识（language）。
+如未设置，系统会返回该报错
+如何查询店铺默认语种？如需查询店铺默认语种，可调用以下接口：/open-api/goods/query-publish-fill-in-standard，接口地址： https://open.sheincorp.com/documents/apidoc/detail/3000293-1000001
+请确保在商品上传请求中满足以下要求：multi_language_name_list -> language 字段中包含店铺默认语种；multi_language_name_list -> name 字段中有对应的商品标题
+查看详情
+更新记录
+更新时间	更新内容
+2026-06-25	
+出参新增字段language_title_max_length_list，用于获取商品标题在各语种下的最大字符数，超出上限将发品/编辑失败。
+2026-06-12	
+出参新增字段：weight_config、length_width_height_config。可获取SKU维度重量、长宽高的填写规则，包括是否必填，可用单位。
+共2条数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

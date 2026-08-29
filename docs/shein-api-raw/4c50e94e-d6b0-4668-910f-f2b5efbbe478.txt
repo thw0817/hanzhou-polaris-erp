@@ -1,0 +1,319 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+商家仓库列表查询
+/msc/warehouse/list
+商家库存查询接口
+/stock/stock-query
+更新商家库存接口v1
+/gsp/goods/change-inventory
+更新商家库存接口v2
+/stock/change-inventory/v2
+全托管/SHEIN自营商家库存更新
+/goods/stock-update
+根据SKU查询销量
+/goods/query-sku-sales
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-04-27 20:38:29
+商家库存查询接口
+POST
+/open-api/stock/stock-query
+自运营
+全托管
+SHEIN自营
+半托管
+POP
+支持通过sku、skc、spu查询库存数量
+
+请求参数：请注意，skuCodeList/skcNameList/spuNameList三个参数不能全部为空，至少传入一个
+
+invType为新增参数，用于更准确地表达库存类型。原warehouseType参数将于2026年12月31日废弃下线，建议尽快切换至invType。过渡期内两个参数可同时使用，当同时传入时以invType为准。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+skuCodeList
+string[]	否	
+SHEIN生成SKU 最多传100个，skuCodeList/skcNameList/spuNameList ，请确保三个参数有且只有1个不为空；
+
+skcNameList
+string[]	否	
+SHEIN生成SKC，skuCodeList/skcNameList/spuNameList ，请确保三个参数有且只有1个不为空；
+spuNameList
+string[]	否	
+SHEIN生成SPU，skuCodeList/skcNameList/spuNameList ，请确保三个参数有且只有1个不为空；
+
+warehouseType
+string	是	
+仓库类型；1:查备货在SHEIN仓的库存/ 2:查半托管，自主运营模式的虚拟库存/ 3:查代运营（全托管）、SHEIN自营模式的虚拟库存
+
+invType
+string	否	
+库存类型，PI：SHEIN仓实物库存，VI：商家虚拟库存，JI：商家JITJIT库存
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码 成功：0
+info
+object	否	
+goodsInventory
+object[]	是	
+商品库存
+spuName
+string	是	
+SHEIN spu 编码
+
+skcName
+string	是	
+SHEIN skc 编码
+
+skuList
+object[]	是	
+sku库存数据
+skuCode
+string	是	
+SHEIN sku 编码
+totalInventoryQuantity
+integer	是	
+查询sku仓库库存汇总
+totalLockedQuantity
+integer	是	
+查询sku仓库锁定库存汇总
+totalTempLockQuantity
+integer	是	
+查询sku仓库临时锁库存汇总
+totalUsableInventory
+integer	是	
+查询sku仓库可用库存汇总
+
+totalOutOfStockQty
+integer	否	
+查询已付款未转急采单的缺货需求数汇总；仅适用代运营，SHEIN自营的急采业务
+totalTransitQuantity
+integer	否	
+查询sku仓库在途库存汇总
+
+warehouseInventoryList
+object[]	是	
+具体仓库数据
+inventoryQuantity
+integer	是	
+仓库库存数
+lockedQuantity
+integer	是	
+仓库锁定库存
+tempLockQuantity
+integer	是	
+仓库临时锁库存
+usableInventory
+integer	是	
+仓库可用库存
+outOfStockQty
+string	否	
+仓库已付款未转急采单的缺货需求数汇总；仅适用代运营，SHEIN自营的急采业务
+warehouseCode
+string	是	
+仓库编码
+warehouseType
+string	是	
+仓库类型
+transitQuantity
+integer	否	
+仓库在途库存
+
+msg
+string	否	
+错误描述,成功：OK
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/stock/stock-query' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'Content-Type: application/json;charset=UTF-8' \
+--header 'x-lt-timestamp: 1752570817402' \
+--data-raw '{
+    "skuCodeList": ["I1omh30jb5ld"],
+    "warehouseType": 2
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": [
+        {
+            "goodsInventory": [
+                {
+                    "spuName": "MM2402234440",
+                    "skcName": "sMM24022344403001",
+                    "skuList": [
+                        {
+                            "skuCode": "I1omh30jb5ld",
+                            "totalInventoryQuantity": 999,
+                            "totalLockedQuantity": 2,
+                            "totalUsableInventory": 997,
+                            "totalTempLockQuantity": 0,
+                            "warehouseInventoryList": [
+                                {
+                                    "warehouseCode": "PS0618098174",
+                                    "warehouseType": "2",
+                                    "inventoryQuantity": 999,
+                                    "lockedQuantity": 2,
+                                    "usableInventory": 997,
+                                    "tempLockQuantity": 0
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "bbl": null
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+00-E-MSC-0000	
+服务器发生错误
+系统异常，请重试
+00-E-MSC-0002	
+SKU、SKC、SPU这三者中只需要传一个值
+该接口以下入参字段必传，且只能选择其中一个参数作为入参，否则无法查询；入参字段：skuCodeList、skcNameList、spuNameList
+00-E-MSC-0004	
+SKC下的SKU数量超过100，SPU下的SKU数量超过100，请按照SKU传值
+以下入参字段的数量不能超过100，入参字段：skuCodeList、skcNameList、spuNameList
+00-E-MSC-0006	
+不允许该供应商操作
+该接口仅限查询自主运营、半托管、全托管类型店铺的仓库
+00-E-MSC-0009	
+SKU数量超过100
+skuCodeList中，sku数量不能超过100
+00-E-MSC-0010	
+SKC数量超过100
+skcNameList中，skc数量不能超过100
+00-E-MSC-0011	
+SPU数量超过100
+spuNameList中，spu数量不能超过100
+00-E-MSC-0012	
+仓库类型无效
+warehouseType无效，请按照文档提供的枚举值进行传参
+共8条数据
+限流规则
+收起
+单个开发者接口限流频次：50次/秒
+FAQ
+Q：如何监控库存水平，避免库存过剩或不足？
+2025-05-26
+A：
+可以有两种方式来实现库存预警功能：ERP 根据订单和商品库存查询库存情况，并更新信息，从而开发库存预警功能，以确保在库存紧张或过剩时及时通知商家。ERP 接入平台提供的预警提醒功能。该平台支持库存预警的 webhook，旨在帮助商家更好地管理库存，确保商家及时了解到即将售罄的 SKU。ERP 通过接入 webhook，可以帮助商家做好 SKU 库存预警，通知路径为：/inventory_warning_notice。
+查看详情
+Q：库存不足的情况下，系统会如何处理订单？
+2025-05-26
+A：
+库存不足后，消费者在前端将看到商品售罄的提醒，需商家及时补充库存。
+Q：如何确认商品是否在同一个仓库中？
+2025-05-26
+A：
+ERP 可以使用库存查询接口 “/open-api/stock/stock-query” 确认商品是否在一个仓库中。
+Q：ERP 是否可以通过接口控制库存锁定？
+2025-05-26
+A：
+由于正式锁和临时锁都是消费者行为，无法通过 API 修改临时锁或者正式锁占用的库存。
+Q：什么是锁定库存和临时锁库存？咨询锁定库存何时会释放？有哪些场景？
+2025-05-26
+A：
+平台定义的正式锁指的是消费者付款的订单占用的库存，会在发货后释放。平台定义的临时锁指的是消费者下单未付款的订单占用的库存，订单取消或者转成付款都会释放临时锁库存。订单取消后会将库存更新为店铺可用库存，付款后会将临时锁库存变更为正式锁库存。
+查看详情
+Q：商家自履约和SHEIN履约在什么时候会扣减总库存
+2024-12-24
+A：
+1、商家自履约在导出地址的时候会扣减库存；2、shein履约（非巴西市场）是打印面单的时候会扣减库存；3、shein履约（巴西市场）是导出地址的时候会扣减库存；
+查看详情
+Q：「库存接口-实时库存同步 」只传shein_sku可以吗？？？
+2025-05-27
+A：
+是的
+Q：/open-api/stock/stock-query接口会返回卖家sku编码（supplierSku）吗
+2025-11-10
+A：
+不会，/open-api/stock/stock-query接口会返回shein生成的skuCode，但不会直接返回卖家自己维护的sku编码（supplierSku）。如果您想要获取某个卖家sku编码对应的库存，需要先通过调用/open-api/goods/spu-info获得shein sku编码（skuCode）和卖家sku编码（supplierSku）之间的映射关系。
+查看详情
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

@@ -1,0 +1,401 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+查询SKC的合规信息要求
+/goods-compliance-requirements/list
+查询资质证书列表
+/goods-certificates/search
+查询资质证书填写规则
+/goods-certificate-schemas/detail
+上传资质证书文件
+/goods-certificate-files/upload
+创建/编辑资质证书
+/goods-certificates/save
+SKC绑定资质证书
+/goods-certificates/bind
+查询代理公司列表
+/goods-compliance/agency-list
+绑定SKC和代理公司
+/goods-compliance/save-skc-agency
+查询SKC的代理公司绑定要求
+/goods-compliance/skc-agency-detail
+查询警告语证书的填写规则
+/goods-compliance/query-warning-certificate-rules
+更新SKC的警告语
+/goods-compliance/update-skc-warning-certificate
+查询SKC的警告语绑定状态
+/goods-compliance/query-skc-warning-status
+查询SKC的实拍图要求
+/goods-compliance/skc-label-list
+查询SKC可用的标签模板
+/goods-compliance/get-label-template
+获取全量环保耗材信息
+/goods-quality/environmental-label-rule/material-quality-tree-v2
+打印合规标签
+/goods-compliance/label-print
+上传实拍图图片
+/goods-compliance/upload-skc-label-picture
+绑定SKC和实拍图
+/goods-compliance/skc-save-label
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新记录
+更新时间：2026-06-30 20:30:58
+查询资质证书填写规则
+POST
+/open-api/goods-certificate-schemas/detail
+自运营
+全托管
+半托管
+POP
+获取资质证书的填写规则，仅支持获取complianceGroupCode=ZSZZL的规则，其他合规信息的填写规则请通过其他接口获取。
+
+完整的资质证书接口调用方案，详见文档
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+默认值：application/json
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+language
+string	否	
+响应msg的语种。不传时默认为中文，枚举值支持语种:英语:US 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+certificateTypeCodes
+string[]	否	
+证书类型code，单次最多查询10个。
+
+certificateTypeIdList
+int64[]	否	
+证书类型id,批量查询数量最多:1000
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码成功：0
+
+msg
+string	否	
+错误描述,成功：OK
+info
+object	否	
+响应信息
+
+certificateTypeInfoList
+object[]	否	
+证书类型信息列表
+
+certificateDimension
+integer	否	
+证书绑定维度：1:部分商品（需手动和SKC绑定）；2:全部商品
+
+certificateLabel
+string	否	
+证书类型标识：0普通类型；1自符类型；2-溯源证书。
+
+目前API仅支持0普通类型的资质证书创建。
+
+certificateType
+string	否	
+证书类型值描述
+
+certificateTypeId
+int64	否	
+证书类型id
+
+complianceGroupCode
+string	否	
+合规信息分组code。枚举值：HGXXL-合规信息类；SPTL-卖点类；GSL-公司类；ZSZZL-证书资质类；SPSMS-说明书
+
+【重要】此接口只能获取ZSZZL的填写规则，其他分组的填写规则需要通过其他接口获取。
+
+
+
+fileModelUrl
+string	否	
+证书下载模板链接
+
+isEnabled
+integer	否	
+规则状态（0:不启用,1:启用)
+
+otherPresetInfoList
+object[]	否	
+证书字段（外部关联字段，例如检测机构等。字段的的可选value通常需要srmDetectionAgencyList获取。）
+
+inputType
+integer	否	
+外部关联字段录入方式(1:单选,2:多选,3:手动录入,4:日期格式,5:警告语,6:欧盟责任人)
+isRequired
+integer	否	
+外部维护时是否必填(0:否,1:是)
+presetId
+int64	否	
+外部关联字段id
+presetName
+string	否	
+外部关联字段名CODE
+presetRemark
+string	否	
+外部关联字段名描述
+presetValueList
+object[]	否	
+外部关联字段值信息
+presetValue
+string	否	
+关联字段的值描述
+presetValueId
+int64	否	
+关联字段的值ID
+sourceFrom
+string	否	
+外部关联字段来源
+unit
+string	否	
+外部关联字段单位
+presetInfoList
+object[]	否	
+证书关联字段信息
+inputType
+integer	否	
+关联字段录入方式(1:单选,2:多选,3:手动录入,4:日期格式,5:警告语,6:欧盟责任人)
+isRequired
+integer	否	
+维护时是否必填(0:否,1:是)
+presetId
+int64	否	
+关联字段id
+presetName
+string	否	
+关联字段名CODE
+presetRemark
+string	否	
+关联字段名描述
+presetValueList
+object[]	否	
+关联字段值信息
+presetValue
+string	否	
+关联字段的值描述
+presetValueId
+int64	否	
+关联字段的值ID
+unit
+string	否	
+关联字段单位
+srmDetectionAgencyList
+object[]	否	
+SRM检测机构列表
+detectionAgency
+object	否	
+detectionAgencyId
+int64	否	
+检测机构id
+detectionAgencyName
+string	否	
+检测机构名称
+laboratoryList
+object[]	否	
+实验室列表
+laboratoryId
+int64	否	
+实验室id
+laboratoryName
+string	否	
+实验室名称
+traceId
+string	否	
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/goods-certificate-schemas/detail' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1782822499186' \
+--header 'language: US' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi.sheincorp.com' \
+--data-raw '{
+  "certificateTypeCodes":["968FAA40F10E785"]
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "certificateTypeInfoList": [
+            {
+                "certificateTypeId": 77,
+                "certificateLabel": 0,
+                "certificateType": "CE-LVD证书",
+                "certificateDimension": 1,
+                "fileModelUrl": "https://lt-pqms.oss-cn-shenzhen.aliyuncs.com/17060023392868330111.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260630T122821Z&X-Amz-SignedHeaders=host&X-Amz-Expires=432000&X-Amz-Credential=LTAI5tKvGuVMaYLBaMkpkiBr/20260630/oss-cn-shenzhen/s3/aws4_request&X-Amz-Signature=a366262098e03076f578ac8bc483fb30f1240744e817818575de063f577602d8",
+                "isEnabled": 1,
+                "complianceGroupCode": "ZSZZL",
+                "presetInfoList": [
+                    {
+                        "presetId": 175,
+                        "presetName": "certificate_effective_time",
+                        "presetRemark": "证书生效时间",
+                        "inputType": 4,
+                        "unit": "",
+                        "isRequired": 1,
+                        "presetValueList": []
+                    }
+                ],
+                "otherPresetInfoList": []
+            }
+        ],
+        "srmDetectionAgencyList": [
+            {
+                "detectionAgency": {
+                    "detectionAgencyId": 16886285,
+                    "detectionAgencyName": "UTS中联品检"
+                },
+                "laboratoryList": [
+                    {
+                        "laboratoryId": 16997191,
+                        "laboratoryName": "UTS-佛山-纺织品"
+                    }
+                ]
+            },
+            {
+                "detectionAgency": {
+                    "detectionAgencyId": 16544234,
+                    "detectionAgencyName": "TUV Rheinland CCIC(Qingdao) Co., Ltd., CPSC ID 1641"
+                },
+                "laboratoryList": [
+                    {
+                        "laboratoryId": 16544235,
+                        "laboratoryName": "TUVR莱茵-青岛-纺织-1641"
+                    }
+                ]
+            },
+            {
+                "detectionAgency": {
+                    "detectionAgencyId": 16541449,
+                    "detectionAgencyName": "Guangdong Wonder Testing International Co., Ltd."
+                },
+                "laboratoryList": [
+                    {
+                        "laboratoryId": 16702039,
+                        "laboratoryName": "Guangdong Wonder Testing International Co., Ltd.+guandong+TOY+1435"
+                    }
+                ]
+            },
+            {
+                "detectionAgency": {
+                    "detectionAgencyId": 16445263,
+                    "detectionAgencyName": "QIMA (Hangzhou) Testing Co., Ltd"
+                },
+                "laboratoryList": [
+                    {
+                        "laboratoryId": 16445264,
+                        "laboratoryName": "启迈（杭州）检测有限公司"
+                    }
+                ]
+            },
+            {
+                "detectionAgency": {
+                    "detectionAgencyId": 16396873,
+                    "detectionAgencyName": "Shenzhen Ensure Quality Technology Service Co.,Ltd."
+                },
+                "laboratoryList": [
+                    {
+                        "laboratoryId": 16396874,
+                        "laboratoryName": "深圳确保质量技术服务有限公司"
+                    }
+                ]
+            }
+        ]
+    },
+    "bbl": null,
+    "traceId": "fca3ac4f6fa8408a"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：20次/秒
+FAQ
+No Data
+暂无数据
+更新记录
+更新时间	更新内容
+2026-06-29	
+新接口上线
+共1条数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

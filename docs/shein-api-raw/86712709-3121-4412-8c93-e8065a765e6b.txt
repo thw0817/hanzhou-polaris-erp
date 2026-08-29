@@ -1,0 +1,382 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+查询退货申请单列表
+/purchase/return-application-list
+查询退货申请单商品明细
+/purchase/return-application-detail
+查询商家可选择的处理方式
+/purchase/return-disposals
+查询退货方式
+/purchase/return-pickup-methods
+查询商家退货地址
+/purchase/query-return-address
+查询退货可选择的物流
+/purchase/return-carriers
+确认退货申请单
+/purchase/confirm-return-application
+查询商品可退库存数
+/purchase/returnable-inventory
+创建退货申请单
+/purchase/create-return-application
+查询退货与报废单列表
+/purchase/return-list
+查询退货与报废单商品明细
+/purchase/return-product-detail
+查询退货与报废单包裹明细
+/purchase/return-package-detail
+修改退货单的退货方式
+/purchase/update-pickup-methods
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-06-12 10:36:33
+查询商家退货地址
+POST
+/open-api/purchase/query-return-address
+全托管
+获取商家可用的退货收货地址列表
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+addressIdList
+integer[]	否	
+卖家地址唯一ID集合,如果入参此ID 列表不为空，只会返回此ID列表中所有 id 对应的地址明细
+filterSharedAddress
+boolean	否	
+是否过滤共享地址 true:过滤 false:不过滤(默认不过滤)；开发者可忽略
+
+fuzzyQuery
+string	否	
+模糊搜索,地址简称、手机区号和联系人的全模糊搜索
+
+orderBySharedAddress
+boolean	否	
+是否按商群共享地址排序，当入参该值并且是true时，会把共享地址排在前面,如果不传按默认排序；开发者可忽略
+
+pageNum
+integer	否	
+页码,默认第一页
+
+pageSize
+integer	否	
+每页条数,默认10条
+
+serviceSiteCodeList
+string[]	否	
+VSS增值系统提供的服务点ID集合,1、VSS增值系统提供的服务点ID 2、如果入参此ID，只会返回此ID对应的地址明细（不区分服务点启用or禁用状态）；开发者可忽略
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码，成功：0
+
+msg
+string	否	
+错误描述,成功：OK
+
+traceId
+string	是	
+请求的唯一标识；用于异常报错跟踪
+info
+object	是	
+data
+object[]	是	
+address1
+string	否	
+地址1(国内和国外商家使用的地址)
+
+address2
+string	否	
+地址2(国外商家使用的地址，地址1和地址2进行拼接使用)
+addressAbnormal
+integer	否	
+地址异常情况：1-已处理 2-待处理
+
+addressDetail
+string	否	
+拼接后的地址详情
+
+addressId
+integer	否	
+物流客户地址唯一ID
+
+addressLabel
+string	否	
+地址标签
+
+cityId
+integer	否	
+城市id
+
+cityName
+string	否	
+城市名称
+
+countryCode
+string	否	
+国家二字码
+
+countryId
+integer	否	
+国家ID
+
+countryName
+string	否	
+国家名称
+
+districtId
+integer	否	
+地区id
+
+districtName
+string	否	
+地区名称
+
+isDefaultAddress
+integer	否	
+是否默认发货地址1：是；2否
+
+isDefaultPickupAddress
+integer	否	
+是否默认收货地址1：是；2:否
+
+isDefaultReturnAddress
+integer	否	
+是否默认退货地址1：是；2:否
+
+isSharedAddress
+integer	否	
+是否商群共享地址1：是；2:否
+
+lastLevelAddressId
+integer	否	
+地址最末级ID
+
+merchantCode
+string	否	
+商家全球唯一编码
+
+phoneAreaCode
+string	否	
+手机区号
+
+postCode
+string	否	
+邮编
+
+postcodeId
+integer	否	
+邮编ID
+
+sellerContract
+string	否	
+商家联系人
+
+sellerContractEmail
+string	否	
+商家联系人邮箱
+
+sellerContractFirstName
+string	否	
+商家联系人-名
+
+sellerContractLastName
+string	否	
+商家联系人-姓
+
+sellerContractPhone
+string	否	
+商家联系人电话
+
+sellerId
+integer	否	
+商家ID,供应商外部id
+
+sellerSiteNo
+string	否	
+服务站点编码
+
+snapshotVersion
+string	否	
+地址最新版本号（按照版本号查询的时候返回的是入参的版本号)
+
+stateId
+integer	否	
+州省id
+
+stateName
+string	否	
+州省名称
+
+streetId
+integer	否	
+街道id
+
+streetName
+string	否	
+街道名称
+
+supplierType
+integer	否	
+商家类型采购：1-生产；2-增值；6-平台
+
+meta
+object	是	
+count
+integer	否	
+customObj
+object	是	
+请求返回示例
+收起
+请求示例
+复制
+
+
+curl --location --request POST 'https://openapi.sheincorp.cn/open-api/purchase/query-return-address' \
+--header 'language: en' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-timestamp: 1752733442579' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+  "addressIdList": [
+    
+  ]
+
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "addressId": 20650,
+                "sellerContract": "浙江 发货",
+                "sellerContractPhone": "12344555667",
+                "phoneAreaCode": "+86",
+                "sellerContractEmail": "",
+                "sellerSiteNo": "",
+                "addressLabel": "浙江地址",
+                "isDefaultAddress": 2,
+                "isDefaultReturnAddress": 2,
+                "isDefaultPickupAddress": 2,
+                "countryId": 44,
+                "countryName": "China",
+                "countryCode": "CN",
+                "stateId": 261464,
+                "stateName": "浙江省",
+                "cityId": 261627,
+                "cityName": "丽水市",
+                "districtId": 3006790,
+                "districtName": "遂昌县",
+                "streetId": 6611892,
+                "streetName": "蔡源乡",
+                "postcodeId": 0,
+                "postCode": "",
+                "address1": "三星大道115号",
+                "address2": "",
+                "addressDetail": "浙江省 丽水市 遂昌县 三星大道115号",
+                "sellerContractLastName": "浙江",
+                "sellerContractFirstName": "发货",
+                "supplierType": 10,
+                "sellerId": test,
+                "merchantCode": "test",
+                "addressAbnormal": 1,
+                "lastLevelAddressId": 6611892,
+                "snapshotVersion": "CLMS2602090001",
+                "isSharedAddress": 2
+            }
+        ],
+        "meta": {
+            "count": 1,
+            "customObj": {}
+        }
+    },
+    "bbl": {},
+    "traceId": "7a2fcc0007bc02e8"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：50次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

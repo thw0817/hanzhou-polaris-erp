@@ -1,0 +1,1297 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+商品发布/编辑
+/goods/product/publishOrEdit
+商品部分编辑
+/goods/product/partialEdit
+确认店铺是否可发品
+/goods/product/check-publish-permission
+确认商品是否可编辑
+/goods/product/check-edit-permission
+查询商品审核状态
+/goods/query-document-state
+撤回商品审核
+/goods/revoke-product
+商品综合查询
+/goods/searchProduct
+商品列表接口
+/openapi-business-backend/product/query
+商品上下架
+/goods/modify-skc-shelf
+spu商品详情查询
+/goods/spu-info
+sku商品详情查询（即将作废）
+/openapi-business-backend/product/full-detail
+商品发布字段规范
+/goods/query-publish-fill-in-standard
+店铺查商品末级分类
+/goods/query-category-tree
+图文识别推荐类目
+/goods/image-category-suggestion
+查询分类可用属性
+/goods/query-attribute-template
+查询是否支持自定义属性值
+/goods/get-custom-attribute-permission-config
+添加自定义属性值
+/goods/add-custom-attribute-value
+查询关联属性填写规则
+/goods/get-associated-attribute-rules
+查询店铺站点和币种信息（新）
+/goods/query-site-list
+查询店铺站点和站点币种（旧）
+/openapi-business-backend/site/query
+查询可用品牌列表
+/goods/query-brand-list
+查询可用IP列表
+/goods/query-ip-list
+图片链接转换
+/goods/transform-pic
+本地图片上传
+/goods/upload-pic
+获取店铺上架额度
+/goods/query-shelf-quota
+查询商家sku是否已存在
+/goods/product/check-supplierSku-repeated
+商品删除预校验
+/goods/check-deletable
+提交商品删除申请
+/goods/delete/{skcName}
+查询商品删除审核记录
+/goods-delete-logs/search
+查询商品证书要求和审核状态
+/goods/get-certificate-rule
+查询证书所需上传资料（新）
+/goods/certificate/get-all-certificate-type-list-v2
+上传证书文件
+/goods/upload-certificate-file
+商品证书池创建/编辑
+/goods/save-or-update-certificate-pool
+店铺证书池创建/编辑
+/goods/save-or-update-supplier-certificate
+SKC绑定商品证书池
+/goods/save-certificate-pool-skc-bind
+商品接口-根据条码批量获取SKC与尺码
+/goods/batch-skc-size
+商品接口-全量查询SKC/SKU/设计款号关系列表
+/goods/number-list
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新记录
+更新时间：2026-07-10 10:40:10
+查询分类可用属性
+POST
+/open-api/goods/query-attribute-template
+自运营
+全托管
+半托管
+支持查询店铺可用属性。平台内不同店铺在各个类目下可用的属性不同，因此建议按店铺维度更新数据。同时因平台规则可能会变更，如增加销售属性，修改属性是否必填等，建议一周更新一次。
+
+属性包括：商品属性、主销售属性（skc）、次销售属性（sku）、尺码表属性，属性规则复杂，可查看SHEIN商品属性介绍了解详细对接方式。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+language
+string	是	
+默认返回中文多语言信息，支持语种：英语:en 法语: fr 西班牙语:es 德语:de 中文简体:zh-cn 泰语:th 巴西葡语:pt-br
+
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+product_type_id_list
+int64[]	是	
+类型id集合，单次调用最多支持10个类型id
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+bbl
+object	否	
+bbl
+
+info
+object	否	
+*
+object[]	否	
+code
+string	是	
+Result(success: 0)
+info
+object	否	
+data
+object[]	否	
+attribute_infos
+object[]	否	
+某个product_type下属性列表。
+
+建议查看SHEIN商品属性介绍了解更多对接细节。
+
+attribute_id
+long	否	
+属性id
+
+attribute_name
+string	否	
+属性id的名称。常见的销售属性有颜色、尺码；常见的商品属性有产品特征、产品功能、是否需要电源等
+
+attribute_is_show
+int64	否	
+属性是否会在消费者端显示；1-展示，2-不展示
+
+attribute_type
+int64	否	
+属性类型。决定属性在商品发布接口中哪个字段内入参。
+
+1-销售属性（在skc_list和sku_list入参）；2-尺寸属性（在size_attribute_list传参），3-成分属性（需要同时结合data_dimension的值，判断在发品接口的入参字段），4-普通属性（需要同时结合data_dimension的值，判断在发品接口的入参字段）
+
+attribute_label
+int64	否	
+主销售属性（SKC属性标签）。只有主销售属性才可在skc_list中传参。
+
+1-代表是主销售属性，主销售属性也可用于次销售属性; 0: 不是主销售属性。
+
+attribute_mode
+int64	否	
+属性值的录入方式。
+
+0 - 手工输入属性值，常见于尺寸属性，只可输入正整数，需在attribute_extra_value中入参；
+
+1-下拉多选，即属性下可以有多个属性值，需在attribute_value_id中入参；
+
+2-销售属性专用，下拉单选，需在attribute_value_id中入参；
+
+3-下拉单选，需在attribute_value_id中入参
+
+4-下拉多选+手工输入参数，需在attribute_value_id和attribute_extra_value中入参
+
+attribute_input_num
+integer	否	
+属性值个数限制。
+
+当attribute_mode=1时，最多可选的属性值个数，0代表无限制。
+
+attribute_status
+int64	否	
+属性是否必填。 1-不可填写（属性可能已废弃）；2-选填；3-必填。必填属性如果不填，则会报错；
+
+attribute_remark_list
+integer[]	否	
+属性标识。说明属性归属于什么场景。1:重要,2:合规,3:质量,4:关务
+
+data_dimension
+integer	否	
+商品属性的绑定维度（attribute_type=3/4）。
+
+1-skc维度，在发品接口的product_attribute_list中入参
+
+3-sku维度，在发品接口的sku_scope_attribute_list中入参
+
+
+
+attribute_value_info_list
+object[]	否	
+属性值列表
+
+attribute_value
+string	否	
+属性值的具体内容
+
+attribute_value_id
+long	否	
+属性值id
+
+is_show
+int64	否	
+是否展示
+
+is_custom_attribute_value
+boolean	否	
+是否为自定义属性值。true代表是，false代表否
+
+rule_info_list
+object[]	否	
+当attribute_mode=3/4，支持手动输入值时（即发品接口中的product_attribute_list-attribute_extra_value），需要关注。此字段中给出了手动输入值的填写规则。
+
+condition_operator
+integer	否	
+条件运算符(目前只作用于正整数、自然数的位数控制)； 0、空：表示不做控制，1：大于{value}位，2：小于{value}位
+
+condition_type
+integer	否	
+校验规则类型。
+
+1-值必须是正整数
+
+2-值必须是连接符，可填符号的详见value
+
+3-值允许输入小数，小数最多支持的位数见value
+
+4-值必须是自然数 (0+正整数)
+
+5-允许输入数字和连接符，数字最多允许2位小数，可填写的连接符见value，多个时逗号分隔，如-,~,/
+
+id
+int64	否	
+校验规则id
+
+value
+string	否	
+变量值。不同condition_type时代表意义不同，详细说明见condition_type
+
+supplier_id
+long	否	
+商家id（如果值大于0，则表示是自定义属性）
+
+main_attribute_status
+long	否	
+类目下主销售属性填写要求。注意：API发品时不论哪种情况，skc的主销售属性必须入参，只是不同填写要求主销售属性可用值不同。
+
+1-不填：主销售属性必须使用【默认】属性。
+
+2-选填：主销售属性可使用【默认】或其他属性。
+
+3-必填：主销售属性不可以使用【默认】属性，只能用其他属性。
+
+product_type_id
+long	否	
+商品类型id
+
+meta
+object	否	
+count
+integer	否	
+customObj
+object	否	
+
+
+msg
+string	否	
+Error description, success: OK
+traceId
+string	否	
+请求的唯一标识；用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi-test01.sheincorp.cn/open-api/goods/query-attribute-template' \
+--header 'language: zh-cn' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-timestamp: 1752733538805' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+    "product_type_id_list": [
+        2147503175
+    ]
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "data": [
+            {
+                "product_type_id": 2512,
+                "business_mode": 1,
+                "attribute_infos": [
+                    {
+                        "attribute_id": 87,
+                        "attribute_name": "尺寸",
+                        "attribute_name_en": "Size",
+                        "attribute_is_show": 1,
+                        "attribute_source": 1,
+                        "attribute_label": 0,
+                        "attribute_mode": 2,
+                        "data_dimension": 1,
+                        "attribute_status": 3,
+                        "attribute_type": 1,
+                        "business_mode": 1,
+                        "is_sample": 1,
+                        "supplier_id": 0,
+                        "attribute_doc": null,
+                        "attribute_doc_image_list": null,
+                        "attribute_value_info_list": [
+                            {
+                                "attribute_value_id": 474,
+                                "attribute_value": "单一尺寸",
+                                "attribute_value_en": "one-size",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1448,
+                                "attribute_value": "",
+                                "attribute_value_en": "",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 568,
+                                "attribute_value": "S",
+                                "attribute_value_en": "S",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 417,
+                                "attribute_value": "M(中文)",
+                                "attribute_value_en": "M",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 387,
+                                "attribute_value": "L-中文",
+                                "attribute_value_en": "L",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 754,
+                                "attribute_value": "XL中文",
+                                "attribute_value_en": "XL_en",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 756,
+                                "attribute_value": "XXL",
+                                "attribute_value_en": "XXL",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 758,
+                                "attribute_value": "XXXL",
+                                "attribute_value_en": "XXXL",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 759,
+                                "attribute_value": "XXXXL",
+                                "attribute_value_en": "XXXXL",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            }
+                        ]
+                    },
+                    {
+                        "attribute_id": 27,
+                        "attribute_name": "颜色",
+                        "attribute_name_en": "color",
+                        "attribute_is_show": 1,
+                        "attribute_source": 1,
+                        "attribute_label": 1,
+                        "attribute_mode": 2,
+                        "data_dimension": 1,
+                        "attribute_status": 3,
+                        "attribute_type": 1,
+                        "business_mode": 1,
+                        "is_sample": 0,
+                        "supplier_id": 0,
+                        "attribute_doc": null,
+                        "attribute_doc_image_list": null,
+                        "attribute_value_info_list": [
+                            {
+                                "attribute_value_id": 78,
+                                "attribute_value": "杏色",
+                                "attribute_value_en": "Apricot",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 81,
+                                "attribute_value": "军绿色",
+                                "attribute_value_en": "Army Green",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 103,
+                                "attribute_value": "米色",
+                                "attribute_value_en": "Beige",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 112,
+                                "attribute_value": "黑色",
+                                "attribute_value_en": "Black",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 113,
+                                "attribute_value": "黑白色",
+                                "attribute_value_en": "Black and White",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 118,
+                                "attribute_value": "blackk",
+                                "attribute_value_en": "blackk",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 137,
+                                "attribute_value": "青铜色",
+                                "attribute_value_en": "Bronze",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 140,
+                                "attribute_value": "棕色",
+                                "attribute_value_en": "Brown",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 144,
+                                "attribute_value": "酒红色",
+                                "attribute_value_en": "Burgundy",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 152,
+                                "attribute_value": "驼色",
+                                "attribute_value_en": "Camel",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 171,
+                                "attribute_value": "香槟色",
+                                "attribute_value_en": "Champagne",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 182,
+                                "attribute_value": "明亮",
+                                "attribute_value_en": "Clear",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 322,
+                                "attribute_value": "姜黄色",
+                                "attribute_value_en": "Ginger",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 330,
+                                "attribute_value": "金黄",
+                                "attribute_value_en": "Gold",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 334,
+                                "attribute_value": "绿色",
+                                "attribute_value_en": "Green",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 336,
+                                "attribute_value": "灰色",
+                                "attribute_value_en": "Grey",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 364,
+                                "attribute_value": "玫红色",
+                                "attribute_value_en": "Hot Pink",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 379,
+                                "attribute_value": "黄褐",
+                                "attribute_value_en": "Khaki",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 421,
+                                "attribute_value": "紫红色",
+                                "attribute_value_en": "Maroon",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 447,
+                                "attribute_value": "彩色",
+                                "attribute_value_en": "Multicolor",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 475,
+                                "attribute_value": "橘色",
+                                "attribute_value_en": "Orange",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 513,
+                                "attribute_value": "粉色",
+                                "attribute_value_en": "Pink",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 536,
+                                "attribute_value": "紫色",
+                                "attribute_value_en": "Purple",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 544,
+                                "attribute_value": "红色",
+                                "attribute_value_en": "Red",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 562,
+                                "attribute_value": "宝蓝色",
+                                "attribute_value_en": "Royal Blue",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 601,
+                                "attribute_value": "银色",
+                                "attribute_value_en": "Silver",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 739,
+                                "attribute_value": "白色",
+                                "attribute_value_en": "Whiteen",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 762,
+                                "attribute_value": "黄色",
+                                "attribute_value_en": "Yellow",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 2427,
+                                "attribute_value": "",
+                                "attribute_value_en": "",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 2431,
+                                "attribute_value": "",
+                                "attribute_value_en": "",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 2436,
+                                "attribute_value": "Mint Green",
+                                "attribute_value_en": "Mint Green",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 2486,
+                                "attribute_value": "Light Grey",
+                                "attribute_value_en": "Light Grey",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 2493,
+                                "attribute_value": "Dark Grey",
+                                "attribute_value_en": "Dark Grey",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 2566,
+                                "attribute_value": "frankie_test",
+                                "attribute_value_en": "frankie_test",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000107,
+                                "attribute_value": "秋",
+                                "attribute_value_en": "秋",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000108,
+                                "attribute_value": "冬",
+                                "attribute_value_en": "冬",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000109,
+                                "attribute_value": "流行款",
+                                "attribute_value_en": "DYJ_流行款_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000110,
+                                "attribute_value": "时尚款",
+                                "attribute_value_en": "DYJ_时尚款_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000111,
+                                "attribute_value": "复色款",
+                                "attribute_value_en": "DYJ_复色款_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000112,
+                                "attribute_value": "DYJ_新款",
+                                "attribute_value_en": "DYJ_新款",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000113,
+                                "attribute_value": "DYJ_套用版型款",
+                                "attribute_value_en": "DYJ_套用版型款",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000114,
+                                "attribute_value": "DYJ_针织",
+                                "attribute_value_en": "DYJ_针织",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000115,
+                                "attribute_value": "梭织",
+                                "attribute_value_en": "DYJ_梭织_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000116,
+                                "attribute_value": "DYJ_毛织",
+                                "attribute_value_en": "DYJ_毛织_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000117,
+                                "attribute_value": "pink",
+                                "attribute_value_en": "pink",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000118,
+                                "attribute_value": "BLUE",
+                                "attribute_value_en": "BLUE",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000119,
+                                "attribute_value": "修身",
+                                "attribute_value_en": "DYJ_修身_en",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000120,
+                                "attribute_value": "宽松",
+                                "attribute_value_en": "DYJ_宽松_en",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000121,
+                                "attribute_value": "紧身",
+                                "attribute_value_en": "DYJ_紧身_en",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000123,
+                                "attribute_value": "DYJ_H",
+                                "attribute_value_en": "DYJ_H_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000126,
+                                "attribute_value": "DYJ_棒球领",
+                                "attribute_value_en": "DYJ_棒球领_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000127,
+                                "attribute_value": "DYJ_翻领",
+                                "attribute_value_en": "DYJ_翻领_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000128,
+                                "attribute_value": "DYJ_泡泡袖",
+                                "attribute_value_en": "DYJ_泡泡袖_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000129,
+                                "attribute_value": "DYJ_蝙蝠袖",
+                                "attribute_value_en": "DYJ_蝙蝠袖_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000130,
+                                "attribute_value": "DYJ_踩脚裤",
+                                "attribute_value_en": "DYJ_踩脚裤_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000131,
+                                "attribute_value": "DYJ_阔腿裤",
+                                "attribute_value_en": "DYJ_阔腿裤_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000132,
+                                "attribute_value": "DYJ_泡泡裙",
+                                "attribute_value_en": "DYJ_泡泡裙_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000133,
+                                "attribute_value": "DYJ_鱼尾裙",
+                                "attribute_value_en": "DYJ_鱼尾裙_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000134,
+                                "attribute_value": "DYJ_超短款",
+                                "attribute_value_en": "DYJ_超短款_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000135,
+                                "attribute_value": "DYJ_常规款",
+                                "attribute_value_en": "DYJ_常规款",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            },
+                            {
+                                "attribute_value_id": 1000136,
+                                "attribute_value": "DYJ_超长袖",
+                                "attribute_value_en": "DYJ_超长袖_EN",
+                                "is_custom_attribute_value": false,
+                                "is_show": 1,
+                                "supplier_id": 0,
+                                "attribute_value_doc": null,
+                                "attribute_value_doc_image_list": null,
+                                "attribute_value_group_list": null
+                            }
+                        ]
+                    },
+                ],
+                "attribute_id": [
+                    87,
+                    27,
+                    109,
+                    160,
+                    1000547,
+                    62,
+                    55,
+                    118,
+                    48,
+                    32,
+                    1000411,
+                    1000463,
+                    1000186,
+                    1000462,
+                    1000407,
+                    1000546,
+                    1000576,
+                    1000062
+                ]
+            }
+        ],
+        "meta": {
+            "count": 1,
+            "customObj": null
+        }
+    },
+    "bbl": null
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：80次/秒
+FAQ
+Q：关于平台定期调整商品属性必填规则
+2025-12-17
+A：
+
+尊敬的开发者，为了给商家以及开发者提供更好的使用体验，后续SHEIN平台的【新增必填属性】操作将按月维度执行。每月的最后一周发布调整通知，通知后的一周新增必填属性正式生效（具体时间可能会调整，请以每月通知为准）。为了确保您的业务正常运行，建议您在新增规则正式生效后，务必重新获取所有商家的可用属性信息，否则可能会导致商家无法发布商品或编辑商品。本次新增的必填属性调整会在2025年10月31日起生效，涉及尺码属性、商品属性等，请在2025年10月31日后尽快采取以下措施：1. 通过“店铺查可选属性”接口（/open-api/goods/query-attribute-template）获取各店铺最新的属性必填规则。请重点关注以下字段：attribute_type（属性类型）：值为2：表示尺寸属性；值为3或4：表示商品属性。attribute_status（属性是否必填）：值为1：不可填写（属性可能已废弃）；值为2：选填；值为3：必填。2. 针对变更为必填的属性，需引导商家及时填写或补充，否则将影响后续商品发布和编辑：新商品发布：自2025年10月31日起，商家需在商品发布时填写本次新增的必填属性。已发布商品补充：商家需在2025年11月30日之前，对已发布商品的新增的必填属性进行补充。调用商品发布或编辑接口时，若出现以下类似报错，说明必填属性未填写，可根据报错进行排查。报错示例如下：报错示例语种报错信息中文长度 (cm): 类型下模板属性为必填项英文Length (cm): The template attribute under type is required葡萄牙语Comprimento (cm): O atributo de modelo em tipo é obrigatório西班牙语Largo (cm): Se requiere el atributo de plantilla debajo de tipo
+
+查看详情
+Q：常见必填属性说明
+2025-11-11
+A：
+
+开发者调用商品发布接口后，经常会遇到属性相关的报错，常见报错示例：Material: The template attribute under type is required；以下是常见属性填写方式以及iD说明1、Material: The template attribute under type is required；属性填写方式：多选；2、Product Model: The template attribute under type is required；属性填写方式：输入框填写；注意⚠️：一般输入框填写通用的字符限制是100字符，开发者在上传商品时填写的属性值长度不要超过100字符属性填写方式等更多信息，请查看： https://open.sheincorp.com/documents/system/424039e8-4657-454a-a4cb-781938a42622
+查看详情
+Q：是否可以获得所有 SHEIN 属性？
+2025-05-26
+A：
+不可以，暂时不支持提供 SHEIN 所有属性的接口，并且每个店铺只能传店铺可用属性，否则接口将报错。不同类目可用属性不一样，建议 ERP 缓存下来。
+查看详情
+Q：哪些属性可以设置在SKC，哪些属性可以设置在SKU维度？
+2025-05-26
+A：
+开发者可以根据店铺可用属性判断，用attribute_label字段判断，1：主销售属性（SKC维度的销售属性，比如颜色），主销售属性也可用于次销售属性；0：不是主销售属性；如果“attribute_type=1，attribute_label=0”，则说明这个属性为次销售属性（用于SKU维度的销售属性传参，比如尺码）。
+查看详情
+Q：什么是销售属性？可以设置多少个销售属性？
+2025-05-26
+A：
+销售属性即是消费者可以在站点选择的规格属性，比如颜色、容量、尺码等。在商品发布接口中，SKC维度的销售属性最多可设置40个，SKU维度的销售属性最多可设置200个。
+查看详情
+Q：商品哪些属性在何时会由选填变为必填？
+2025-05-26
+A：
+SHEIN 会根据运营相关策略定期更新属性必填项，建议定期更新店铺可选属性。
+Q：发品成功后，是否支持修改销售属性和销售属性值？
+2024-12-24
+A：
+不支持，商品一旦发品成功后，不允许修改属性和属性值；比如这个商品的销售属性是颜色，属性值是白色，一旦发品成功，编辑商品不再允许修改属性和属性值
+查看详情
+Q：属性值多选如何传参？
+2025-11-17
+A：
+属性的输入方式为多选（"attribute_mode": 1）时，每个属性值需要以独立一组数据的形式提供。例如"attribute_id": 101支持多选，若要选择两个属性值1000981、1000982，则需要按下方形式提供"product_attribute_list": [{
+		"attribute_id": 101,
+		"attribute_value_id": 1000981
+	}, {
+		"attribute_id": 101,
+		"attribute_value_id": 1000982
+	}, {
+		"attribute_id": 333,
+		"attribute_value_id": 493
+	}, {
+		"attribute_id": 160,
+		"attribute_value_id": 1008347
+	}, {
+		"attribute_id": 60,
+		"attribute_value_id": 459
+	}]
+查看详情
+Q：发布商品发现类目和属性报错
+2024-12-24
+A：
+1、由于平台的可用属性和类目会随着业务发展而变更，建议实时查或者每隔一段时间更新店铺可用类目和可用属性的接口店铺可用属性： https://open.sheincorp.com/en/documents/apidoc/detail/3000429-1000001 店铺可用类目： https://open.sheincorp.com/en/documents/apidoc/detail/3000436-1000001 2、不要上传不是这个店铺可用的类目3、不要上传不是这个店铺可用的属性，如果发现属性从非必填变成必填，调用接口更新；
+查看详情
+Q：自定义属性值添加后，在查询分类属性的接口的属性值数据中是否会返回自定义属性的值和id？
+2024-12-24
+A：
+是的
+Q：size_attribute_list下如何传参？
+2025-06-10
+A：
+[存在图片内容，请点击查看详情]
+查看详情
+更新记录
+更新时间	更新内容
+2026-07-10	
+平台新增SKU维度商品属性，因此新增出参：data_dimension，用于判断商品属性（attribute_type=3/4）的绑定维度，从而确认此属性应该在发品接口的哪个字段入参。
+2026-07-02	
+出参新增字段rule_info_list，可用于判断attribute_mode=3/4，需要手动输出值时，值的校验规则。
+2026-06-24	
+出参中新增字段main_attribute_status，用于判断类目下主销售属性的填写规则（不填/选填/必填），影响主销售属性能否使用【默认】属性。详细规则可参考：https://open.sheincorp.com/notice/0/70f4a5e3-1279-4d07-a74a-8b47cb4d56b1
+共3条数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

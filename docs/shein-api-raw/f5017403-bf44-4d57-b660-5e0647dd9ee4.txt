@@ -1,0 +1,417 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+Feed
+客单
+退货退款
+采购单
+获取采购单信息
+/order/purchase-order-infos
+JIT母单及子单对应关系查询接口
+/order/get-mothe-child-orders
+发货基本信息查询接口
+/shipping/basic
+物流产品查询
+/shipping/express-company-list-v2
+查shein合作物流预估运费
+/openapi-business-backend/purchase-estimated-fee
+​查询货代信息
+/pfmp/shipping/thirdPartyAndChannelList
+收货仓信息查询
+/shipping/warehouse
+创建发货单
+/shipping/orderToShipping
+查询发货单列表
+/shipping/delivery
+修改和取消发货单订单
+/shipping/modify-delivery-order-info
+发货单维度打印面单
+/shipping/delivery/print-package
+打印物流面单
+/pfmp/print-purchase-logisticsLabel
+商品打印条码
+/goods/print-barcode
+手工下备货单
+/idms/create-order
+备货单审核列表
+/idms/review-orders
+查询商品备货信息列表
+/openapi-business-backend/stock-goods-list
+打印箱唛或包裹面单
+/order/print-package
+物流公司信息查询（即将废弃）
+/shipping/express-company-list
+查询SHEIN仓库的收件信息
+/order/storage-receiver-info
+查询智能拆包结果接口
+/purchase/intelligent-packing-result
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新记录
+更新时间：2026-04-21 17:17:45
+创建发货单
+POST
+/open-api/shipping/orderToShipping
+自运营
+全托管
+SHEIN自营
+半托管
+POP
+该接口为采购单生成发货单履约的场景调用。详细履约介绍请查看备货单履约管理文档。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+默认值：application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+x-lt-signature
+string	是	
+接口签名
+x-lt-language
+string	否	
+指定出参语种，默认中文；支持语种:英语:US 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+请求参数（请求体）
+收起
+数据类型	是否必须	描述
+adminName
+string	是	
+用户名称（ERP系统可自行定义，用于系统记录此次发货的操作人，页面不展示）
+agedProductCode
+string	否	
+时效产品编码，从物流产品查询接口获取
+list
+object[]	否	
+skuCode
+string	是	
+sku编码，需要入参采购单中所有的SKU
+
+orderNo
+string	是	
+订单编号
+
+orderQuantity
+integer	否	
+下单数量
+
+packageNum
+integer	否	
+包裹数（箱唛发货时必填，同一订单传相同包裹数）
+
+tempDeliveryQuantity
+integer	是	
+实际发货数量：如果待发货数量大于500，单次发货需要大于150
+
+packingInfoList
+object	否	
+装箱明细，当shippingRoute为1时需要传入装箱明细
+
+packQuantity
+integer	是	
+装箱数量
+
+skuCode
+string	是	
+装箱的sku编码
+
+orderType
+integer	是	
+订单类型，1：急采，2：备货
+
+deliveryType
+integer	是	
+发货方式，商家可用的发货方式枚举值请从发货基本信息查询获取；
+
+arrivalTime
+datetime	否	
+预约SEHIN到仓时间（yyyy-MM-dd HH:mm:ss），当deliveryType=4或21时必填
+shippingRoute
+integer	否	
+发货路径，0：无发货路径，1：直送路径，2：集货路径
+
+expressId
+string	否	
+快递编码，SHEIN集成物流场景从物流产品查询接口companyCode字段获取，非SHIEN集成物流场景从发货基本信息查询接口companyCode获取，当deliveryType=1时必填
+
+coding
+string	否	
+车队编码，当deliveryType=2且使用车队自送场景必填
+
+expressInfo
+object[]	是	
+运单包裹信息
+
+addrId
+int64	是	
+发货地址id，从发货基本信息查询接口中获取
+
+expressCode
+string	否	
+快递单号，适用非SHIEN集成物流场景
+
+packageNumber
+integer	是	
+总包裹数量（箱唛类型时=所有订单包裹的总计）
+
+packageWeight
+double	否	
+包裹重量（单位:kg）
+
+reserveParcelTime
+datetime	否	
+预约取货时间（yyyy-MM-dd HH:mm:ss），当使用SHEIN集成物流或SHEIN集成车队送货时必填
+
+deliveryPackages
+object	否	
+包裹信息列表,包裹列表的长度必须与包裹数量相同
+index
+integer	是	
+包裹序号，从0开始
+packageHeight
+double	否	
+包裹高(cm)
+packageLength
+double	否	
+包裹长(cm)
+packageWeight
+double	否	
+包裹重量(kg)
+packageWidth
+double	否	
+包裹宽(cm)
+supplierWarehouseId
+int64	是	
+商家仓库id
+
+subWarehouseId
+integer	否	
+供应商子仓ID
+thirdPartyChannel
+int64	否	
+货代渠道
+
+thirdPartyChannelName
+string	否	
+货代渠道名称
+
+thirdPartyOrderMethod
+integer	否	
+货代下单方式：
+
+1：SHEIN代下单
+
+2：商家自行下单
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码 成功：0
+info
+object	否	
+deliveryCode
+string	是	
+发货单号
+expressCode
+string	否	
+运单号（系统自动产生运单时，返回运单号）
+
+msg
+string	否	
+错误描述，成功：OK；支持指定语种出参；
+
+traceId
+string	否	
+请求的唯一标识，用于异常报错跟踪
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.cn/open-api/shipping/orderToShipping' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'Content-Type: application/json;charset=UTF-8' \
+--header 'x-lt-timestamp: 1752570849017' \
+--data-raw '{
+  "agedProductCode": "abc",
+  "adminName": "root test",
+  "coding": "",
+  "deliveryType": 1,
+  "expressId": "kuayue",
+  "expressInfo": [
+    {
+      "addrId": 688495,
+      "expressCode": "",
+      "packageNumber": 3,
+      "reserveParcelTime": "2025-12-27 23:20:00"
+    }
+  ],
+  "list": [
+    {
+      "orderNo": "PB2505220000462",
+      "orderQuantity": "1",
+      "packageNum": 1,
+      "skuCode": "I24lsfii3qse",
+      "tempDeliveryQuantity": 1,
+      "type": 0
+    },
+    {
+      "orderNo": "PB2505220000433",
+      "orderQuantity": "1",
+      "packageNum": 1,
+      "skuCode": "I24lsfii3qse",
+      "tempDeliveryQuantity": 1,
+      "type": 0
+    }
+  ],
+  "orderType": 2,
+  "subWarehouseId": 27,
+  "supplierWarehouseId": 89755
+}'
+
+
+返回示例
+复制
+{
+    "code": "0032001",
+    "msg": "B231107500397订单状态不能发货",
+    "info": null,
+    "bbl": null
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+pfmp0003	
+送货上门时请选择车队
+入参字段“deliveryType”为送货上门时，“coding”字段必填
+pfmp0003	
+请选择快递公司
+入参字段“deliveryType”为快递时，“expressCode”字段必填
+pfmp0009	
+发货地址不存在
+入参字段“addressId”发货地址ID 请从发货基本信息接口/open-api/shipping/basic获取
+pfmp95005	
+必填项为空：送货方式
+请填写字段“deliveryType”发货方式
+pfmp95014	
+发货订单不存在
+orderNo不存在，请检查
+pfmp95052	
+订单大仓不一致不可同时发货
+请调用接口/open-api/order/purchase-order-infos，查询合并发货采购单的字段“storageId”是否一致，不一致不可同时发货
+pfmp95053	
+急采和备货不能一起发货
+请调用接口/open-api/order/purchase-order-infos查询采购单类型是否一致，急采和备货不能一起发货
+pfmp95057	
+为安检订单，和非安检订单不能同时发货
+请前往商家后台查看是否有安检标签的采购单
+pfmp95070	
+订单在作废审核中，不支持操作发货。
+此订单正在作废审核，作废中的订单不支持发货
+pfmp95084	
+未维护仓库信息，请维护后重试
+请填写入参字段“supplierWarehouseId”供应商仓库id，可从接口/open-api/shipping/basic获取
+pfmp95086	
+请选择大于当前时间的预约取件时间
+reserveParcelTime或arrivalTime填入的时区为UTC +8，请输入大于当前时间的值
+pfmp95089	
+订单（{0}）的SKC属于成衣品类，订单（{1}）属于非成衣品类，不能一起发货，请分开操作
+请前往商家后台查看是否有成衣和非成衣标签
+pfmp95091	
+预估收货仓不一致不能同时发货
+请调用接口/open-api/order/purchase-order-infos获取字段“recommendedSubWarehouseId“ 预估收货仓，不一致不能同时发货
+pfmp95101	
+急采订单不允许多发
+急采订单orderQuantity>=tempDeliveryQuantity
+pfmp95101	
+SKU 的发货数量不符合平台规则
+请按照msg的提示更新sku数量，重新下单
+pfmp95180	
+INPOST揽收的包裹重量不得超出25.00kg，请更换物流商或减少包裹内商品
+请更换物流商或减少包裹内商品
+pfmp95181	
+INPOST物流不支持揽收数量＞1的包裹
+请确认包裹数量准确
+pfmp95182	
+选择INPOST物流商承运，需要维护发货地址中联系人的邮箱。请维护完整或更换物流商。
+请前往卖家中心维护完整的联系人数据，或者更换物流商。
+pfmp95183	
+请填写包裹尺寸
+请填写包裹尺寸
+pfmp95185	
+INPOST物流的包裹总重量与包裹重量必须一致
+请检查包裹重量数据
+共25条数据
+跳至
+页
+限流规则
+收起
+单个开发者接口限流频次：20次/秒
+FAQ
+No Data
+暂无数据
+更新记录
+更新时间	更新内容
+2026-04-21	
+更新deliveryPackages参数
+2026-03-30	
+增加装箱明细参数（packingInfoList）
+共2条数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

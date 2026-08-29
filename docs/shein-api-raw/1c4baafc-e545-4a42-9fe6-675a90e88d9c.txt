@@ -1,0 +1,356 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+合规
+查询SKC的合规信息要求
+/goods-compliance-requirements/list
+查询资质证书列表
+/goods-certificates/search
+查询资质证书填写规则
+/goods-certificate-schemas/detail
+上传资质证书文件
+/goods-certificate-files/upload
+创建/编辑资质证书
+/goods-certificates/save
+SKC绑定资质证书
+/goods-certificates/bind
+查询代理公司列表
+/goods-compliance/agency-list
+绑定SKC和代理公司
+/goods-compliance/save-skc-agency
+查询SKC的代理公司绑定要求
+/goods-compliance/skc-agency-detail
+查询警告语证书的填写规则
+/goods-compliance/query-warning-certificate-rules
+更新SKC的警告语
+/goods-compliance/update-skc-warning-certificate
+查询SKC的警告语绑定状态
+/goods-compliance/query-skc-warning-status
+查询SKC的实拍图要求
+/goods-compliance/skc-label-list
+查询SKC可用的标签模板
+/goods-compliance/get-label-template
+获取全量环保耗材信息
+/goods-quality/environmental-label-rule/material-quality-tree-v2
+打印合规标签
+/goods-compliance/label-print
+上传实拍图图片
+/goods-compliance/upload-skc-label-picture
+绑定SKC和实拍图
+/goods-compliance/skc-save-label
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+该文档是否有帮助？
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2025-09-24 19:40:32
+查询SKC的实拍图要求
+POST
+/open-api/goods-compliance/skc-label-list
+自运营
+全托管
+半托管
+POP
+查询哪些SKC需要上传实拍图，以及实拍图内需要体现哪些信息元素。
+
+实拍图场景的整体解决方案，可点击查看文档。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+Content-Type
+string	是	
+application/json
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：158339876400
+
+
+
+x-lt-signature
+string	是	
+查看签名生成规则
+
+language
+string	否	
+指定出参语种，默认中文；支持语种:英语:EN 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+
+
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+pageSize
+integer	是	
+每页条数，最多100
+pageNum
+integer	是	
+分页页数，建议从1开始查询
+
+skcList
+string[]	是	
+SKC，支持批量查询
+
+skcShelfStatusList
+integer[]	否	
+SKC的上下架状态。0-待上架；1-已上架；2-已下架；3-售罄
+
+reviewStatusList
+integer[]	否	
+skc上传的实拍图中某个信息元素的审核状态。1-待上传；2-生效中；3-审核不通过。
+
+若想查询商家当前急需上传的信息元素，建议入参1/3
+
+isRequired
+integer	否	
+SKC上传的实拍图中，某个信息元素是否必须体现。 0-否, 1-是, 10-未知（SKC生成时的瞬间状态，可忽略）
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	否	
+响应码。正常为“0”。
+
+msg
+string	否	
+响应信息。正常为“OK”。
+
+
+
+info
+object[]	否	
+响应详细信息
+
+skc
+string	否	
+SKC
+
+skcShelfStatus
+string[]	否	
+SKC的上下架状态。0-待上架；1-已上架；2-已下架；3-售罄
+
+skcLabelInfoList
+object[]	否	
+SKC上传的实拍图中需要被识别的内容
+
+isRequired
+integer	否	
+识别内容是否必须。0-否, 1-是, 10-未知（SKC生成时的瞬间状态，若拉到此值建议过一会再重试一次）
+
+labelId
+int64	否	
+识别内容ID
+
+labelName
+string	否	
+识别内容名称
+
+labelGroup
+string	否	
+识别内容属于包装还是本体。即包含此内容的标签需要贴在哪里。
+
+1=商品本体，2=外包装
+
+siteList
+string[]	否	
+识别内容影响的站点
+
+reviewStatus
+integer	否	
+内容的识别结果。 0-待提交；1-审核中（此状态在商家后台展示位通过，API层面亦可理解为通过）；2-通过；3-不通过。
+
+注意：入参的reviewStatusList枚举值，和出参的reviewStatus不一样。入参1，出参0；入参2，出参1/2；入参3，出参3。
+
+failReason
+string[]	否	
+审核驳回原因。仅审核不通过时有值
+
+traceId
+string	否	
+请求追踪码
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'https://openapi.sheincorp.com/open-api/goods-compliance/skc-label-list' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1751007220030' \
+--header 'language: zh-cn' \
+--header 'Content-Type: application/json' \
+--header 'Host: openapi.sheincorp.com' \
+--data-raw '{
+    "pageSize":10,
+    "pageNum":1,
+    "skcList":["dress14041203"]
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": [
+        {
+            "skc": "sh2412030799611160",
+            "failReasonList": null,
+            "skcShelfStatus": 0,
+            "skcLabelInfoList": [
+                {
+                    "isRequired": 1,
+                    "labelId": 2,
+                    "labelName": "Electronic Recycling Mark",
+                    "siteList": [
+                        "SHEIN奥地利站",
+                        "SHEIN德国站"
+                    ],
+                    "reviewStatus": 0
+                },
+                {
+                    "isRequired": 1,
+                    "labelId": 4,
+                    "labelName": "Model",
+                    "siteList": [
+                        "SHEIN奥地利站",
+                        "SHEIN德国站"
+                    ],
+                    "reviewStatus": 0
+                },
+                {
+                    "isRequired": 1,
+                    "labelId": 5,
+                    "labelName": "Electrical parameters",
+                    "siteList": [
+                        "SHEIN奥地利站",
+                        "SHEIN德国站"
+                    ],
+                    "reviewStatus": 0
+                },
+                {
+                    "isRequired": 1,
+                    "labelId": 8,
+                    "labelName": "Manufacturer",
+                    "siteList": [
+                        "SHEIN奥地利站",
+                        "SHEIN德国站"
+                    ],
+                    "reviewStatus": 0
+                },
+                {
+                    "isRequired": 1,
+                    "labelId": 9,
+                    "labelName": "Manufacturer Address",
+                    "siteList": [
+                        "SHEIN奥地利站",
+                        "SHEIN德国站"
+                    ],
+                    "reviewStatus": 0
+                },
+                {
+                    "isRequired": 1,
+                    "labelId": 10,
+                    "labelName": "Manufacturer contact information",
+                    "siteList": [
+                        "SHEIN奥地利站",
+                        "SHEIN德国站"
+                    ],
+                    "reviewStatus": 0
+                },
+                {
+                    "isRequired": 1,
+                    "labelId": 11,
+                    "labelName": "EU responsible person (EU|REP  or EC|REP)",
+                    "siteList": [
+                        "SHEIN奥地利站",
+                        "SHEIN德国站"
+                    ],
+                    "reviewStatus": 0
+                },
+                {
+                    "isRequired": 1,
+                    "labelId": 34,
+                    "labelName": "CE Mark",
+                    "siteList": [
+                        "SHEIN奥地利站",
+                        "SHEIN德国站"
+                    ],
+                    "reviewStatus": 0
+                }
+            ]
+        }
+    ],
+    "traceId": "a5c496a1c82ccb21"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：20次/秒
+FAQ
+Q：商品未绑定证书会有什么影响？
+2025-05-26
+A：
+商品未绑定证书，有可能会因为合规要求而自动下架，商品由于合规规则下架后无法上架，需要补充证书后才能上架。更多信息可查看商品证书解决方案：商品证书解决方案。
+查看详情
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服

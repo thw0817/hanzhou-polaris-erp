@@ -1,0 +1,402 @@
+shein-logo
+开放平台
+文档中心
+工单中心
+平台公告
+中文
+WH欧易11
+控制台
+API文档
+密钥
+商品
+价格
+更新商品售价
+/openapi-business-backend/product/price/save
+更新成本价
+/goods/update-cost
+获取成本价涨价原因枚举值
+/goods/query-change-price-reason
+价格证明材料上传
+/goods/discuss/upload-discuss-file
+查询商品建议零售价
+/goods-recommend-retail-price/search
+查询建议零售价填写规则
+/goods/query-recommend-retail-price-rule
+提交建议零售价
+/goods-recommend-retail-price/batch-save
+查询建议零售价审核记录
+/goods-recommend-retail-price-audit/search
+获取议价单列表
+/goods/discuss/query-discuss-list
+处理议价单
+/goods/discuss/process-discuss
+合规
+Feed
+客单
+退货退款
+采购单
+采购单退货
+库存和销量
+财务
+店铺
+定制商品
+认证仓
+物流
+MES
+排产
+面料
+MDP印染
+接口描述
+请求参数（请求头）
+请求参数（请求体）
+返回参数（响应体）
+请求返回示例
+业务返回错误信息
+限流规则
+FAQ
+更新时间：2026-07-02 20:37:27
+查询商品建议零售价
+POST
+/open-api/goods-recommend-retail-price/search
+自运营
+全托管
+半托管
+查询商品当前的建议零售价详情。
+
+注意：更新建议零售价前，请一定要查询商品当前建议零售价信息，因为更新是全量覆盖逻辑，提交时必须提供所有想要的信息，原数据会清空，以最新更新信息为准。
+
+请求参数（请求头）
+收起
+参数名称	数据类型	是否必须	描述
+x-lt-signature
+int64	是	
+接口签名
+
+x-lt-openKeyId
+string	是	
+访问用户隐私数据时的唯一权限标识 openKeyId
+
+x-lt-timestamp
+string	是	
+请求时间戳，格式为时间转换为毫秒的值，也就是从1970年1月1日起至今的时间转换为毫秒，如：1583398764000
+
+language
+string	否	
+响应msg的语种。不传时默认为英语，枚举值支持语种:英语:US 法语:FR 西班牙语:ES 德语:DE 中文简体:CN 泰语:TH 巴西葡语:PT 土耳其语：TR
+
+请求参数（请求体）
+收起
+参数名称	数据类型	是否必须	描述
+skc_name_list
+string[]	是	
+SKC平台编码列表，单次最多支持查询100个SKC。
+
+返回参数（响应体）
+收起
+数据类型	是否必须	描述
+code
+string	是	
+响应编码 成功：0
+
+msg
+string	否	
+错误描述,成功：OK
+info
+object	否	
+响应信息
+
+skc_rrp_list
+object[]	否	
+SKC列表
+
+skc_name
+string	否	
+SKC平台编码
+
+status
+integer	否	
+SKC的建议零售价状态。1-审核中 2-包含抽检失败 3-包含审核失败 4-生效中 5-即将过期 6-已过期失效 7-部分过期失效。
+
+其中2、3、7指的是SKC下的部分SKU有对应的状态，失败的部分代表没有建议零售价，具体是哪些SKU失败，可以查询审核记录：/open-api/goods-recommend-retail-price-audit/search
+
+status_desc
+string	否	
+当前状态的说明文案。例如status=1，desc=当前skc内有sku的建议零售价正在审核中，不能进行修改
+
+start_effective_time
+int64	否	
+SKC整体建议零售价的有效期开始时间(毫秒时间戳)
+
+end_effective_time
+int64	否	
+SKC整体建议零售价的有效期结束时间(毫秒时间戳)
+
+last_update_time
+int64	否	
+SKC整体建议零售价的最新更新时间(毫秒时间戳)
+
+sku_rrp_info_list
+object[]	否	
+SKC下详细的SKU建议零售价信息列表
+
+sku_code
+string	是	
+SKU平台编码
+
+site_rrp_info_list
+object[]	否	
+站点维度建议零售价列表。一个SKU可能有多组数据。如果A站点是按站点维度提供的，则site有值，例如shein-fr；如果BCD三个站点是不按站点维度提供的，则site无值。
+
+site
+string	否	
+站点。若例如shein-fr。如果站点为空，则代表此组数据为不分站点的SKU维度建议零售价。
+
+currency
+string	否	
+币种。例如EUR
+
+suggested_retail_price
+string	否	
+建议零售价
+
+end_effective_time
+int64	否	
+结束生效时间(毫秒时间戳)
+
+start_effective_time
+int64	否	
+开始生效时间(毫秒时间戳)。
+
+type_one_proof
+object	否	
+类型一证明材料信息
+
+attachments
+string[]	否	
+证明材料附件列表
+
+proof_link
+string	否	
+证明链接
+type_two_proof
+object	否	
+类型二证明材料信息
+
+attachments
+string[]	否	
+证明材料附件列表
+proof_link
+string	否	
+证明链接
+
+traceId
+string	否	
+追踪码
+
+请求返回示例
+收起
+请求示例
+复制
+curl --location --request POST 'http://openapi-test01.sheincorp.cn/open-api/goods-recommend-retail-price/search' \
+--header 'x-lt-signature: test' \
+--header 'x-lt-openKeyId: test' \
+--header 'x-lt-timestamp: 1780919799256' \
+--header 'language: US' \
+--header 'Content-Type: application/json' \
+--header 'Accept: */*' \
+--header 'Host: openapi-test01.sheincorp.cn' \
+--data-raw '{
+
+            "skc_name_list":["ss260525103285186567910"]
+
+}'
+
+
+返回示例
+复制
+{
+    "code": "0",
+    "msg": "OK",
+    "info": {
+        "skc_rrp_list": [
+            {
+                "skc_name": "ss260525103285186567910",
+                "start_effective_time": null,
+                "end_effective_time": null,
+                "status": 1,
+                "status_desc": "当前skc内有sku的建议零售价正在审核中，不能进行修改",
+                "last_update_time": 1779676699000,
+                "sku_rrp_info_list": [
+                    {
+                        "sku_code": "I4mpkle8ncr1zn",
+                        "site_rrp_info_list": [
+                            {
+                                "site": "shein-de",
+                                "currency": null,
+                                "suggested_retail_price": null,
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": 1784860699000,
+                                "type_one_proof": null,
+                                "type_two_proof": null
+                            },
+                            {
+                                "site": "shein-fr",
+                                "currency": null,
+                                "suggested_retail_price": null,
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": 1784860699000,
+                                "type_one_proof": null,
+                                "type_two_proof": null
+                            },
+                            {
+                                "site": "shein-it",
+                                "currency": null,
+                                "suggested_retail_price": null,
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": 1784860699000,
+                                "type_one_proof": null,
+                                "type_two_proof": null
+                            },
+                            {
+                                "site": "shein-uk",
+                                "currency": null,
+                                "suggested_retail_price": null,
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": 1784860699000,
+                                "type_one_proof": null,
+                                "type_two_proof": null
+                            },
+                            {
+                                "site": "shein-us",
+                                "currency": "USD",
+                                "suggested_retail_price": "99.00",
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": null,
+                                "type_one_proof": {
+                                    "attachments": [
+                                        "https://ssmp-spmp-test.oss-cn-shenzhen.aliyuncs.com/dpas/proof/rrp/1779676397075uaobni4n.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tD1ANf6jAP8CkpBmDaC%2F20260608%2Fcn-shenzhen%2Fs3%2Faws4_request&X-Amz-Date=20260608T115640Z&X-Amz-Expires=180&X-Amz-SignedHeaders=host&X-Amz-Signature=bbb3bb4e84533aa4c8ef682ab08840aac63c95353752c4bf2aedcc146dca4682"
+                                    ],
+                                    "proof_link": ""
+                                },
+                                "type_two_proof": {
+                                    "attachments": [],
+                                    "proof_link": ""
+                                }
+                            },
+                            {
+                                "site": "",
+                                "currency": null,
+                                "suggested_retail_price": null,
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": null,
+                                "type_one_proof": null,
+                                "type_two_proof": null
+                            }
+                        ]
+                    },
+                    {
+                        "sku_code": "I7mpkle8nlab0v",
+                        "site_rrp_info_list": [
+                            {
+                                "site": "shein-de",
+                                "currency": null,
+                                "suggested_retail_price": null,
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": 1784860699000,
+                                "type_one_proof": null,
+                                "type_two_proof": null
+                            },
+                            {
+                                "site": "shein-fr",
+                                "currency": null,
+                                "suggested_retail_price": null,
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": 1784860699000,
+                                "type_one_proof": null,
+                                "type_two_proof": null
+                            },
+                            {
+                                "site": "shein-it",
+                                "currency": null,
+                                "suggested_retail_price": null,
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": 1784860699000,
+                                "type_one_proof": null,
+                                "type_two_proof": null
+                            },
+                            {
+                                "site": "shein-uk",
+                                "currency": null,
+                                "suggested_retail_price": null,
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": 1784860699000,
+                                "type_one_proof": null,
+                                "type_two_proof": null
+                            },
+                            {
+                                "site": "shein-us",
+                                "currency": "USD",
+                                "suggested_retail_price": "99.00",
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": null,
+                                "type_one_proof": {
+                                    "attachments": [
+                                        "https://ssmp-spmp-test.oss-cn-shenzhen.aliyuncs.com/dpas/proof/rrp/1779676397075uaobni4n.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tD1ANf6jAP8CkpBmDaC%2F20260608%2Fcn-shenzhen%2Fs3%2Faws4_request&X-Amz-Date=20260608T115640Z&X-Amz-Expires=180&X-Amz-SignedHeaders=host&X-Amz-Signature=bbb3bb4e84533aa4c8ef682ab08840aac63c95353752c4bf2aedcc146dca4682"
+                                    ],
+                                    "proof_link": ""
+                                },
+                                "type_two_proof": {
+                                    "attachments": [],
+                                    "proof_link": ""
+                                }
+                            },
+                            {
+                                "site": "",
+                                "currency": null,
+                                "suggested_retail_price": null,
+                                "start_effective_time": 1779676699000,
+                                "end_effective_time": null,
+                                "type_one_proof": null,
+                                "type_two_proof": null
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "bbl": null,
+    "traceId": "c4a0fa09ff98b720"
+}
+
+
+业务返回错误信息
+收起
+语言
+错误信息
+错误码
+未解决你的问题，你可以通过 提交工单 获得帮助
+错误码	错误信息	解决方案
+No Data
+暂无数据
+限流规则
+收起
+单个开发者接口限流频次：20次/秒
+FAQ
+No Data
+暂无数据
+shein-logo
+开放平台
+版权所有： ©2009-2026 SHEIN All Rights Reserved
+tel
+联系我们：openapi@shein.com
+重要文档
+开发者入驻协议
+隐私声明
+卖家授权协议
+常见链接
+SHEIN卖家学习中心
+SHEIN平台招商门户
+SHEIN自营招商门户
+AI客服
+智能客服
