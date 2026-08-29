@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v26
+版本：2026-08-29-v27
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前 Run 已完成允许范围内检查但完成门阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前官方只读回读 Run 进行中，前序完成门仍阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-OBJECT-READBACK-EVIDENCE-04
+当前活动步骤：ERP-05 / IN_PROGRESS / RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05
 
 ## 0. 台账用途
 
@@ -30,7 +30,7 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-OBJECT-READBACK-EVIDENCE-04 | ERP-04 | 已完成媒体 provider-level HEAD 分层与本地回执/回读结构索引；完整对象证据、官方回读和新模型逐条映射仍缺失；前序阻断记录保留；ERP-06 不得开始 |
+| ERP-05 | 历史数据证据盘点 | IN_PROGRESS | RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05 | ERP-04 | 正在执行官方只读回读证据补证；禁止调用会写 Receipt/Review 的业务回读路由；前序阻断记录保留；ERP-06 仍不得开始 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -1447,3 +1447,13 @@
 - 关键解释：404 主要集中在已标记 deleted 的资产；referenced/ready 没有 404，但仍有 54 条超时，必须保持 `UNKNOWN`，不得据此自动清理或修复。
 - 完成门结论：`BLOCKED`；当前 Run 的允许范围内检查已完成，但完整对象存储证据、SHEIN 官方回读/平台映射和 ProductVersion/PublishAttempt 逐条事实仍缺失；不得开始 ERP-06 或 ERP-20 修复。
 - 当前状态：`BLOCKED`；详细结果见 `docs/ERP05_HISTORICAL_DATA_EVIDENCE_REPORT_2026-08-29.md` 的 2.6 节。
+
+### RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05
+
+- 类型：ERP-05 官方回读证据补证；使用一次性内存进程直接调用 SHEIN 官方只读接口，补齐本地回执字段无法证明的官方来源。
+- 启动依据：用户继续明确要求“下一步”；前一 Run 已完成媒体和本地回执结构审计，但官方回读/平台映射仍为 `UNKNOWN`。
+- 允许范围：非交互 SSH；生产 PostgreSQL `SELECT`/系统目录只读；进程内解密已配置凭据；仅调用 `/open-api/goods/query-document-state`、`/open-api/goods/spu-info`；输出脱敏聚合、结构摘要和单向哈希；前后行数/写入证据核对。
+- 禁止范围：调用会持久化结果的 Control 业务方法；SHEIN 写接口；数据库写入/迁移；Receipt/Review 写入；Redis payload、队列消费/重试/claim；对象存储变更；部署、重启、切换；输出任何密钥、Token、签名、原始业务身份或完整 payload。
+- 失败关闭：只读边界、生产凭据作用域、目标映射或官方接口参数无法证明，或出现鉴权/网络/副作用迹象，立即停止并保持 `UNKNOWN`。
+- 完成标准：官方请求、返回码、trace、结构与目标覆盖有脱敏证据；数据库关键行数及写入审计前后无变化；缺口仍存在则保持 `BLOCKED`，不得开始 ERP-06。
+- 当前状态：`IN_PROGRESS`；生产官方读探针尚未执行。

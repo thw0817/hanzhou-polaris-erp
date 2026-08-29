@@ -1,9 +1,9 @@
 # ERP-05 历史数据证据审计报告
 
-版本：2026-08-29-v6
-正式 Run：`RUN-20260829-ERP05-OBJECT-READBACK-EVIDENCE-04`
+版本：2026-08-29-v7
+正式 Run：`RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05`
 步骤：ERP-05  
-状态：`BLOCKED`（本 Run 已完成允许范围内的媒体分层和本地回执/回读结构索引；完整对象证据和 SHEIN 官方回读仍缺失）
+状态：`IN_PROGRESS`（本 Run 只验证 SHEIN 官方读接口回读证据；禁止调用会写入 Receipt/Review 的 Control 业务路由）
 审计时间：2026-08-29 19:17:29（Asia/Shanghai；服务器 UTC `2026-08-29T11:17:29Z`）
 
 ## 1. 审计结论
@@ -376,3 +376,17 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 本报告未记录 SecretId、SecretKey、Token、Cookie、签名、完整请求 payload、图片字节或个人敏感信息。
 - 本 Run 只有 Markdown 文档变更；生产检查全部是只读查询和元数据摘要；回滚仅需恢复本 Run 对应的文档提交，不触碰业务数据。
 - 原始 Run 和生产聚合 Run 状态保持 `BLOCKED`；当前逐条补证 Run 结论为 `BLOCKED`，不是 `COMPLETE`。虽然生产真实规模、不可逆指纹和部分媒体存在性已补证，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、完整对象存储清单和 SHEIN 官方回读仍缺失，ERP-06 不得开始。
+
+## 11. 当前正式 Run：官方只读回读证据补证
+
+### RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05
+
+- 类型：ERP-05 官方回读证据补证；只读验证 SHEIN 官方商品查询接口与本地已存储发布目标的可映射性。
+- 启动依据：用户继续明确要求“下一步”；ERP-05 前一 Run 已证明本地 Receipt/Job `readback` 字段不能证明官方来源，本 Run 专门补齐该缺口。
+- 目标：从生产 PostgreSQL 只读取得已存在的发布目标样本，在一次性内存进程中使用既有 `requestShein` 签名实现，调用官方只读路径 `/open-api/goods/query-document-state` 与 `/open-api/goods/spu-info`；统计 HTTP 状态、SHEIN 业务码、trace 是否存在、响应结构和目标映射覆盖，不落库。
+- 允许范围：非交互 SSH；生产 PostgreSQL `SELECT`/系统目录只读；使用生产已配置的加密凭据在进程内解密；仅调用上述官方读接口；输出脱敏聚合计数、错误类别、结构摘要和单向哈希；执行前后核对关键表行数/写入计数证据。
+- 禁止范围：调用 `web-business-service` 的 `queryDocumentState`/`querySpuInfo`（这些方法会写 Receipt/Review）；任何 SHEIN 写接口；数据库 `INSERT/UPDATE/DELETE`、迁移、Receipt/Review 写入；Redis payload、队列消费/重试/claim；对象上传/下载/删除/复制；部署、重启、切换；输出 SecretId、SecretKey、Token、Cookie、签名、原始 ID、SPU 名、完整 JSON 或图片字节。
+- 失败关闭：生产配置、凭据作用域、目标版本/SPU、官方读路径或只读边界无法证明；需要交互认证；API 返回鉴权/参数/限流/网络不确定错误；发现任何写入迹象时立即停止，相关证据保持 `UNKNOWN`，不猜测、不重试业务命令。
+- 完成标准：每个实际请求均能归属到生产目标样本并记录脱敏结果；报告官方返回成功/失败/未知、业务码和结构覆盖；前后数据库关键表行数与审计证据无变化；若官方回读或映射仍不完整，ERP-05 仍为 `BLOCKED`，不得开始 ERP-06。
+- 回滚点：本 Run 不修改业务数据；仅新增本报告/台账记录，回滚为恢复本 Run 文档提交。
+- 当前状态：`IN_PROGRESS`；生产调用尚未开始，等待配置/源码接线审计完成后执行一次性读探针。
