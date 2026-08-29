@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v47
+版本：2026-08-30-v48
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结、原子发布交接、Worker 编排、结果持久化、官方回读单阶段编排与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-OFFICIAL-READBACK-ORCHESTRATION-15
+当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-RELEASE-READINESS-16
 
 ## 0. 台账用途
 
@@ -1853,3 +1853,20 @@
 - 环境证据：现有 staging Redis/PostgreSQL/MinIO 仅只读核对且均 healthy；测试使用 fake remote/repository，不解析真实凭证、不连接生产或 staging、不发真实 SHEIN HTTP。
 - 当前状态：`COMPLETE`；本 Run 的隔离单阶段官方回读编排和失败保护完成。ERP-06 整体仍为 `IN_PROGRESS`，真实 Worker/凭证/生产队列/正式 migration/生产部署/SHEIN 写入均未开始。
 - 下一执行单元：另行评审预发/生产授权、真实凭证来源、网络出口、Worker/队列接线、回读持久化接线、监控和回滚证据；在 ERP-06 完成门与单独批准前，不执行外部写入。
+
+## 36. ERP-06 预发/生产接入前置审查
+
+### RUN-20260830-ERP06-RELEASE-READINESS-16
+
+- 类型：ERP-06 接入前置审查；只读核验本地部署定义、组件接线、静态制品门禁、预发状态和公网健康证据，不触碰生产。
+- 启动依据：第 35 Run 已完成单阶段官方回读编排隔离验证；本 Run 按约定审查真实凭证来源、网络出口、Worker/队列接线、回读持久化接线、监控和回滚证据。
+- 允许范围：只读查看 `loadConfig`、云端/预发 Compose、Control/Worker 入口、release manifest、部署与回滚文档；只读查看本机 `.env` 的键名与文件权限；只读查看预发容器状态和公网 `/`、`/health`、`/ready` 状态码；尝试非交互 SSH 只读获取服务器证据。
+- 禁止范围：生产 PostgreSQL/COS/Redis/队列/SHEIN 访问或写入；数据库 migration、角色/权限修改、云端重启/切换、真实凭证输出、真实 SHEIN 请求、真实上传/删除/回填/重试或发布。
+- 本地接线结论：云端 Compose 仍以 `control` 与旧 `product-publish-worker` 为长期入口；旧 Worker 通过 `createProductPublishWorker`/`WebProductPublishExecutor` 工作。`erp06-official-readback-orchestrator.js`、`erp06-official-readback-repository.js` 和 `erp06-shein-remote-boundary.js` 目前仅由隔离测试/隔离组件互相引用，未进入 Control 路由或云端长期 Worker，不能宣称 ERP-06 已在线上生效。
+- 配置与安全结论：云端发布、合规写入、Webhook、同步 Worker 和 Outbox 均由显式开关/profile 控制，默认关闭；runtime 与 migration 连接配置在部署文档中分离。工作区 `.env` 未被 Git 跟踪，原权限为 `644`，其中存在非空 SHEIN 配置项；已仅将本机文件权限收紧为 `600`，未读取、打印或修改任何值。
+- 预发与公网只读证据：`hanzhou-polaris-staging` 的 PostgreSQL、Redis、MinIO 容器均为 healthy，未重启、未写入；`https://app.hanzhou.icu/` 返回 `200`，`https://api.hanzhou.icu/health` 返回 `200`；公网 `/ready` 返回 `404`，符合其仅供服务器本机/Docker 健康检查的部署边界。
+- 生产证据阻断：从当前 Codex 主机对 `ubuntu@42.193.179.216` 的非交互 SSH 只读连接返回 `Permission denied (publickey,password)`。因此当前没有生产 release、活动容器、数据库角色审计、队列状态、Worker 日志、COS 对象状态或回滚点的可验证现场证据；不使用历史截图替代当前事实。
+- 门禁结论：`NO-GO / BLOCKED`。本地静态测试、构建和 release audit 通过，只能证明候选代码质量；真实 ERP-06 接线未完成，且生产现场证据缺失，禁止进入预发/生产真实接入、正式 migration 或部署切换。
+- 环境边界：本 Run 未修改业务代码、数据库、预发容器、云端配置或 SHEIN 数据；唯一本机变更是将被 `.gitignore` 排除的 `.env` 权限从 `644` 收紧为 `600`。工作区提交仍为 `902f1aa`，无未提交代码变更。
+- 当前状态：`BLOCKED`；ERP-06 整体仍为 `IN_PROGRESS`，隔离设计与回归已完成，但真实 Worker/sender/凭证/生产队列/正式 migration/部署/SHEIN 写入均未开始。
+- 下一执行单元：先取得可验证的服务器只读证据并完成 ERP-06 真实 Worker → sender → 官方回读接线设计评审；随后只能在独立预发、保持真实写入关闭的条件下做接线演练。未完成接入评审和单独批准前，不执行外部写入。
