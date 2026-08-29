@@ -2,10 +2,10 @@
 
 版本：2026-08-29-v18  
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00 已完成；ERP-01 执行中；ERP-02～ERP-23 尚未开始；历史修复记录另行保存  
+状态：ERP-00、ERP-01 已完成；ERP-02～ERP-23 尚未开始；历史修复记录另行保存  
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-01 / IN_PROGRESS / RUN-20260829-ERP01-ASSET-BASELINE-01  
+当前活动步骤：无（ERP-01 已完成，ERP-02 尚未启动）  
 
 ## 0. 台账用途
 
@@ -26,7 +26,7 @@
 | 步骤 | 名称 | 状态 | 当前 Run | 前置条件 | 完成证据 |
 | --- | --- | --- | --- | --- | --- |
 | ERP-00 | 变更冻结与真相基线 | COMPLETE | RUN-20260829-ERP00-BASELINE-01 | 无 | [ERP-00 基线报告](./ERP00_BASELINE_REPORT_2026-08-29.md)；备份与隔离恢复验证通过 |
-| ERP-01 | 源码资产救援与版本控制 | IN_PROGRESS | RUN-20260829-ERP01-ASSET-BASELINE-01 | ERP-00 | 资产边界、124 个发布包索引和工作区备份已完成；Git 提交/远端克隆验证进行中 |
+| ERP-01 | 源码资产救援与版本控制 | COMPLETE | RUN-20260829-ERP01-ASSET-BASELINE-01 | ERP-00 | [ERP-01 基线报告](./ERP01_BASELINE_REPORT_2026-08-29.md)；commit/tag、私有镜像、空目录 clone、1170 测试、双构建和静态审计通过 |
 | ERP-02 | 单一 V2 前端产物恢复 | NOT_STARTED | — | ERP-01 | — |
 | ERP-03 | CI、预发与发布门禁 | NOT_STARTED | — | ERP-02 | — |
 | ERP-04 | 商品生命周期与状态字典定稿 | NOT_STARTED | — | ERP-03 | — |
@@ -1279,4 +1279,5 @@
 - 进入门结果：ERP-00 COMPLETE；工作区归档已完成；生产 PostgreSQL 备份已完成并通过隔离恢复；当前仓库无可信 HEAD，原有 `.git` 内部对象/refs 保留，不作为历史提交使用。
 - 失败基线/已知边界：未配置外部 Git 服务 URL；本步骤先建立本地可验证私有 bare 镜像，外部托管远端待用户提供目标后再绑定；原始 Markdown 存在历史性尾随空格和 EOF 空行，记录为 `WARN`，不做批量格式化。
 - 成功标准：基线提交和 tag 可定位；暂存内容不含受禁资产或高置信秘密；124 个发布归档均有 bytes/mtime/SHA-256/证据映射索引；从私有镜像空目录 clone 后可安装依赖、运行测试和构建；原始工作区和完整备份可回滚。
-- 当前状态：IN_PROGRESS；未通过全部完成门前，不得开始 ERP-02。
+- 完成证据：[ERP01_BASELINE_REPORT_2026-08-29.md](./ERP01_BASELINE_REPORT_2026-08-29.md)。基线 commit、树哈希、tag、完整备份、124 包索引、私有镜像、空目录 clone、安装、1170 测试、V2/Web 构建、静态 release readiness 和差异可见性验证均已记录。
+- 当前状态：COMPLETE；ERP-02 尚未启动，不得把本步骤的本地构建物或静态审计结果当作生产切换授权。
