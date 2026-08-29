@@ -1,19 +1,19 @@
 # ERP-05 历史数据证据审计报告
 
-版本：2026-08-29-v15
-正式 Run：`RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-14`
+版本：2026-08-29-v16
+正式 Run：`RUN-20260829-ERP05-SCOPE-DISPOSITION-15`
 步骤：ERP-05  
-状态：`BLOCKED`（Run 14 原生 COS 列表与媒体归属对账已完成；其余 ERP-05 完成门仍未通过）
+状态：`COMPLETE`（用户已批准 COS-first 与历史映射冻结豁免；Run 14 原生 COS 列表与媒体归属对账完成，未安全映射的历史记录只读保留）
 审计时间：2026-08-29（Asia/Shanghai）
 
 ## 1. 审计结论
 
-原始 Run 已完成本地静态证据盘点，并发现可逐条读取的本地业务投影和 V2 本地 Draft/Asset 状态，但没有取得完整 PostgreSQL 历史事实链而阻断。补证 Run 按用户于 2026-08-29 明确授权取得了生产 PostgreSQL、Redis、容器、Worker 日志数量和应用健康元数据；随后 Run 取得了关系型集合/关系的单向指纹、媒体 HEAD 结果和 SHEIN 官方只读回读结果，但完整对象存储清单和新模型逐条分类仍未取得，因此当前完成门仍未通过：
+原始 Run 完成本地静态证据盘点，并将无法证明的历史关系标记为 `UNKNOWN`。补证 Run 按用户于 2026-08-29 明确授权取得了生产 PostgreSQL、Redis、容器、Worker 日志数量和应用健康元数据；随后取得关系型集合/关系单向指纹、媒体 HEAD 结果、COS 原生对象清单和 SHEIN 官方只读回读结果。Run 14 已完成对象与媒体归属对账；用户随后批准 COS-first 与历史映射冻结豁免。因此本报告以“证据盘点完成、旧映射只读冻结、新链路不依赖历史迁移”收口，不声称旧记录已被迁移或补齐：
 
 1. 本地投影中已确认：1 个 store-scoped business record，包含 1,179 个商品投影、声明 805 个 SPU 和 6,077 个 SKU；V2 本地状态包含 4 个 Draft 和 13 个 Asset。
 2. 这些文件不是 PostgreSQL 的 Draft/Batch/Job/Run/Receipt/Review 历史表，也没有证明 ProductVersion、PublishAttempt、PlatformProductLink、Webhook、队列和 Worker 事实链；对应关系仍必须标记为 `UNKNOWN`。
 3. 源码和迁移已经证明若干结构性风险：发布 Job 直接绑定可变 Draft、当前迁移没有 ProductVersion 边界、媒体引用没有 ProductVersion 类型、页面存在多路查询和二次归并、草稿列表使用“是否存在任意 Job”排除并受 `LIMIT 100` 影响。
-4. ERP-20 的修复范围目前可精确到“本地投影核验 + 结构性风险清单”，仍不能精确到历史记录 ID、租户、店铺、SKC、版本和 Attempt；因此 ERP-05 完成门未通过，ERP-06 不得开始。
+4. ERP-20 的修复范围目前可精确到“本地投影核验 + 结构性风险清单”；无法精确到安全映射的历史记录不进入新链路，保留为只读 legacy。ERP-05 在用户批准范围豁免后完成收口，ERP-06 仅按新模型非生产边界启动。
 5. 当前逐条补证取得了关系表的不可逆集合指纹和关系指纹，但这只能证明某一时点的行集合/关联集合，不能把旧 Job 映射为新 ProductVersion、PublishAttempt 或 SHEIN 平台身份。
 6. 当前生产没有 ProductVersion 或 PublishAttempt 专用表；`shein_authorization_attempts` 的 21 条记录属于授权流程 Attempt，不能冒充商品发布 Attempt。发布 Job 的 `attempt_count`、`shein_version` 和 `readback` 字段也不能单独证明不可变版本或官方回读。
 7. 媒体只读 `HEAD` 结果为 585 条成功、173 条 404、62 条超时；成功项大小/类型与数据库记录均无不匹配，但对象清单仍不完整，404/超时记录不得自动删除、重试或改状态。
@@ -27,7 +27,7 @@
 15. Run 10 在用户确认修正子用户后使用服务器当前运行时身份重新执行，`ListObjectsV2` 第 0 页仍返回 HTTP 403；这表明当前运行时密钥仍未获得匹配的 COS List 权限，或策略的主体/资源/action 仍不匹配。数据库行数和 MediaAsset 指标稳定，但 PostgreSQL 统计在后台并发下增加 inserts 10、updates 7，因此只记录为受并发影响，不能声称本 Run 零统计变化。
 16. Run 11 在用户确认 `wow-rug-cos-service` 为目标子用户并完成策略调整后再次执行，S3/AWS4 兼容 `ListObjectsV2` 第 0 页仍返回 HTTP 403；Run 13 修正 AWS4 canonical query 后结果仍为 403。该结果不代表 COS 原生 HMAC-SHA1 请求失败。
 17. Run 14 使用同一生产运行时凭据执行 COS 原生 HMAC-SHA1 `GET Bucket`，列表成功且分页完整：633 个唯一对象、总大小 949039963 bytes、桶内孤儿 0、重复 0；数据库 820 条唯一 `object_key` 中 633 条匹配，187 条无远端对象。缺失记录全部为无引用的 `deleted`（185）或 `failed`（2）；不执行删除、恢复或状态改写。
-18. Run 14 证明当前 CAM 策略、子用户密钥和 COS 原生只读列表权限已生效；前序 403 的直接范围是当前 AWS4/S3 兼容列表探针，不再作为“权限未配置”的证据。ERP-05 仍因 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配的解释和 SKU 应用角色可读证据缺失而 `BLOCKED`。
+18. Run 14 证明当前 CAM 策略、子用户密钥和 COS 原生只读列表权限已生效；前序 403 的直接范围是当前 AWS4/S3 兼容列表探针，不再作为“权限未配置”的证据。ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配的解释和 SKU 应用角色可读证据仍缺失，但用户已批准将这些历史映射冻结为只读 legacy，不作为新 COS-first 链路进入 ERP-06 的前置条件。
 
 此前补证 Run 只执行了非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；本正式 Run 另行执行了官方只读查询，未执行生产写入、队列副作用、部署、重启、切换或任何密钥输出。
 
@@ -559,3 +559,19 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 缺失对象累计数据库记录大小 `228526673` bytes；其中 185 条在探针时已过期，缺失记录均有 store 归属。该统计只用于证据分类，不代表允许清理或恢复。
 - 数据库零写入：关键表行数前后相同；本次探针未写数据库、Redis、队列、SHEIN 或对象存储。`media_assets` 统计在本次观察后为 inserts 820、updates 5284、deletes 0；未将后台并发统计解释为探针写入。
 - 结论：Run 14 的对象清单与归属证据已取得，但 ERP-05 总完成门仍为 `BLOCKED`。187 条缺失记录保持历史事实，禁止自动删除、补对象、改状态或重试；ERP-06、ERP-20、生产清理和发布重试均不得开始。
+
+## 21. 当前正式决策：COS-first 与 ERP-05 历史映射冻结豁免
+
+2026-08-29 用户明确批准：
+
+> 批准采用 COS-first：历史数据冻结只读，新系统以 COS 为文件主存储，数据库保留元数据与业务引用，允许 ERP-05 历史映射豁免后进入 ERP-06。
+
+本决策的当前执行含义：
+
+1. ERP-05 完成的是证据盘点、风险分类、COS 原生对象对账和历史冻结边界，不代表旧记录已经补建 ProductVersion/PublishAttempt/PlatformProductLink。
+2. 633 个已核验 COS 对象可作为新链路的远端资产来源；187 条无远端对象且无业务引用的历史记录保持原状态，只读冻结。
+3. 新链路必须先完成 COS 直传、服务端完整性与存在性核验，再登记数据库 Asset 元数据和业务引用；数据库孤立行不能证明文件存在。
+4. 历史 `legacy_unversioned`/`UNKNOWN` 记录不自动删除、恢复、重试或改状态；未来如需处置，必须另行进入 ERP-20/ERP-23 的批准流程。
+5. ERP-06 当前只允许进行规范模型、事件账本、COS-first 媒体引用和 additive migration 的本地/隔离设计与验证；生产迁移仍未授权执行。
+
+当前状态：`COMPLETE`（范围豁免已批准）；下一正式 Run 为 `RUN-20260829-ERP06-MODEL-EVENT-FOUNDATION-01`。

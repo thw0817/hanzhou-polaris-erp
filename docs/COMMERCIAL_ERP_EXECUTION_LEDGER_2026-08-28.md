@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v38
+版本：2026-08-29-v39
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 Run 14 已完成 COS 原生签名与媒体归属只读对账，但 ERP-05 总完成门仍被历史映射证据缺口阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型与事件账本的非生产设计；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-14
+当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260829-ERP06-MODEL-EVENT-FOUNDATION-01
 
 ## 0. 台账用途
 
@@ -30,8 +30,8 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-14 | ERP-04 | Run 14 已用 COS 原生 HMAC-SHA1 完成列表与媒体归属只读对账：633 个对象匹配，187 条历史媒体记录无远端对象且均无引用；ProductVersion/PublishAttempt/PlatformProductLink 逐条映射等缺口仍阻断，ERP-06 不得开始 |
-| ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
+| ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
+| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260829-ERP06-MODEL-EVENT-FOUNDATION-01 | ERP-05 | 非生产范围启动：设计 COS-first 媒体边界、ProductVersion/PublishAttempt/PlatformProductLink、事件/Outbox 与 additive migration；生产迁移仍未执行 |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
@@ -800,6 +800,7 @@
 | ADR-326 | Analytics/Report 权限按 dataset/field/storeSet/capability 服务端裁剪，搜索/下钻/导出/订阅同样重验 | ACCEPTED | 卡片标题、明细和导出均可能包含敏感数据 | 可增加脱敏摘要，不降低服务端范围校验 |
 | ADR-327 | 报表读/重算继续基于已落库事实和手动 RefreshOperation；页面 load/切店/聚焦/30 秒不调用 SHEIN | ACCEPTED | 保持单一刷新 owner 和稳定用户体验 | 未来新鲜度策略需独立 ADR 与负载证明 |
 | ADR-328 | 报表中心和管理驾驶舱渐进加入现有 V2，不引入第二套前端/鉴权/权限或大屏式全站重设计 | ACCEPTED | 防止再次因修复一处改变全站并控制复杂度 | 经视觉基线、业务需求和性能证明后可逐页优化 |
+| ADR-329 | 采用 COS-first：新系统以 COS 为媒体文件主存储，PostgreSQL 保存元数据、业务引用、版本所有权和审计；历史映射冻结为只读 legacy | ACCEPTED | 用户明确批准不让历史映射阻断新链路；当前 633 个对象可复用、187 条无远端且无引用的旧记录保留原状 | 新上传先 COS 直传/完整性核验，再登记数据库；不自动删除、恢复、重试或改写历史 |
 
 ## 5. Run 总表
 
@@ -809,6 +810,8 @@
 | RUN-20260829-ERP05-OBJECT-INVENTORY-RECONCILIATION-08 | ERP-05 | — | 2026-08-29 20:23:36 | BLOCKED | production（只读） | 否 | provider `ListObjectsV2` 第 1 页 HTTP 403；未取得完整对象清单，Asset 归属保持 `UNKNOWN`；数据库行数稳定但 `sync_jobs` 后台并发更新使写入统计变化 2；9 条官方 version 不匹配沿用 `crossNone=9` |
 | RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-09 | ERP-05 | — | 2026-08-29 20:53:23 | BLOCKED | production（只读） | 否 | 当前生产凭据发起 `ListObjectsV2` 第 0 页仍 HTTP 403；数据库行数/统计本轮稳定；需核对实际密钥主体与资源匹配 |
 | RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-14 | ERP-05 | — | 2026-08-29 | BLOCKED | production（只读） | 否 | COS 原生 HMAC-SHA1 列表成功：633 个唯一对象、无桶内孤儿；数据库 820 个唯一 object_key 中 633 个匹配、187 个缺失且均无引用，未发生写入；ERP-05 其他历史证据缺口仍阻断 |
+| RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-05 | — | 2026-08-29 | COMPLETE | design/decision | 否 | 用户批准 COS-first 与历史映射冻结豁免；旧映射缺口保留为只读 legacy，不迁移/不恢复/不删除，并允许进入 ERP-06 |
+| RUN-20260829-ERP06-MODEL-EVENT-FOUNDATION-01 | ERP-06 | — | 2026-08-29 | IN_PROGRESS | design/local（非生产） | 否 | 开始设计 COS-first 媒体事实、ProductVersion/PublishAttempt/PlatformProductLink、事件账本、Inbox/Outbox 与 additive migration；尚未改代码、改库或执行生产迁移 |
 
 ### 5.1 Run ID 规则
 
@@ -1594,3 +1597,28 @@
 - 缺失记录用途分布：`selected_unpublished=153`、`reusable_source=26`、`generated_unselected=3`、`temporary_upload=3`、`compliance_evidence=2`。该分布仅用于审计分类，不授权删除、恢复、改状态或重试。
 - 数据库零写入：关键表行数前后相同；未写数据库、Redis、队列、SHEIN 或对象存储。`media_assets` 统计在探针后为 inserts 820、updates 5284、deletes 0；不将后台并发统计解释为探针写入。
 - 结论：Run 14 的对象清单与归属证据已取得，但 ERP-05 总完成门为 `BLOCKED`。187 条历史缺失记录保持现状；ERP-06、ERP-20、生产清理和发布重试均不得开始。
+
+## 21. ERP-05 历史映射冻结豁免与 ERP-06 入场
+
+### RUN-20260829-ERP05-SCOPE-DISPOSITION-15
+
+- 类型：ERP-05 范围处置与进入 ERP-06 的正式决策记录。
+- 启动依据：Run 14 已完成 COS 原生对象列表与 MediaAsset 归属只读对账；用户明确批准“COS-first：历史数据冻结只读，新系统以 COS 为文件主存储，数据库保留元数据与业务引用，允许 ERP-05 历史映射豁免后进入 ERP-06”。
+- 决策结果：ERP-05 在“证据盘点与风险边界”范围内完成；未能安全建立 ProductVersion/PublishAttempt/PlatformProductLink 的旧关系不伪造、不强行迁移，统一保留为 `legacy_unversioned`/`UNKNOWN` 只读 legacy。
+- 已确认历史边界：633 个 COS 对象可作为新系统远端资产来源；187 条无远端对象且无业务引用的历史媒体记录保持原状。
+- 禁止事项：不删除旧记录或对象，不恢复、不重试、不批量改状态，不执行 ERP-20 历史修复，不以范围豁免代替证据。
+- 外部写入：无；数据库、Redis、队列、对象存储、SHEIN、部署和服务重启均未执行。
+- 当前状态：`COMPLETE`；ERP-06 获准进入非生产模型设计与验证。
+
+### RUN-20260829-ERP06-MODEL-EVENT-FOUNDATION-01
+
+- 类型：ERP-06 规范数据模型与事件账本的第一阶段非生产设计 Run。
+- 启动依据：ERP-05 范围处置已完成，用户已批准 COS-first 与历史映射冻结豁免。
+- 目标：建立新链路的 additive 模型边界，明确 COS 文件本体、数据库元数据/引用/版本所有权、ProductVersion、PublishAttempt、PlatformProductLink、事件账本、Inbox/Outbox 和迁移演练契约。
+- 当前设计交付物：[ERP06_DATA_MODEL_EVENT_LEDGER_DESIGN_2026-08-29.md](./ERP06_DATA_MODEL_EVENT_LEDGER_DESIGN_2026-08-29.md)。
+- 允许范围：只读检查现有迁移、代码、测试和 ERP-05 证据；新增设计/契约/失败回归测试；必要时在隔离本地环境进行迁移 rehearsal；更新非敏感文档。
+- 禁止范围：生产数据库迁移或写入；修改旧历史记录；对象上传、下载、删除、恢复、复制或改名；SHEIN 读写；Redis/队列消费、重试或清理；生产部署、重启、切换和凭据输出。
+- 硬性边界：新上传顺序必须为“COS 直传 → 服务端完整性与存在性核验 → 数据库登记 Asset 元数据/引用”；未取得 VersionMedia 所有权前不得释放 Draft 引用；`result_unknown` 不得生成自动重发命令。
+- 成功标准：输出可审查的 additive schema/事件模型、旧表兼容 adapter 边界、迁移 preflight/verify/rollback 方案和最小失败回归集合；不改变生产状态；旧 legacy 只读策略可被测试验证。
+- 回滚点：本 Run 仅涉及本地设计、测试与 Markdown；如产生文件变更，回滚至本 Run 起始 commit，不触碰生产。
+- 当前状态：`IN_PROGRESS`；尚未执行生产迁移、生产写入或外部 SHEIN 写入。
