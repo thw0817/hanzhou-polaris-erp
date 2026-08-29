@@ -1874,3 +1874,20 @@
 - 环境边界：本 Run 未修改生产业务代码、生产数据库、生产容器、云端配置或 SHEIN 数据；执行的 SSH、Docker、PostgreSQL、Redis、HTTP 命令均为只读。此前唯一本机变更是将被 `.gitignore` 排除的 `.env` 权限从 `644` 收紧为 `600`；本次审查记录提交后工作区保持干净。
 - 当前状态：`NO-GO / IN_PROGRESS`；ERP-06 隔离设计与回归完成，真实 Worker/sender/凭证/生产队列/正式 migration/部署/SHEIN 写入尚未完成。
 - 下一执行单元：另行批准并记录生产发布开关的安全处置方案（含正在运行任务的 drain/观察，不在本 Run 自动关闭），随后在真实写入关闭的独立预发环境接入 ERP-06 Worker → sender → 官方回读与持久化；通过预发回归、制品一致性、备份/回滚和观察窗口后，才可重新评审生产部署。
+
+## 37. 全站诊断日志与隐藏诊断读取隔离实现
+
+### RUN-20260830-DIAGNOSTIC-OBSERVABILITY-01
+
+- 类型：V2 全站可观测性补强；为每个模块的路由、控件动作、表单字段变更、浏览器请求、API 错误和客户端异常建立脱敏诊断记录，不触碰生产。
+- 启动依据：用户要求覆盖网站每一个板块、按键、操作和执行，以便定位图片上传失败、COS 预览/下载失败及后续业务回归；同时要求诊断界面不出现在正常网页。
+- 允许范围：复用现有 `api_audit_logs`；新增浏览器诊断捕获和批量上报、Control 隐藏写入/读取入口、请求 TraceId、脱敏/限长/租户范围回归、运行时 capability 清单同步和文档记录。
+- 禁止范围：生产 PostgreSQL/COS/Redis/SHEIN 访问或写入；生产部署/重启/切换；正式数据库 migration；记录密码、Token、Secret、Cookie、Authorization、签名 URL、请求/响应 body、headers、文件/图片内容或表单输入值；新增网页诊断菜单。
+- 实际文件：[server/cloud/diagnostic-events.js](../server/cloud/diagnostic-events.js)、[server/cloud/diagnostic-events.test.js](../server/cloud/diagnostic-events.test.js)、[src-v2/lib/diagnostics.js](../src-v2/lib/diagnostics.js)、[src-v2/lib/diagnostics.d.ts](../src-v2/lib/diagnostics.d.ts)、[src-v2/lib/diagnostics.test.js](../src-v2/lib/diagnostics.test.js)、更新 [server/cloud/control-server.js](../server/cloud/control-server.js)、[server/cloud/control-server.test.js](../server/cloud/control-server.test.js)、[src-v2/lib/api.ts](../src-v2/lib/api.ts)、[src-v2/main.tsx](../src-v2/main.tsx)；同步 `deploy/postgres/runtime-role-capabilities.md` 与 `deploy/postgres/audit-runtime-capabilities.sql` 的静态能力清单。
+- 捕获范围：`ui.route`、`ui.click`、`ui.change`、`ui.submit`、所有浏览器 `fetch` 的 `api.request`、业务错误 `api.error`、`client.error`；直传/预览等非统一 API 的 `fetch` 也自动进入同一捕获层。服务端为非诊断请求透传或生成 `X-Trace-Id` 并追加请求摘要。
+- 隐藏入口：`POST /v1/web/diagnostics/events` 仅接受可信来源的登录会话和有界已脱敏事件；`GET /v1/internal/diagnostics/events?limit=100` 仅管理员可读且按租户查询；二者均无正常网页导航和可见日志面板。
+- 存储与容量：复用 `api_audit_logs`，不新增正式 migration；浏览器队列上限 100、单批 20，服务端批次上限 50、查询上限 100，metadata 上限约 4KB，诊断失败丢弃且不影响业务请求。
+- 脱敏门禁：路径去除查询参数、UUID/大数字对象标识归一化，外部 COS/SHEIN URL 只保留目的地类别；敏感字段、秘密值、签名 URL、body、headers、input/value、file/image 一律不入库。
+- 本地验证：诊断定向回归与 Control 回归 `63/63`；全量 `npm test` `1303/1303`；`npm run build:v2` 通过；runtime capability matrix/audit 通过；`npm run ci:secret-scan` 通过且 `findings=[]`；新增 JS `node --check` 和 `git diff --check` 通过。未提交工作区运行 release manifest 时按预期报告 `source_dirty`，不能作为候选发布通过证据。
+- 当前状态：`COMPLETE / NOT DEPLOYED`；代码和文档已完成，生产数据库、生产容器、生产配置、COS 和 SHEIN 均未触碰。正式候选仍须先提交形成干净 revision，再重建制品、重跑 release manifest 和完整门禁。
+- 下一执行单元：如需上线，另行执行候选制品构建、制品一致性核验、预发只读/故障回归、观察窗口和部署批准；上线后由管理员使用 internal API 查看诊断数据，不在正常网页增加日志界面。

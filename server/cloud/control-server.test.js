@@ -26,17 +26,94 @@ function createRequest({
 function createResponse() {
   return {
     status: null,
-    headers: null,
+    headers: {},
     body: "",
+    setHeader(name, value) {
+      this.headers[name] = value;
+    },
     writeHead(status, headers) {
       this.status = status;
-      this.headers = headers;
+      this.headers = { ...this.headers, ...headers };
     },
     end(body) {
       this.body = body || "";
     },
   };
 }
+
+test("cloud control exposes a trace id without exposing diagnostic data", async () => {
+  const handler = createCloudControlRequestHandler({
+    readiness: { async check() { return { ok: true, dependencies: {} }; } },
+  });
+  const response = await invokeRaw(handler, {
+    method: "GET",
+    url: "/health",
+    headers: { "x-request-id": "ui-request-1" },
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers["X-Trace-Id"], "ui-request-1");
+  assert.equal(response.body, JSON.stringify({ ok: true, service: "shein-cloud-control" }));
+});
+
+test("cloud control accepts authenticated diagnostic batches through a hidden API-only route", async () => {
+  let received = null;
+  const handler = createCloudControlRequestHandler({
+    readiness: { async check() { return { ok: true, dependencies: {} }; } },
+    webAuth: {
+      async authenticate(token) {
+        assert.equal(token, "session-token");
+        return { tenantId: "tenant-1", userId: "user-1", role: "operator" };
+      },
+    },
+    diagnosticEvents: {
+      async recordClientEvents(input) {
+        received = input;
+        return { recorded: input.events.length };
+      },
+    },
+  });
+
+  const response = await invoke(handler, {
+    method: "POST",
+    url: "/v1/web/diagnostics/events",
+    headers: { cookie: "shein_web_session=session-token" },
+    body: JSON.stringify({ events: [{ kind: "ui.click", action: "刷新" }] }),
+  });
+
+  assert.equal(response.status, 202);
+  assert.deepEqual(received.context, {
+    tenantId: "tenant-1",
+    userId: "user-1",
+    role: "operator",
+  });
+  assert.equal(received.events[0].action, "刷新");
+});
+
+test("cloud control protects hidden diagnostic reads with administrator access", async () => {
+  const handler = createCloudControlRequestHandler({
+    readiness: { async check() { return { ok: true, dependencies: {} }; } },
+    webAuth: {
+      async authenticate() {
+        return { tenantId: "tenant-1", userId: "user-1", role: "viewer" };
+      },
+    },
+    diagnosticEvents: {
+      async list() {
+        throw new Error("viewer must not query diagnostics");
+      },
+    },
+  });
+
+  const response = await invoke(handler, {
+    method: "GET",
+    url: "/v1/internal/diagnostics/events",
+    headers: { cookie: "shein_web_session=session-token" },
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal(response.body.code, "ADMIN_REQUIRED");
+});
 
 async function invoke(handler, requestOptions) {
   const response = createResponse();
@@ -2244,5 +2321,6 @@ test("cloud control only grants CORS to configured browser origins", async () =>
     allowed.headers["Access-Control-Allow-Origin"],
     "http://127.0.0.1:5173",
   );
+  assert.equal(allowed.headers["Access-Control-Expose-Headers"], "X-Trace-Id");
   assert.equal(rejected.headers["Access-Control-Allow-Origin"], undefined);
 });

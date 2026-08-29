@@ -1,4 +1,5 @@
 import http from "node:http";
+import { randomUUID } from "node:crypto";
 import { isIP } from "node:net";
 import { pathToFileURL } from "node:url";
 import Redis from "ioredis";
@@ -21,6 +22,10 @@ import {
 } from "./web-shein-authorization.js";
 import { PostgresStoreRepository } from "./store-repository.js";
 import { PostgresWebhookAuditRepository } from "./webhook-audit-repository.js";
+import {
+  DiagnosticEventError,
+  PostgresDiagnosticEventRepository,
+} from "./diagnostic-events.js";
 import {
   parseCookieHeader,
   PostgresWebAuthService,
@@ -110,6 +115,8 @@ const AUTH_PATHS = new Set([
   "/v1/web/password-reset/confirm",
   "/v1/web/logout",
   "/v1/web/session",
+  "/v1/web/diagnostics/events",
+  "/v1/internal/diagnostics/events",
   "/v1/web/stores",
   "/v1/web/shein/auth/start",
   "/v1/web/shein/auth/callback",
@@ -158,6 +165,7 @@ function getCorsHeaders(request, allowedOrigins) {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "Access-Control-Expose-Headers": "X-Trace-Id",
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Max-Age": "600",
     Vary: "Origin",
@@ -245,6 +253,7 @@ export function createCloudControlRequestHandler({
   sheinAuthorization = null,
   webSheinAuthorization = null,
   webhookAudits = null,
+  diagnosticEvents = null,
   enrollmentLimiter = createFixedWindowRateLimiter(),
   authorizationLimiter = createFixedWindowRateLimiter({
     limit: 20,
@@ -271,6 +280,13 @@ export function createCloudControlRequestHandler({
       `http://${request.headers.host || "127.0.0.1"}`,
     );
     const corsHeaders = getCorsHeaders(request, allowedOrigins);
+    const startedAt = process.hrtime.bigint();
+    const suppliedTraceId = String(request.headers["x-request-id"] || "").trim();
+    const traceId = /^[A-Za-z0-9._:-]{1,128}$/.test(suppliedTraceId)
+      ? suppliedTraceId
+      : randomUUID();
+    let requestErrorCode = null;
+    response.setHeader("X-Trace-Id", traceId);
 
     try {
       if (
@@ -314,6 +330,55 @@ export function createCloudControlRequestHandler({
           },
           corsHeaders,
         );
+      }
+
+      // Diagnostic events are intentionally API-only. There is no navigation
+      // entry for them in the normal web UI; the endpoint accepts only bounded,
+      // already-redacted event descriptors from an authenticated session.
+      if (
+        request.method === "POST" &&
+        url.pathname === "/v1/web/diagnostics/events"
+      ) {
+        if (!webAuth || !diagnosticEvents) {
+          throw new WebAuthError(
+            "SERVICE_UNAVAILABLE",
+            "诊断日志服务尚未启用",
+            503,
+          );
+        }
+        requireTrustedWebOrigin(request, allowedOrigins);
+        const context = await webAuth.authenticate(
+          getWebSessionToken(request, webCookieName),
+        );
+        const body = await readJsonBody(request, 64 * 1024);
+        const result = await diagnosticEvents.recordClientEvents({
+          context,
+          events: body.events,
+        });
+        return sendJson(response, 202, { ok: true, ...result }, corsHeaders);
+      }
+
+      if (
+        request.method === "GET" &&
+        url.pathname === "/v1/internal/diagnostics/events"
+      ) {
+        if (!webAuth || !diagnosticEvents) {
+          throw new WebAuthError(
+            "SERVICE_UNAVAILABLE",
+            "诊断日志服务尚未启用",
+            503,
+          );
+        }
+        requireTrustedWebOrigin(request, allowedOrigins);
+        const context = await webAuth.authenticate(
+          getWebSessionToken(request, webCookieName),
+        );
+        requireAdministrator(context);
+        const result = await diagnosticEvents.list({
+          tenantId: context.tenantId,
+          limit: url.searchParams.get("limit") || 50,
+        });
+        return sendJson(response, 200, result, corsHeaders);
       }
 
       if (request.method === "POST" && url.pathname === "/v1/web/login") {
@@ -2548,6 +2613,7 @@ export function createCloudControlRequestHandler({
         corsHeaders,
       );
     } catch (error) {
+      requestErrorCode = typeof error?.code === "string" ? error.code : "INTERNAL_ERROR";
       if (error instanceof DeviceAuthError) {
         return sendJson(
           response,
@@ -2650,6 +2716,14 @@ export function createCloudControlRequestHandler({
           corsHeaders,
         );
       }
+      if (error instanceof DiagnosticEventError) {
+        return sendJson(
+          response,
+          error.status,
+          { code: error.code, msg: error.message },
+          corsHeaders,
+        );
+      }
       if (
         Number.isInteger(error?.status) &&
         error.status >= 400 &&
@@ -2676,6 +2750,28 @@ export function createCloudControlRequestHandler({
         },
         corsHeaders,
       );
+    } finally {
+      if (
+        diagnosticEvents &&
+        typeof diagnosticEvents.recordServerRequest === "function" &&
+        url.pathname !== "/v1/web/diagnostics/events"
+      ) {
+        const durationMs = Math.round(
+          Number(process.hrtime.bigint() - startedAt) / 1_000_000,
+        );
+        void Promise.resolve(
+          diagnosticEvents.recordServerRequest({
+            method: request.method,
+            path: url.pathname,
+            traceId,
+            statusCode: response.statusCode || 500,
+            durationMs,
+            errorCode: requestErrorCode,
+          }),
+        ).catch(() => {
+          // Diagnostics must never turn a completed business response into a failure.
+        });
+      }
     }
   };
 }
@@ -2782,6 +2878,9 @@ export async function startCloudControlServer(config = loadConfig()) {
     webAppBaseUrl: config.webAppBaseUrl,
   });
   const webhookAudits = new PostgresWebhookAuditRepository({
+    pool: authPool,
+  });
+  const diagnosticEvents = new PostgresDiagnosticEventRepository({
     pool: authPool,
   });
   const credentialCipher = config.cloudEncryptionKey
@@ -3072,6 +3171,7 @@ export async function startCloudControlServer(config = loadConfig()) {
     sheinAuthorization,
     webSheinAuthorization,
     webhookAudits,
+    diagnosticEvents,
     allowedOrigins: config.cloudAllowedOrigins,
     webRegistrationTenantId: config.webPublicRegistrationTenantId,
     webCookieName: config.webCookieName,

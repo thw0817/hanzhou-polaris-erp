@@ -16,9 +16,9 @@ This is a review inventory only. It does not create roles, change privileges, or
 
 | Object | Kind | Operations | Runtime SQL sources |
 | --- | --- | --- | --- |
-| `api_audit_logs_id_seq` | sequence | USAGE | `server/cloud/compliance-sync-service.js`<br>`server/cloud/device-auth.js`<br>`server/cloud/rule-refresh-service.js`<br>`server/cloud/store-business-service.js`<br>`server/cloud/today-work-service.js`<br>`server/cloud/web-auth.js` |
+| `api_audit_logs_id_seq` | sequence | USAGE | `server/cloud/compliance-sync-service.js`<br>`server/cloud/device-auth.js`<br>`server/cloud/diagnostic-events.js`<br>`server/cloud/rule-refresh-service.js`<br>`server/cloud/store-business-service.js`<br>`server/cloud/today-work-service.js`<br>`server/cloud/web-auth.js` |
 | `ai_feature_grants` | table | SELECT, INSERT, UPDATE, DELETE | `server/cloud/ai-title-service.js`<br>`server/cloud/web-auth.js` |
-| `api_audit_logs` | table | SELECT, INSERT | `server/cloud/compliance-sync-service.js`<br>`server/cloud/device-auth.js`<br>`server/cloud/rule-refresh-service.js`<br>`server/cloud/store-business-service.js`<br>`server/cloud/today-work-service.js`<br>`server/cloud/web-auth.js` |
+| `api_audit_logs` | table | SELECT, INSERT | `server/cloud/compliance-sync-service.js`<br>`server/cloud/device-auth.js`<br>`server/cloud/diagnostic-events.js`<br>`server/cloud/rule-refresh-service.js`<br>`server/cloud/store-business-service.js`<br>`server/cloud/today-work-service.js`<br>`server/cloud/web-auth.js` |
 | `compliance_drafts` | table | SELECT, INSERT, UPDATE | `server/cloud/compliance-workspace-service.js` |
 | `compliance_preflight_reviews` | table | SELECT, INSERT | `server/cloud/compliance-workspace-service.js` |
 | `compliance_preflight_runs` | table | SELECT, INSERT | `server/cloud/compliance-workspace-service.js` |

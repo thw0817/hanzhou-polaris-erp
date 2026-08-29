@@ -10,6 +10,7 @@ import { sizeTemplatePaths } from "./size-template-contract.js";
 import { tailImageTemplatePaths } from "./tail-image-template-contract.js";
 import { titleRuleTemplatePaths } from "./title-rule-template-contract.js";
 import { aiTitlePaths } from "./ai-title-contract.js";
+import { recordDiagnosticEvent } from "./diagnostics.js";
 
 export type UserRole = "owner" | "admin" | "operator" | "viewer";
 
@@ -1887,6 +1888,7 @@ export class ApiError extends Error {
 }
 
 async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const method = String(init.method || "GET").toUpperCase();
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json;charset=UTF-8");
@@ -1900,6 +1902,12 @@ async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> 
     });
   } catch (error) {
     const aborted = error instanceof DOMException && error.name === "AbortError";
+    recordDiagnosticEvent({
+      kind: "api.error",
+      method,
+      path,
+      metadata: { errorName: aborted ? "AbortError" : "FetchError" },
+    });
     throw new ApiError(
       aborted ? 504 : 503,
       aborted ? "REQUEST_TIMEOUT" : "SERVICE_UNAVAILABLE",
@@ -1908,6 +1916,14 @@ async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> 
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    recordDiagnosticEvent({
+      kind: "api.error",
+      method,
+      path,
+      statusCode: response.status,
+      traceId: response.headers.get("x-trace-id") || payload.traceId || null,
+      metadata: { errorCode: String(payload.code || "REQUEST_FAILED") },
+    });
     throw new ApiError(
       response.status,
       String(payload.code || "REQUEST_FAILED"),
