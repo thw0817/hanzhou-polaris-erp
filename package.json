@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "npm@11.13.0",
+  "engines": {
+    "node": "24.16.0",
+    "npm": "11.13.0"
+  },
   "scripts": {
     "dev": "node --env-file-if-exists=.env server/dev.js",
     "dev:local:direct": "env SHEIN_LOCAL_DIRECT_AUTH=true node --env-file-if-exists=.env server/dev.js",
@@ -35,7 +40,15 @@
     "build:v2": "tsc -p tsconfig.v2.json --noEmit && vite build --mode v2",
     "test": "node --test",
     "preview": "vite preview --outDir dist-v2",
-    "preview:v2": "vite preview --outDir dist-v2"
+    "preview:v2": "vite preview --outDir dist-v2",
+    "ci:toolchain": "node server/ci/verify-toolchain.js",
+    "ci:secret-scan": "node server/ci/secret-scan.js",
+    "ci:staging-audit": "node server/ci/staging-isolation.js",
+    "ci:release-manifest": "node server/ci/release-manifest.js --check",
+    "ci:release-package": "node server/ci/create-release-package.js",
+    "ci:fault-gates": "node --test server/ci/erp03-fault-gates.test.js",
+    "test:e2e": "playwright test",
+    "test:e2e:core": "playwright test tests/e2e/v2-core-flow.spec.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -65,6 +78,7 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.3.4",
+    "@playwright/test": "1.62.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^6.0.5"

@@ -1,0 +1,107 @@
+name: Polaris ERP-03 gate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Static, tests, build, audit, staging and browser gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use fixed Node version
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Verify toolchain and lockfile
+        run: npm run ci:toolchain
+
+      - name: Scan tracked files for high-confidence secrets
+        run: npm run ci:secret-scan
+
+      - name: Run targeted ERP regression tests
+        run: node --test server/cloud/audit-v2-release-readiness.test.js server/cloud/media-lifecycle.test.js server/cloud/product-publish-worker.test.js server/cloud/webhook-event-processor.test.js
+
+      - name: Run complete test suite and fault gates
+        run: |
+          npm run ci:fault-gates
+          npm test
+
+      - name: Build V2 once
+        run: npm run build:v2
+
+      - name: Audit V2 artifact
+        run: npm run release:audit:v2
+
+      - name: Audit complete release manifest
+        run: npm run ci:release-manifest
+
+      - name: Audit staging isolation
+        run: npm run ci:staging-audit
+
+      - name: Install deterministic browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run deterministic core browser flow
+        run: npm run test:e2e:core
+
+      - name: Preserve the single V2 build for packaging
+        uses: actions/upload-artifact@v4
+        with:
+          name: polaris-v2-build-${{ github.sha }}
+          path: dist-v2
+          if-no-files-found: error
+          retention-days: 7
+
+  package-staging-candidate:
+    name: Package only after all gates pass
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact gated revision
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use fixed Node version
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Download the already-gated V2 build
+        uses: actions/download-artifact@v4
+        with:
+          name: polaris-v2-build-${{ github.sha }}
+          path: .
+
+      - name: Create staging candidate package
+        env:
+          POLARIS_CI_GATE: passed
+          POLARIS_ARTIFACT_CHANNEL: staging
+        run: npm run ci:release-package
+
+      - name: Upload immutable staging candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: polaris-staging-release-${{ github.sha }}
+          path: artifacts/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7

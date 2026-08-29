@@ -2,10 +2,10 @@
 
 版本：2026-08-29-v18  
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02 已完成；ERP-03～ERP-23 尚未开始；历史修复记录另行保存  
+状态：ERP-00、ERP-01、ERP-02 已完成；ERP-03 门禁失败待环境补证；ERP-04～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：无（ERP-02 已完成，ERP-03 尚未启动）  
+当前活动步骤：ERP-03 / GATE_FAILED / RUN-20260829-ERP03-CI-STAGING-GATE-01
 
 ## 0. 台账用途
 
@@ -28,7 +28,7 @@
 | ERP-00 | 变更冻结与真相基线 | COMPLETE | RUN-20260829-ERP00-BASELINE-01 | 无 | [ERP-00 基线报告](./ERP00_BASELINE_REPORT_2026-08-29.md)；备份与隔离恢复验证通过 |
 | ERP-01 | 源码资产救援与版本控制 | COMPLETE | RUN-20260829-ERP01-ASSET-BASELINE-01 | ERP-00 | [ERP-01 基线报告](./ERP01_BASELINE_REPORT_2026-08-29.md)；commit/tag、私有镜像、空目录 clone、1170 测试、双构建和静态审计通过 |
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
-| ERP-03 | CI、预发与发布门禁 | NOT_STARTED | — | ERP-02 | — |
+| ERP-03 | CI、预发与发布门禁 | GATE_FAILED | RUN-20260829-ERP03-CI-STAGING-GATE-01 | ERP-02 | 基础设施已落地；本机 Docker/Chromium 环境缺失，staging 运行和 Playwright 实测待补证 |
 | ERP-04 | 商品生命周期与状态字典定稿 | NOT_STARTED | — | ERP-03 | — |
 | ERP-05 | 历史数据证据盘点 | NOT_STARTED | — | ERP-04 | — |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
@@ -1297,3 +1297,23 @@
 - 成功标准：一次构建只产生一套前端事实；本地/候选/云端入口 hash 可对比；生成 buildId/source revision/asset manifest/UI marker；Playwright 或等价浏览器证据证明 V2 品牌、关键路由和无 legacy 标识；深层路由不循环；不执行生产切换。
 - 完成证据：[ERP02_BASELINE_REPORT_2026-08-29.md](./ERP02_BASELINE_REPORT_2026-08-29.md)。clean commit 上 `sourceDirty=false` 的 V2 构建、双命令相同 tree hash、静态审计和浏览器复验均通过。
 - 当前状态：COMPLETE；ERP-03 尚未启动。生产切换、Nginx reload、迁移、队列和 SHEIN 写入均未执行。
+
+## 15. 正式 ERP-03 Run
+
+### RUN-20260829-ERP03-CI-STAGING-GATE-01
+
+- 类型：ERP 实施步骤；CI、预发与发布门禁。
+- 启动时间：2026-08-29 12:19 +0800。
+- 启动依据：ERP-02 COMPLETE；用户明确要求继续严格按 ERP-00～ERP-23 顺序执行。
+- 目标：把测试、构建、浏览器验收、制品审计、staging 隔离和发布一致性变成可自动阻断的门禁，而不是口头检查。
+- 允许范围：固定 Node/npm 版本；新增 CI workflow、门禁脚本、staging compose/env 模板、Playwright 核心流程和不含秘密的 mock；扩展 release manifest/audit；新增只读/故障注入测试；更新部署文档和台账。
+- 禁止范围：修改业务页面/API/数据库语义；连接生产 DB/Redis 做 staging；生产迁移、Nginx reload、切换 current、重启生产服务；调用真实 SHEIN 写接口；提交 secrets、真实 env、生产数据或凭证。
+- 进入门结果：ERP-00、ERP-01、ERP-02 COMPLETE；V2 单一产物和 audit 已通过；当前仓库 clean、生产写入未授权。
+- 初始失败/未知：当前无 CI workflow；Playwright/MSW/Storybook/Lighthouse 是否已安装需核对；Control、Worker、Outbox、schema range 和 flags 尚未由同一 manifest 串联；staging 运行环境尚未建立；12 类故障门尚未完整覆盖。
+- 成功标准：CI 失败时不得产出正式制品；clean clone 能执行固定版本检查、secret scan、定向/全量测试、V2 build、release audit；staging 的 DB/Redis/bucket/flags 明确独立且默认不写 SHEIN；manifest 能证明 Control/Publish Worker/Outbox/schema/flags 同版本；故障 fixture 对重复、超时、断线、回读、媒体异常给出确定结果；所有无法执行的项显式标记 `UNKNOWN`。
+- 实际改动：新增固定工具链声明、CI workflow、tracked-file secret scan、staging Compose/环境模板、Playwright 核心流程、完整 release manifest/audit、故障契约测试和候选制品打包脚本；将 cloud control Dockerfile 固定到 `node:24.16.0-alpine`；未修改业务 API/数据库语义。
+- 验证结果：固定工具链 PASS；secret scan PASS（574 个 tracked 文件，4 个 reference-only 文档/测试向量已明示）；故障契约 17/17 PASS；全量测试 1193/1193 PASS；V2 build/build:web PASS；V2 artifact audit PASS；staging 静态隔离 PASS；Playwright `--list` 发现 2 个测试；in-app browser 深层路由补充验证 PASS。
+- 未闭合门：本机未安装 Docker，无法做 staging 实际启动/迁移/隔离验证；Playwright Chromium 下载在 CDN 10% 处超时，无法将实际浏览器执行标 PASS；当前没有 Outbox Dispatcher，manifest 固定标记 `not_implemented` 并阻断新 PublishCommand。
+- 证据报告：[ERP03_CI_STAGING_GATE_REPORT_2026-08-29.md](./ERP03_CI_STAGING_GATE_REPORT_2026-08-29.md)。
+- 外部写入：未连接生产 PostgreSQL/Redis/对象存储；未执行生产迁移、Nginx reload、current 切换、服务重启或 SHEIN 写入。
+- 当前状态：GATE_FAILED；不满足 ERP-03 完成门，不得开始 ERP-04；待具备 Docker/Chromium 的隔离验收环境后，从同一 clean revision 重跑全部门禁。

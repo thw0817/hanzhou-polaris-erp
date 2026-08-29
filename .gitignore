@@ -19,6 +19,7 @@ dist-web/
 .env.*
 !.env.example
 !.env.cloud.example
+!.env.staging.example
 
 # Logs and operating-system files
 *.log

@@ -1,0 +1,123 @@
+name: hanzhou-polaris-staging
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: polaris_staging
+      POSTGRES_USER: shein
+      POSTGRES_PASSWORD: staging-only
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - polaris_staging_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shein -d polaris_staging"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "192mb", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:56379:6379"
+    volumes:
+      - polaris_staging_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: staging-access
+      MINIO_ROOT_PASSWORD: staging-secret
+    ports:
+      - "127.0.0.1:59000:9000"
+      - "127.0.0.1:59001:9001"
+    volumes:
+      - polaris_staging_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["mc alias set staging http://minio:9000 staging-access staging-secret && mc mb --ignore-existing staging/shein-polaris-staging"]
+
+  migration:
+    profiles: ["migration"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    env_file:
+      - ../.env.staging.example
+    command: ["npm", "run", "db:migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  control:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    env_file:
+      - ../.env.staging.example
+    environment:
+      SHEIN_CLOUD_CONTROL_HOST: 0.0.0.0
+      SHEIN_CLOUD_CONTROL_PORT: 8870
+      DATABASE_URL: postgres://shein:staging-only@postgres:5432/polaris_staging
+      REDIS_URL: redis://redis:6379
+      SHEIN_MEDIA_S3_ENDPOINT: http://minio:9000
+    ports:
+      - "127.0.0.1:8870:8870"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8870/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # Intentionally fail-closed unless a later ERP step enables and proves the real publish pipeline.
+  product-publish-worker:
+    profiles: ["publish"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    env_file:
+      - ../.env.staging.example
+    environment:
+      SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED: "false"
+      DATABASE_URL: postgres://shein:staging-only@postgres:5432/polaris_staging
+      REDIS_URL: redis://redis:6379
+    command: ["npm", "run", "product-publish-worker:cloud"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  polaris_staging_postgres_data:
+  polaris_staging_redis_data:
+  polaris_staging_minio_data:
