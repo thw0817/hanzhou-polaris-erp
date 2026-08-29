@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v27
+版本：2026-08-29-v28
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前官方只读回读 Run 已完成但完成门仍阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前官方回读不匹配交叉关联 Run 进行中，前序完成门仍阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05
+当前活动步骤：ERP-05 / IN_PROGRESS / RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06
 
 ## 0. 台账用途
 
@@ -30,7 +30,7 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05 | ERP-04 | 82 个目标官方回读已完成；3 个通过目标的 SPU/SKC/SKU 回读成功；9 条仅版本匹配，ProductVersion/PublishAttempt/PlatformProductLink 与完整对象清单仍缺失；ERP-06 不得开始 |
+| ERP-05 | 历史数据证据盘点 | IN_PROGRESS | RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06 | ERP-04 | 正在核对 9 条官方 SPU 不匹配是否能同店铺/同版本唯一交叉关联；前序完成门仍阻断；ERP-06 不得开始 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -1468,3 +1468,11 @@
 - 禁止事项已满足：未调用会写 Receipt/Review 的 Control 回读方法；未写数据库、Redis、队列、对象存储或 SHEIN；未部署、重启、切换或输出敏感数据。
 - 完成门结论：`BLOCKED`；官方来源已取得，但 9 条 SPU 标识不匹配、现有模型没有 ProductVersion/PublishAttempt/PlatformProductLink 专用事实、完整对象存储清单仍缺失；ERP-06、ERP-20 修复和任何生产清理/重试不得开始。
 - 当前状态：`BLOCKED`；报告见 `docs/ERP05_HISTORICAL_DATA_EVIDENCE_REPORT_2026-08-29.md`。
+
+### RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06
+
+- 类型：ERP-05 官方回读不匹配交叉关联只读核验；只检查 9 条仅版本匹配记录是否能与同店铺/同版本的其他目标唯一对应。
+- 允许范围：非交互 SSH；生产 PostgreSQL `SELECT`；进程内解密凭据；官方 `query-document-state` 只读请求；输出分类计数和单向摘要。
+- 禁止范围：任何业务写接口、Control 持久化回读方法、数据库/Redis/队列/对象存储写入、重发/删除/修复/重命名和敏感输出。
+- 完成标准：9 条记录全部进入唯一交叉、无交叉、歧义或 `UNKNOWN`；前后关键表行数和写入统计不变；无充分证据则保持 `BLOCKED`。
+- 当前状态：`IN_PROGRESS`；生产交叉关联探针尚未执行。

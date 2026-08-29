@@ -1,10 +1,10 @@
 # ERP-05 历史数据证据审计报告
 
 版本：2026-08-29-v7
-正式 Run：`RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05`
+正式 Run：`RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06`
 步骤：ERP-05  
-状态：`BLOCKED`（本 Run 已完成官方只读回读验证；9 条 SPU 标识不匹配，ProductVersion/PublishAttempt/PlatformProductLink 逐条映射仍未完成）
-审计时间：2026-08-29 19:44:21（Asia/Shanghai；服务器 UTC `2026-08-29T11:44:21Z`）
+状态：`IN_PROGRESS`（本 Run 只核对 9 条 SPU 标识不匹配是否能与同店铺/同版本的其他目标唯一关联）
+审计时间：2026-08-29 19:49:26（Asia/Shanghai；服务器 UTC `2026-08-29T11:49:26Z`）
 
 ## 1. 审计结论
 
@@ -377,7 +377,7 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 本 Run 只有 Markdown 文档变更；生产检查全部是只读查询和元数据摘要；回滚仅需恢复本 Run 对应的文档提交，不触碰业务数据。
 - 原始 Run、生产聚合 Run、逐条对象 Run 和当前官方回读 Run 结论均为 `BLOCKED`，不是 `COMPLETE`。官方只读已覆盖 82 个目标，72 条失败、7 条待审核、3 条通过；3 条通过目标的 `spu-info` 均规范化成功，共 3 个 SKC、18 个 SKU；9 条仅版本匹配的 SPU 关系不能强行归并。ProductVersion/PublishAttempt/PlatformProductLink 逐条映射和完整对象存储清单仍缺失，ERP-06 不得开始。
 
-## 11. 当前正式 Run：官方只读回读证据补证
+## 11. 已结束 Run：官方只读回读证据补证
 
 ### RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05
 
@@ -390,3 +390,17 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 完成标准：每个实际请求均能归属到生产目标样本并记录脱敏结果；报告官方返回成功/失败/未知、业务码和结构覆盖；前后数据库关键表行数与审计证据无变化；若官方回读或映射仍不完整，ERP-05 仍为 `BLOCKED`，不得开始 ERP-06。
 - 回滚点：本 Run 不修改业务数据；仅新增本报告/台账记录，回滚为恢复本 Run 文档提交。
 - 当前状态：`BLOCKED`；本 Run 已完成 82 个官方 `query-document-state` 目标及 3 个通过目标的 `spu-info` 回读；数据库关键表行数与 PostgreSQL 写入统计前后无变化，但 9 条 SPU 标识不匹配，ProductVersion/PublishAttempt/PlatformProductLink 逐条映射和完整对象清单仍缺失。
+
+## 12. 当前正式 Run：官方回读不匹配交叉关联
+
+### RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06
+
+- 类型：ERP-05 官方回读证据补证；仅核对前一 Run 的 9 条“仅版本匹配”记录能否与同店铺、同版本的其他本地目标唯一对应。
+- 启动依据：前一 Run 已完成 82 个目标的官方回读，发现 73 条 version+SPU 完全匹配、9 条仅 version 匹配；用户继续要求“下一步”。
+- 目标：重新调用官方只读 `/open-api/goods/query-document-state`，在进程内将返回 SPU 与生产 PostgreSQL 只读取得的 82 个目标按 `store_id + version + spu` 做精确、唯一、歧义或无匹配分类；不修改本地目标、不生成重发命令。
+- 允许范围：非交互 SSH；生产 PostgreSQL `SELECT`；进程内解密生产已配置凭据；仅调用官方 `/open-api/goods/query-document-state`；输出数量、状态、唯一/歧义/无匹配分类和单向摘要。
+- 禁止范围：调用会写 Receipt/Review 的 Control 回读方法；SHEIN 写接口；任何数据库/Redis/队列/对象存储写入；重发、删除、修复或重命名目标；输出 SecretId、SecretKey、Token、签名、原始 ID、SPU 名或完整 payload。
+- 失败关闭：出现鉴权、限流、网络不确定、凭据解密失败、返回结构无法规范化或匹配关系非唯一时，保留 `UNKNOWN`，不猜测、不自动归并。
+- 完成标准：9 条不匹配逐条进入 `unique_cross_match`、`no_cross_match`、`ambiguous_cross_match` 或 `UNKNOWN`；查询前后关键表行数和写入统计无变化；无唯一交叉证据则 ERP-05 仍为 `BLOCKED`。
+- 回滚点：本 Run 不修改业务数据；仅新增本报告/台账记录。
+- 当前状态：`IN_PROGRESS`；生产交叉关联探针尚未执行。
