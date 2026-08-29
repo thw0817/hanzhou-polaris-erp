@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v25
+版本：2026-08-29-v26
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 正在执行新的只读缺口证据补证 Run；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前 Run 已完成允许范围内检查但完成门阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / IN_PROGRESS / RUN-20260829-ERP05-OBJECT-READBACK-EVIDENCE-04
+当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-OBJECT-READBACK-EVIDENCE-04
 
 ## 0. 台账用途
 
@@ -30,7 +30,7 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | IN_PROGRESS | RUN-20260829-ERP05-OBJECT-READBACK-EVIDENCE-04 | ERP-04 | 新 Run 补做媒体 provider-level HEAD 分层与本地回执/回读结构索引；前一 Run 阻断记录保留；禁止生产写入、SHEIN API、队列副作用和密钥输出 |
+| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-OBJECT-READBACK-EVIDENCE-04 | ERP-04 | 已完成媒体 provider-level HEAD 分层与本地回执/回读结构索引；完整对象证据、官方回读和新模型逐条映射仍缺失；前序阻断记录保留；ERP-06 不得开始 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -1438,4 +1438,12 @@
 - 禁止范围：SHEIN API 读写或回读；数据库写入/迁移；Redis payload、claim、消费、重试或清理；对象上传/下载/删除/复制；部署、重启、Nginx reload、current 切换；输出 SecretId、SecretKey、Token、Cookie、签名、原始 ID、业务键、完整 JSON、图片字节或个人信息。
 - 失败关闭：provider/容器/凭证作用域不明确、`HEAD` 不能证明只读、命令需要交互、超时无法区分或出现副作用时，保留 `UNKNOWN`，不猜测、不自动处置。
 - 成功标准：得到按媒体状态分层的 HEAD 结果；得到本地 Receipt/Job 回读字段的结构计数与单向指纹；明确区分本地回执字段和 SHEIN 官方回读证据；仍缺证则保持 `BLOCKED`，不得开始 ERP-06。
-- 当前状态：`IN_PROGRESS`；Run 合同已建立，证据查询尚未完成。
+- Run 合同状态：已完成允许范围内的证据查询；最终结论见下方结果记录。
+
+### RUN-20260829-ERP05-OBJECT-READBACK-EVIDENCE-04 结果
+
+- 媒体只读 `HEAD`：`referenced` 608 条中 556 成功、0 个 404、52 个超时；`deleted` 185 条中 167 个 404、18 个超时；`failed` 3 条中 1 成功、2 个 404；`ready` 24 条中 22 成功、0 个 404、2 个超时。总计 579 成功、169 个 404、72 个超时，大小/类型不匹配均为 0；未下载、上传、删除或复制对象。
+- 本地回执索引：`publish_receipts` 只有 `audited` 16、`document_state` 57、`received` 2、`submitted` 82，没有 `readback` 类型；`platform_code` 非空 0；Job `readback`/`receipt` JSON 各 219 条，不能证明官方回读来源。
+- 关键解释：404 主要集中在已标记 deleted 的资产；referenced/ready 没有 404，但仍有 54 条超时，必须保持 `UNKNOWN`，不得据此自动清理或修复。
+- 完成门结论：`BLOCKED`；当前 Run 的允许范围内检查已完成，但完整对象存储证据、SHEIN 官方回读/平台映射和 ProductVersion/PublishAttempt 逐条事实仍缺失；不得开始 ERP-06 或 ERP-20 修复。
+- 当前状态：`BLOCKED`；详细结果见 `docs/ERP05_HISTORICAL_DATA_EVIDENCE_REPORT_2026-08-29.md` 的 2.6 节。

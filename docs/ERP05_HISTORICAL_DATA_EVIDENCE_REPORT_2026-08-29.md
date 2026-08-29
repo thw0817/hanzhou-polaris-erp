@@ -1,10 +1,10 @@
 # ERP-05 历史数据证据审计报告
 
-版本：2026-08-29-v5
+版本：2026-08-29-v6
 正式 Run：`RUN-20260829-ERP05-OBJECT-READBACK-EVIDENCE-04`
 步骤：ERP-05  
-状态：`IN_PROGRESS`（本 Run 正在执行媒体 provider-level 只读分层和本地回执/回读结构索引；前一 Run 的阻断结论保留）
-审计时间：2026-08-29（Asia/Shanghai；本 Run 结果待采集）
+状态：`BLOCKED`（本 Run 已完成允许范围内的媒体分层和本地回执/回读结构索引；完整对象证据和 SHEIN 官方回读仍缺失）
+审计时间：2026-08-29 19:17:29（Asia/Shanghai；服务器 UTC `2026-08-29T11:17:29Z`）
 
 ## 1. 审计结论
 
@@ -17,6 +17,8 @@
 5. 当前逐条补证取得了关系表的不可逆集合指纹和关系指纹，但这只能证明某一时点的行集合/关联集合，不能把旧 Job 映射为新 ProductVersion、PublishAttempt 或 SHEIN 平台身份。
 6. 当前生产没有 ProductVersion 或 PublishAttempt 专用表；`shein_authorization_attempts` 的 21 条记录属于授权流程 Attempt，不能冒充商品发布 Attempt。发布 Job 的 `attempt_count`、`shein_version` 和 `readback` 字段也不能单独证明不可变版本或官方回读。
 7. 媒体只读 `HEAD` 结果为 585 条成功、173 条 404、62 条超时；成功项大小/类型与数据库记录均无不匹配，但对象清单仍不完整，404/超时记录不得自动删除、重试或改状态。
+8. 当前 Run 的分层复核结果为 579 条成功、169 条 404、72 条超时；404 集中在 `deleted` 状态（167/185），`referenced` 与 `ready` 均无 404，但仍有 54 条超时，完整对象证据仍未闭合。
+9. 当前 `publish_receipts` 没有独立 `readback` 类型，只有 `audited/document_state/received/submitted`；Job 的 219 条 `readback` JSON 只是本地字段，生产中没有可验证的官方回读来源索引，完成门继续阻断。
 
 补证 Run 只执行了非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；未执行生产写入、队列副作用、部署、重启、切换、SHEIN API 或任何密钥输出。
 
@@ -142,6 +144,43 @@
 在 `2026-08-29T11:03:38Z`/`11:05:17Z` 的只读快照中：61 个 Draft 被多个 Job 复用（单 Draft 最多 6 个）；12 个 running Run 全部超过 1 小时；2 个 claimed Job 的 claim 全部过期；82 个 submitted Job 全部缺 `completed_at`；13 个 queued Webhook 全部已有 `processed_at`；同步表当前为 571 条（succeeded 400、failed 166、queued 4、running 1）。外键孤儿仍为 0。
 
 以上异常只能进入受控修复范围，当前 Run 不执行清理、重试、消费、回读或数据修改。
+
+### 2.6 当前 Run 的 provider-level 媒体与回读结构补证
+
+本节对应当前正式 Run `RUN-20260829-ERP05-OBJECT-READBACK-EVIDENCE-04`，所有操作仍为生产只读。媒体检查使用已确认的 `S3ObjectStorage.statObject()`，只发送 `HEAD`；发布回执检查只读取 PostgreSQL 列定义、非空计数、状态分布和 JSON 结构指纹，不读取 JSON 内容。
+
+#### 媒体 provider-level 分层结果
+
+本 Run 使用媒体 Worker `deploy-media-cleanup-1` 的 `s3` provider 与同一运行时配置，对 820 条媒体行按数据库状态分层执行 `HEAD`。本次结果如下：
+
+| 数据库状态 | 总数 | HEAD 成功 | 404 | 超时 | 其他错误 | 大小/类型不匹配 |
+|---|---:|---:|---:|---:|---:|---:|
+| `referenced` | 608 | 556 | 0 | 52 | 0 | 0 / 0 |
+| `deleted` | 185 | 0 | 167 | 18 | 0 | 0 / 0 |
+| `failed` | 3 | 1 | 2 | 0 | 0 | 0 / 0 |
+| `ready` | 24 | 22 | 0 | 2 | 0 | 0 / 0 |
+| **合计** | **820** | **579** | **169** | **72** | **0** | **0 / 0** |
+
+解释边界：167 个 `deleted` 资产返回 404 与数据库状态方向一致；2 个 `failed` 资产返回 404，只登记为 `missing_object` 候选；`referenced` 和 `ready` 没有 404，但 54 条超时，不能由超时推断存在或缺失。与上一轮 585/173/62 的差异说明网络/对象存储响应存在时变性，因此未响应对象必须保持 `UNKNOWN`，不得自动删除、补引用、改状态或重试。
+
+#### 本地回执/回读结构索引
+
+`publish_receipts` 当前只存在以下 receipt type：
+
+| receipt type | 行数 | 有 Webhook ID | 有 document_sn | 有 version | 有 occurred_at |
+|---|---:|---:|---:|---:|---:|
+| `audited` | 16 | 16 | 16 | 16 | 0 |
+| `document_state` | 57 | 0 | 57 | 57 | 0 |
+| `received` | 2 | 2 | 2 | 2 | 0 |
+| `submitted` | 82 | 0 | 0 | 82 | 82 |
+
+补充结构事实：全部 157 条 Receipt 有 object 类型 `payload`；Job 的 `receipt` JSON、`readback` JSON、`remote_candidate_fingerprint` 各为 219 条；Job 的 `trace_id` 为 215 条、`shein_document_sn` 为 59 条、`shein_version` 为 82 条；`platform_code` 为 0 条。生产没有 `receipt_type='readback'` 行。
+
+上述字段能证明本地回执/投影结构已经写入，但不能证明来源一定是 SHEIN 官方回读：`document_state` 没有关联 Webhook ID，`submitted` 没有 document_sn，Job 的 `readback` 又是本地 JSON 字段。按照当前 Run 禁止调用 SHEIN API 的边界，本次不主动回读、不消费 Webhook、不改写 Receipt，官方来源继续标记为 `UNKNOWN`。
+
+#### Run 结论
+
+本 Run 已完成允许范围内的 provider-level 分层与回执结构索引，但没有取得完整对象存储证据，也没有取得可验证的 SHEIN 官方回读/平台映射。ERP-05 完成门仍为 `BLOCKED`；ERP-06、ERP-20 修复和任何生产清理/重试均不得开始。
 
 ## 3. 当前结构关系图（静态证据）
 
