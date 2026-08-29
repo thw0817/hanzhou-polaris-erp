@@ -4,8 +4,16 @@ function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+function sha1(value) {
+  return crypto.createHash("sha1").update(value).digest("hex");
+}
+
 function hmac(key, value, encoding) {
   return crypto.createHmac("sha256", key).update(value).digest(encoding);
+}
+
+function hmacSha1(key, value) {
+  return crypto.createHmac("sha1", key).update(value).digest("hex");
 }
 
 function percentEncode(value) {
@@ -37,6 +45,35 @@ function requiredText(value, name) {
   return normalized;
 }
 
+function isTencentCosEndpoint(endpoint) {
+  const hostname = endpoint.hostname.toLowerCase();
+  return (
+    hostname.includes(".cos.") &&
+    (hostname.endsWith(".myqcloud.com") || hostname.endsWith(".tencentcos.cn"))
+  );
+}
+
+function resolveSignatureVersion(signatureVersion, endpoint) {
+  const normalized = String(signatureVersion || "auto").trim().toLowerCase();
+  if (!["auto", "aws4", "cos"].includes(normalized)) {
+    throw new TypeError("对象存储签名版本必须是auto、aws4或cos");
+  }
+  if (normalized === "auto") {
+    return isTencentCosEndpoint(endpoint) ? "cos" : "aws4";
+  }
+  return normalized;
+}
+
+function formatCosEntries(entries) {
+  return Object.entries(entries)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(
+      ([name, value]) =>
+        `${percentEncode(name.toLowerCase())}=${percentEncode(normalizeHeaderValue(value))}`,
+    )
+    .join("&");
+}
+
 export class S3ObjectStorage {
   constructor({
     endpoint,
@@ -45,6 +82,7 @@ export class S3ObjectStorage {
     accessKeyId,
     secretAccessKey,
     allowInsecureEndpoint = false,
+    signatureVersion = "auto",
     fetchImpl = globalThis.fetch,
     now = () => new Date(),
   } = {}) {
@@ -62,6 +100,10 @@ export class S3ObjectStorage {
     this.secretAccessKey = requiredText(
       secretAccessKey,
       "对象存储SecretAccessKey",
+    );
+    this.signatureVersion = resolveSignatureVersion(
+      signatureVersion,
+      this.endpoint,
     );
     if (typeof fetchImpl !== "function") {
       throw new TypeError("对象存储缺少fetch实现");
@@ -87,6 +129,31 @@ export class S3ObjectStorage {
     if (Number.isNaN(signedAt.getTime())) {
       throw new TypeError("签名时间无效");
     }
+    if (this.signatureVersion === "cos") {
+      return this.createCosPresignedUrl({
+        normalizedMethod,
+        normalizedKey,
+        contentType,
+        expiry,
+        signedAt,
+      });
+    }
+    return this.createAws4PresignedUrl({
+      normalizedMethod,
+      normalizedKey,
+      contentType,
+      expiry,
+      signedAt,
+    });
+  }
+
+  createAws4PresignedUrl({
+    normalizedMethod,
+    normalizedKey,
+    contentType,
+    expiry,
+    signedAt,
+  }) {
     const timestamp = amzTimestamp(signedAt);
     const dateStamp = timestamp.slice(0, 8);
     const scope = `${dateStamp}/${this.region}/s3/aws4_request`;
@@ -138,6 +205,65 @@ export class S3ObjectStorage {
     const signingKey = hmac(serviceKey, "aws4_request");
     const signature = hmac(signingKey, stringToSign, "hex");
     url.search = `${canonicalQuery}&X-Amz-Signature=${signature}`;
+
+    return {
+      url: url.toString(),
+      headers: contentType ? { "Content-Type": headers["content-type"] } : {},
+      expiresAt: new Date(signedAt.getTime() + expiry * 1000).toISOString(),
+    };
+  }
+
+  createCosPresignedUrl({
+    normalizedMethod,
+    normalizedKey,
+    contentType,
+    expiry,
+    signedAt,
+  }) {
+    const startTime = Math.floor(signedAt.getTime() / 1000);
+    const keyTime = `${startTime};${startTime + expiry}`;
+    const url = new URL(this.endpoint);
+    const endpointPath = url.pathname.replace(/\/+$/, "");
+    url.pathname = `${endpointPath}/${encodeObjectKey(normalizedKey)}`;
+    url.hash = "";
+    url.search = "";
+
+    const headers = {
+      host: url.host,
+    };
+    if (contentType) {
+      headers["content-type"] = normalizeHeaderValue(contentType);
+    }
+    const signedHeaderNames = Object.keys(headers).sort();
+    const signedHeaders = signedHeaderNames.join(";");
+    const httpHeaders = formatCosEntries(headers);
+    const httpString = [
+      normalizedMethod.toLowerCase(),
+      url.pathname,
+      "",
+      httpHeaders,
+      "",
+    ].join("\n");
+    const stringToSign = [
+      "sha1",
+      keyTime,
+      sha1(httpString),
+      "",
+    ].join("\n");
+    const signKey = hmacSha1(this.secretAccessKey, keyTime);
+    const signature = hmacSha1(signKey, stringToSign);
+    const query = [
+      ["q-sign-algorithm", "sha1"],
+      ["q-ak", this.accessKeyId],
+      ["q-sign-time", keyTime],
+      ["q-key-time", keyTime],
+      ["q-header-list", signedHeaders],
+      ["q-url-param-list", ""],
+      ["q-signature", signature],
+    ];
+    url.search = query
+      .map(([name, value]) => `${percentEncode(name)}=${percentEncode(value)}`)
+      .join("&");
 
     return {
       url: url.toString(),

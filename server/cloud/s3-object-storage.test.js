@@ -26,6 +26,41 @@ test("creates a short-lived S3-compatible upload URL without exposing the secret
   assert.equal(ticket.expiresAt, "2026-07-31T10:10:00.000Z");
 });
 
+test("uses Tencent COS q-signature for standard COS endpoints", () => {
+  const storage = new S3ObjectStorage({
+    endpoint: "https://shein-image-assets-1259300321.cos.ap-hongkong.myqcloud.com",
+    region: "ap-hongkong",
+    bucket: "shein-image-assets-1259300321",
+    accessKeyId: "AKIDEXAMPLE",
+    secretAccessKey: "secret-value-that-must-never-leak",
+    now: () => new Date("2026-07-31T10:00:00.000Z"),
+  });
+  const upload = storage.createUploadUrl({
+    objectKey: "tenant-1/store-1/temporary_upload/2026-07-31/a b.jpg",
+    contentType: "image/jpeg",
+    expiresInSeconds: 600,
+  });
+  const download = storage.createDownloadUrl({
+    objectKey: "tenant-1/store-1/result.png",
+    expiresInSeconds: 300,
+  });
+  const uploadQuery = new URL(upload.url).searchParams;
+  const downloadQuery = new URL(download.url).searchParams;
+
+  assert.equal(uploadQuery.get("q-sign-algorithm"), "sha1");
+  assert.equal(uploadQuery.get("q-ak"), "AKIDEXAMPLE");
+  assert.equal(uploadQuery.get("q-sign-time"), "1785492000;1785492600");
+  assert.equal(uploadQuery.get("q-key-time"), "1785492000;1785492600");
+  assert.equal(uploadQuery.get("q-header-list"), "content-type;host");
+  assert.equal(uploadQuery.get("q-url-param-list"), "");
+  assert.match(uploadQuery.get("q-signature"), /^[a-f0-9]{40}$/);
+  assert.equal(downloadQuery.get("q-header-list"), "host");
+  assert.match(downloadQuery.get("q-signature"), /^[a-f0-9]{40}$/);
+  assert.equal(upload.url.includes("X-Amz-"), false);
+  assert.equal(upload.url.includes("secret-value"), false);
+  assert.deepEqual(upload.headers, { "Content-Type": "image/jpeg" });
+});
+
 test("rejects a remote HTTP endpoint unless insecure staging access is explicit", () => {
   assert.throws(
     () => new S3ObjectStorage({

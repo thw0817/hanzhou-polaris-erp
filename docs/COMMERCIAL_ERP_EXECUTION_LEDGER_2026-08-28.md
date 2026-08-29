@@ -1622,3 +1622,18 @@
 - 成功标准：输出可审查的 additive schema/事件模型、旧表兼容 adapter 边界、迁移 preflight/verify/rollback 方案和最小失败回归集合；不改变生产状态；旧 legacy 只读策略可被测试验证。
 - 回滚点：本 Run 仅涉及本地设计、测试与 Markdown；如产生文件变更，回滚至本 Run 起始 commit，不触碰生产。
 - 当前状态：`IN_PROGRESS`；尚未执行生产迁移、生产写入或外部 SHEIN 写入。
+
+## 22. ERP-06 COS-first 媒体链路签名修复
+
+### RUN-20260829-ERP06-MEDIA-COS-SIGNING-02
+
+- 类型：ERP-06 COS-first 图片上传/下载链路的非生产代码修复与回归验证。
+- 启动依据：用户反馈前端“图片上传失败、COS 下载失败”；既有 COS 原生 HMAC-SHA1 `GET Bucket` 只读验证成功，而对象存储适配器仍对 COS 端点生成 AWS4 `X-Amz-*` 预签名参数。
+- 根因：通用 `S3ObjectStorage` 未按腾讯云 COS 原生签名协议分流，导致上传 PUT、下载 GET、上传完成后的 HEAD 校验及删除请求均可能被 COS 拒绝。
+- 修复：标准 Tencent COS endpoint 自动使用 `q-signature` HMAC-SHA1 预签名；显式 `signatureVersion=cos` 可用于非标准 COS 域名；通用 S3/MinIO 继续使用 AWS4。前端 API、媒体状态机、权限范围、历史数据和生产配置未改动。
+- 代码与测试：[server/cloud/s3-object-storage.js](../server/cloud/s3-object-storage.js)、[server/cloud/s3-object-storage.test.js](../server/cloud/s3-object-storage.test.js)。
+- 验证结果：COS 定向回归 `6/6`；媒体/控制端定向测试 `67/67`；服务端全量测试 `125/125`；`npm run build:v2` 通过；V2 release artifact readiness `READY`、阻塞项 `none`。
+- 安全边界：测试使用假凭据；未输出或提交真实 SecretId/SecretKey；未访问或修改生产数据库、Redis、队列、对象、SHEIN 数据或生产服务。
+- 部署边界：本 Run 只完成仓库代码修复和验证，未部署生产；现网要生效需后续按发布门执行部署与线上上传/下载验收。
+- 回滚点：恢复本 Run 变更前的代码与台账 commit；不触碰历史媒体记录和对象。
+- 当前状态：`COMPLETE`（代码修复与本地验证完成；生产部署仍待单独授权/发布 Run）。
