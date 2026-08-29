@@ -268,6 +268,7 @@ export async function auditPolarisReleaseManifest({
   if (!frontend) errors.push("v2_release_manifest_missing");
   if (frontend && manifest?.ui?.sourceRevision !== frontend.sourceRevision) errors.push("ui_source_revision_drift");
   if (frontend && manifest?.ui?.buildId !== frontend.buildId) errors.push("ui_build_id_drift");
+  if (frontend && manifest?.source?.revision !== frontend.sourceRevision) errors.push("ui_not_built_from_current_source");
   for (const [key, definition] of Object.entries(COMPONENT_DEFINITIONS)) {
     const component = manifest?.components?.[key];
     if (!component || component.entry !== definition.entry || component.sourceRevision !== manifest?.source?.revision) {
