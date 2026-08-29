@@ -1566,4 +1566,4 @@
 - Provider：第 0 页 HTTP 403；`pages=0`、`objects=0`、`bytes=0`、`complete=false`；未发生对象下载、上传、删除、复制或改名。
 - 数据库：13 张关键表行数前后相同；MediaAsset 820/820 有唯一 `object_key`，sha256 771；本 Run 内 PostgreSQL 统计 inserts 增加 4、updates 增加 4、deletes 不变，属于后台并发活动。
 - 既有异常：官方 version mismatch 继续沿用 `total=9/crossUnique=0/crossNone=9/crossAmbiguous=0`，分类 `UNKNOWN`，不回读、不重发。
-- 完成门结论：`BLOCKED`；还需核对服务器实际 AccessKey 与 `wow-rug-cos-service` 的 API 密钥是否逐字匹配，并确认该用户直接关联 `polaris-media-list-readonly`；ERP-06、ERP-20 和媒体清理不得开始。
+- 完成门结论：`BLOCKED`；用户提供的服务器掩码前缀/后缀与 `wow-rug-cos-service` API 密钥截图一致，未记录完整密钥；但 `ListObjectsV2` 仍 HTTP 403，仍需在该用户权限页确认 `polaris-media-list-readonly` 的直接关联及最终 JSON 已保存生效；ERP-06、ERP-20 和媒体清理不得开始。

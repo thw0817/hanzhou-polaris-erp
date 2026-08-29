@@ -530,4 +530,4 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - Provider：`ListObjectsV2` 第 0 页返回 HTTP 403，`pages=0`、`objects=0`、`bytes=0`、`complete=false`；未取得对象清单，未发生对象下载、上传、删除、复制或改名。
 - 数据库：13 张关键表行数前后完全相同；MediaAsset 仍为 820 行、820 行有唯一 `object_key`、771 行有 `sha256`。本 Run 内 PostgreSQL 统计 inserts 增加 4、updates 增加 4、deletes 不变，属于后台并发活动，不能归因于本探针。
 - 官方 version mismatch：沿用 `total=9/crossUnique=0/crossNone=9/crossAmbiguous=0`，分类仍为 `UNKNOWN`；不发起业务回读或重发。
-- 完成门结论：`BLOCKED`。还需核对服务器实际 AccessKey 与 `wow-rug-cos-service` 的 API 密钥是否逐字匹配，并确认该用户确实直接关联 `polaris-media-list-readonly`；在核对前不得继续重试、清理媒体或进入 ERP-06/ERP-20。
+- 完成门结论：`BLOCKED`。用户提供的服务器掩码前缀/后缀与 `wow-rug-cos-service` API 密钥截图一致，未记录完整密钥；但 `ListObjectsV2` 仍 HTTP 403，仍需在该用户权限页确认 `polaris-media-list-readonly` 的直接关联及最终 JSON 已保存生效；在闭合前不得继续重试、清理媒体或进入 ERP-06/ERP-20。
