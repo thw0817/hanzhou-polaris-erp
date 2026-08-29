@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v20
+版本：2026-08-29-v21
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03 已完成；ERP-04 已启动为 IN_PROGRESS；ERP-05～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 因缺少历史数据证据暂时 BLOCKED；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-04 / IN_PROGRESS / RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01
+当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-HISTORICAL-EVIDENCE-01
 
 ## 0. 台账用途
 
@@ -29,8 +29,8 @@
 | ERP-01 | 源码资产救援与版本控制 | COMPLETE | RUN-20260829-ERP01-ASSET-BASELINE-01 | ERP-00 | [ERP-01 基线报告](./ERP01_BASELINE_REPORT_2026-08-29.md)；commit/tag、私有镜像、空目录 clone、1170 测试、双构建和静态审计通过 |
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
-| ERP-04 | 商品生命周期与状态字典定稿 | IN_PROGRESS | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 待用户批准状态名称与工作流；本阶段只做设计 |
-| ERP-05 | 历史数据证据盘点 | NOT_STARTED | — | ERP-04 | — |
+| ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
+| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-HISTORICAL-EVIDENCE-01 | ERP-04 | 静态证据已盘点；缺少历史 DB/Redis/Worker/媒体证据；不得 UPDATE/DELETE/重试/清队列 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -1376,4 +1376,27 @@
 - 初始失败/未知：存量 `product_drafts/publish_jobs/product_review_states/spus/skcs/skus` 的关系与脏数据尚未完成 ERP-05 只读盘点；当前状态词典仍有旧版审核中心兼容码，不能在本阶段直接改存量数据。
 - 成功标准：完成 Lifecycle ADR、六维状态字典、转换/非法转换矩阵、UI 标签/筛选映射、兼容旧状态迁移策略；每一状态可追溯事实源/时间/版本；result_unknown 无盲重发；当前尝试不按更新时间猜；待用户批准业务名称和工作流后才可标记 `COMPLETE`。
 - 回滚点：本 Run 仅新增/更新 Markdown；回滚为恢复本 Run 变更前的文档 commit，不触碰业务代码、数据库或生产。
-- 当前状态：`IN_PROGRESS`。
+- 当前状态：`COMPLETE`；用户已批准六维状态、精确页面标签、版本化重发和 `result_unknown` 禁止盲重发规则。
+
+## 20. 正式 ERP-05 Run
+
+### RUN-20260829-ERP05-HISTORICAL-EVIDENCE-01
+
+- 类型：ERP 实施步骤；历史数据证据盘点。
+- 启动依据：ERP-04 已完成设计门，用户已批准六维状态、精确页面标签、版本化重发和 `result_unknown` 禁止盲重发规则。
+- 目标：在不改变任何数据的前提下，解释历史 Draft/Batch/Job/Run/Receipt/Review/SPU/SKC/SKU/媒体/规则快照之间的真实关系，并为 ERP-20 的受控修复范围提供证据。
+- 允许范围：只读检查本地代码、迁移、测试、脱敏 schema/fixture、非生产可访问的本地数据证据、部署/队列审计定义和历史报告；生成不含密钥、Token、Cookie、完整 payload 或图片字节的报告。
+- 禁止范围：任何数据库 `INSERT/UPDATE/DELETE`；生产 PostgreSQL/Redis/对象存储连接；SHEIN API 读写；队列重试、清理或消费；生产部署、服务重启、Nginx reload、current 切换；输出 SecretId/SecretKey、session、签名或完整个人信息。
+- 进入门结果：ERP-00～ERP-04 `COMPLETE`；当前 Git 为 `7f2abec`；ERP-04 设计已提交且工作树启动前 clean；生产 PostgreSQL 备份与隔离恢复证据已存在。
+- 初始未知：当前工作区是否包含可安全读取的历史业务数据库快照、生产队列快照、Worker 日志和媒体对象清单尚未确认；没有证据的项目必须标记 `UNKNOWN`，不得用历史文档推断当前数据。
+- 必做范围：按 tenant/store/SKC/version 关联；分类执行状态；识别 Draft/Job/Batch 不一致、旧驳回覆盖新 Attempt、缺失 Version/Platform ID/Receipt、stale running、mutable Draft 复用、名称/时间/SKC 启发式关系、媒体/规则快照所有权、页面 fan-out/二次归并和 LIMIT 100 影响。
+- 成功标准：100% 可取得的历史记录进入 `mapped`、`legacy_unversioned`、`unmatched`、`conflict` 或明确 `UNKNOWN`；报告给出数量、非敏感 ID 和证据来源；没有执行 UPDATE、DELETE、重试或清队列；ERP-20 修复范围可由报告精确指定。
+- 回滚点：本 Run 仅新增/更新非敏感 Markdown 报告；回滚为恢复本 Run 变更前的文档提交，不触碰业务数据。
+- 当前状态：`BLOCKED`；本地静态证据已盘点，但没有可安全读取的历史数据库、Redis、Worker 日志或媒体清单，ERP-05 完成门未通过，ERP-06 不得开始。
+
+### ERP-05 审计报告
+
+- 报告：`docs/ERP05_HISTORICAL_DATA_EVIDENCE_REPORT_2026-08-29.md`。
+- 结果：结构性风险已登记；实际历史记录、队列现场、媒体对象和平台回读全部按证据可得性分类，缺证项目保持 `UNKNOWN`。
+- 禁止事项已满足：未连接生产 PostgreSQL/Redis/对象存储，未调用 SHEIN API，未执行数据库写入、队列重试/清理/消费、部署或重启。
+- 恢复条件：取得脱敏、可校验、只读的历史证据包后，才能重开 ERP-05 并完成逐条分类；在此之前不得开始 ERP-06 或 ERP-20 修复。
