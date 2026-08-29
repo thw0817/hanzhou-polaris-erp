@@ -1,10 +1,10 @@
 # ERP-05 历史数据证据审计报告
 
-版本：2026-08-29-v7
+版本：2026-08-29-v8
 正式 Run：`RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07`
 步骤：ERP-05  
-状态：`IN_PROGRESS`（本 Run 只核对生产数据库行级关系、缺失字段、重复/冲突和不可逆指纹）
-审计时间：2026-08-29 20:04:32（Asia/Shanghai；服务器 UTC `2026-08-29T12:04:32Z`）
+状态：`BLOCKED`（本 Run 的允许范围已完成；ERP-05 完成门仍未通过）
+审计时间：2026-08-29 20:14:23（Asia/Shanghai；服务器 UTC `2026-08-29T12:14:23Z`）
 
 ## 1. 审计结论
 
@@ -19,6 +19,9 @@
 7. 媒体只读 `HEAD` 结果为 585 条成功、173 条 404、62 条超时；成功项大小/类型与数据库记录均无不匹配，但对象清单仍不完整，404/超时记录不得自动删除、重试或改状态。
 8. 当前 Run 的分层复核结果为 579 条成功、169 条 404、72 条超时；404 集中在 `deleted` 状态（167/185），`referenced` 与 `ready` 均无 404，但仍有 54 条超时，完整对象证据仍未闭合。
 9. 当前 `publish_receipts` 没有独立 `readback` 类型，只有 `audited/document_state/received/submitted`；Job 的 219 条 `readback` JSON 只是本地字段。官方只读 Run 已对 82 个去重目标取得回读：73 条 version+SPU 完全匹配，9 条仅 SPU 匹配（返回 version 与请求 version 不一致）；官方来源已证明，但 9 条不能安全建立版本身份映射，完成门继续阻断。
+10. 当前 Run 已完成生产关系核对：目标业务表精确行数为 Draft 93、Batch 33、BatchItem 266、Run 28、Job 219、Receipt 173、Review 156、SPU 518、SKC 547、MediaAsset 820、Reference 542、Webhook 2,985、SyncJob 578、SyncItem 339；前后行数与 PostgreSQL 插入/更新/删除统计均不变。
+11. 当前数据库系统目录确认目标关系上有 50 个声明外键；BatchItem→Batch/Draft、Job→Run/Batch/BatchItem/Draft、Receipt→Job/Webhook、SKC→SPU、SyncItem→SyncJob 的实际孤儿计数均为 0。外键完整只证明结构关系，不等于新 ProductVersion/PublishAttempt 映射完成。
+12. `public.skus` 是普通表且经数据库所有者只读核验为 0 行，但应用角色 `shein_runtime` 没有 SELECT 权限；因此本 Run 将 SKU 行级事实标为 `UNKNOWN`，不能用权限不可见替代业务数据结论。
 
 此前补证 Run 只执行了非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；本正式 Run 另行执行了官方只读查询，未执行生产写入、队列副作用、部署、重启、切换或任何密钥输出。
 
@@ -425,4 +428,17 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 失败关闭：表结构/外键/字段语义无法证明、查询出现写入或锁等待迹象、生产连接需要交互或结果无法脱敏时，立即停止并保持 `UNKNOWN`。
 - 完成标准：可读取的核心表逐表给出行数、缺失字段和关系分类；所有未能建立新模型映射的记录明确标为 `legacy_unversioned` 或 `UNKNOWN`；前后关键表行数与 PostgreSQL 写入统计无变化；ERP-05 仍有缺口则保持 `BLOCKED`。
 - 回滚点：本 Run 不修改生产数据；仅新增本报告/台账记录。
-- 当前状态：`IN_PROGRESS`；生产行级关系探针尚未执行。
+- 当前状态：`BLOCKED`；允许范围内生产行级关系探针已完成，结果见下方；完整对象证据、新模型逐条映射和 9 条官方 version 不匹配仍未闭合。
+
+### RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07 结果
+
+- 生产范围：仅执行 PostgreSQL `SELECT`、系统目录和统计视图；未调用 SHEIN API、Control 业务回读方法、Redis/队列、对象存储或任何写路径。
+- Schema 与权限：目标表存在并核验到 50 个声明外键；`public.skus` 为普通表、数据库所有者只读计数为 0，但 `shein_runtime` 无 SELECT 权限，应用角色无法读取 SKU 行；其余目标表可按本 Run 范围读取。
+- 关系完整性：BatchItem 缺 Batch/Draft 均 0；Job 缺 Run/Batch/BatchItem/Draft 均 0；Receipt 缺 Job/Webhook 均 0；SKC 缺 SPU 或 `spu_id` 均 0；MediaReference 缺 Asset 0、引用计数不一致 0；SyncItem 缺 SyncJob 0。
+- Draft/发布链：93 个 Draft 中 82 个有 Job，61 个被多个 Job 复用，单 Draft 最多 6 个 Job；Batch 失败 13、就绪 20；BatchItem 失败 84、就绪 182；2 个 claimed Job 的 claim 已过期，82 个 submitted Job 均无 `completed_at`；12 个 active ExecutionRun 超过 1 小时。
+- 新模型与字段缺口：219 个 Job 中缺 `shein_version` 137、缺 `shein_document_sn` 160、缺 `trace_id` 4；26/28 个 ExecutionRun 的 `execution_enabled` 或 `authorizes_publishing` 不同时为真；Receipt 缺 `platform_code` 173、缺 `trace_id` 91、缺 `document_sn` 82、缺 `occurred_at` 91；没有发现无效 JSON 结构或重复 `request_key`/Receipt `dedupe_key`，但 source fingerprint 有 52 个重复组，登记为冲突候选而非已确认冲突。
+- 审核与目录：Review 156 条中 version/document/SPU/SKC 各缺 39 条，workflow_stage 全部缺失，audit_state 缺 39 条；严格同时按 store+version+document+SPU 做本地 Job 候选关联为 unique 57、unmatched 99、ambiguous 0，该关联不是官方映射，最终仍为 `UNKNOWN/legacy_unversioned`。SPU 518、SKC 547，SKC→SPU 无孤儿；SPU audit_state 全部为空，SPU/SKC raw_data 均为有效对象。
+- 媒体、Webhook、同步：820 个 Asset、542 个 Reference 无孤儿且引用计数一致，542 条引用没有 ProductVersion/Publish-like 类型；Webhook 为 processed 2,972、queued 13，13 条 queued 同时已有 `processed_at`，无重复 dedupe key；SyncJob 为 succeeded 404、failed 169、queued 4、running 1，4 个 active Job 无 `started_at`，339 个 SyncItem 均 succeeded 且无孤儿。
+- 新模型分类：本 Run 没有建立任何可审计的 `mapped` 记录；旧关系表记录保留为 `legacy_unversioned`，官方身份、ProductVersion/PublishAttempt/PlatformProductLink、SKU 应用角色行证据及无法唯一归属的关联保持 `UNKNOWN`；严格本地候选的 99 条只记作 `unmatched`，不据此自动修复。
+- 零写入：全部目标表精确行数前后相同；`pg_stat_user_tables` 的 inserts/updates/deletes 前后相同；Run 仅产生本报告/台账文档变更。
+- 完成门结论：`BLOCKED`。ERP-05 仍缺完整对象清单、ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配的可解释身份和 SKU 应用角色可读证据；不得开始 ERP-06、ERP-20 修复、生产清理或重试。

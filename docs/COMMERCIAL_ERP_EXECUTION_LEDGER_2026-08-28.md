@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v30
+版本：2026-08-29-v31
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前行级关系证据 Run 进行中，前序完成门仍阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前行级关系证据 Run 已完成允许范围但完成门阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / IN_PROGRESS / RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07
+当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07
 
 ## 0. 台账用途
 
@@ -30,7 +30,7 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | IN_PROGRESS | RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07 | ERP-04 | 正在核对 Draft/Batch/Job/Run/Receipt/Review/SPU/SKC/SKU/Media/Webhook 的行级关系和缺失字段；前序完成门仍阻断；ERP-06 不得开始 |
+| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07 | ERP-04 | 允许范围内已完成 Draft/Batch/Job/Run/Receipt/Review/SPU/SKC/SKU/Media/Webhook 行级关系核对；完整对象证据、新模型逐条映射和 SKU 应用角色可读证据仍缺失；ERP-06 不得开始 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -803,7 +803,7 @@
 
 | Run ID | ERP 步骤 | Issue ID | 开始时间 | 状态 | 环境 | 外部写入 | 结论 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| — | — | — | — | 尚无执行记录 | — | 否 | 本轮仅建立计划和台账 |
+| RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07 | ERP-05 | — | 2026-08-29 20:04:32 | BLOCKED | production（只读） | 否 | 关系证据已完成；50 个声明外键、目标表行数/字段缺口/孤儿关系已核对，SKU 表由数据库所有者确认 0 行但应用角色无 SELECT；ProductVersion/Attempt 逐条映射和官方不匹配仍阻断 |
 
 ### 5.1 Run ID 规则
 
@@ -1491,4 +1491,13 @@
 - 允许范围：非交互 SSH；PostgreSQL `SELECT`/系统目录/统计视图；SQL/内存计数和单向摘要。
 - 禁止范围：任何生产写入/迁移、SHEIN API、Redis payload、队列消费/重试、对象存储访问、业务路由和敏感输出。
 - 完成标准：核心历史表逐表给出关系完整性、缺失字段、重复/冲突与 `mapped/legacy_unversioned/unmatched/conflict/UNKNOWN` 分类；前后写入审计不变；缺口仍在则保持 `BLOCKED`。
-- 当前状态：`IN_PROGRESS`；生产行级关系探针尚未执行。
+- 当前状态：`BLOCKED`；生产行级关系探针已完成，结果见下方。
+
+### RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07 结果
+
+- 执行时间：2026-08-29 20:04:32～20:14:23（Asia/Shanghai）；生产环境只读。
+- 关系与 Schema：目标关系核验到 50 个声明外键；BatchItem→Batch/Draft、Job→Run/Batch/BatchItem/Draft、Receipt→Job/Webhook、SKC→SPU、SyncItem→SyncJob 孤儿均为 0。`public.skus` 是普通表，数据库所有者计数 0；`shein_runtime` 无 SELECT 权限，SKU 应用角色行证据记为 `UNKNOWN`。
+- 关键结果：Draft 93；Batch 33；BatchItem 266；ExecutionRun 28；Job 219；Receipt 173；Review 156；SPU 518；SKC 547；MediaAsset/Reference 820/542；Webhook 2,985；SyncJob/Item 578/339。61 个 Draft 被多个 Job 复用，最多 6 个；12 个 active Run stale；2 个 claim 过期；82 个 submitted Job 无 `completed_at`；Job 缺 version/document/trace 分别 137/160/4；source fingerprint 重复组 52。
+- 其他证据：Receipt 缺 platform_code/trace/document/occurred_at 为 173/91/82/91；Review 缺 version/document/SPU/SKC 各 39，workflow_stage 全缺；严格本地 Review→Job 候选为 unique 57、unmatched 99、ambiguous 0；媒体孤儿/引用计数不一致为 0；Webhook queued 13；Sync active 无 started_at 4；无重复 request_key、Receipt dedupe_key 或 Webhook dedupe_key。
+- 零写入：目标表精确行数与 PostgreSQL inserts/updates/deletes 前后均不变；未调用 SHEIN API、业务写路径、Redis/队列或对象存储。
+- 新模型分类与结论：`mapped=0`；旧表记录保留 `legacy_unversioned`，官方身份及 ProductVersion/PublishAttempt/PlatformProductLink 逐条关系为 `UNKNOWN`；严格本地候选的 99 条记作 `unmatched`，不自动修复。Run 结果 `BLOCKED`，ERP-06、ERP-20 修复、生产清理和重试均不得开始。
