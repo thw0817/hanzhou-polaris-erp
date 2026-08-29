@@ -1753,3 +1753,21 @@
 - 数据库 rehearsal：`PASS`。一次性本机 Docker `postgres:16-alpine` 临时数据库 `127.0.0.1:55437/erp06_outbox_rehearsal` 真实应用现有 001–046 与 047 草案，验证 handoff 创建 pending Outbox、Dispatcher claim/dispatch、确定性 job、Worker claim lease 后 dry-run release、重复 Dispatcher 不重复投递，以及 Attempt=`result_unknown` 后 Worker 不再领取；临时容器已移除，现有 staging 容器未触碰。
 - 当前状态：`COMPLETE`；本 Run 的隔离 Dispatcher/Worker claim/lease、确定性队列 handoff 和零远端演练完成。ERP-06 整体仍为 `IN_PROGRESS`，生产 Dispatcher/Worker、真实 SHEIN adapter/发布、生产迁移和 ERP-07 均未开始。
 - 下一执行单元：隔离评审并实现真实 SHEIN publish adapter 的 boundary contract、结果未知与官方回读占位；生产事项必须另行评审和明确批准。
+
+## 30. ERP-06 SHEIN publish adapter boundary、result_unknown 与回读占位
+
+### RUN-20260830-ERP06-PUBLISH-ADAPTER-BOUNDARY-10
+
+- 类型：ERP-06 当前隔离实现单元；只实现 SHEIN 发布 adapter boundary contract、结果分类和官方回读占位，不触碰生产。
+- 启动依据：第 29 Run 已完成 Outbox Dispatcher/Worker 的 claim/lease、确定性队列 handoff 和零远端 dry-run；本 Run 继续补齐 Worker 到 SHEIN 写 owner 之间的可审查边界，但不接入真实 Worker。
+- 允许范围：新增隔离 adapter contract、冻结 source/Command 身份校验、`send_started` 前置 hook、成功/明确失败/`result_unknown` 分类、官方 `query-document-state` 回读占位、失败回归和静态验证。
+- 禁止范围：生产 PostgreSQL/COS/Redis/队列/SHEIN 访问或写入；真实 sender、凭证读取、签名请求、Webhook/官方回读接入；生产部署/重启/切换；历史回填、删除、恢复、重试或真实发布。
+- 实际文件：[erp06-shein-publish-adapter-contract.js](../server/cloud/erp06-shein-publish-adapter-contract.js)、[erp06-shein-publish-adapter-contract.test.js](../server/cloud/erp06-shein-publish-adapter-contract.test.js)、更新 [erp06-draft/README.md](../server/cloud/erp06-draft/README.md)、[HANZHOU_POLARIS_REBUILD_HANDOFF_V2_2026-08-29.md](HANZHOU_POLARIS_REBUILD_HANDOFF_V2_2026-08-29.md) 与 [ERP06_DATA_MODEL_EVENT_LEDGER_DESIGN_2026-08-29.md](ERP06_DATA_MODEL_EVENT_LEDGER_DESIGN_2026-08-29.md)。未修改 `server/cloud/migrations/`。
+- Boundary：只接受既有 `erp06-publish-command-v1` 队列命令和同租户/店铺、同 Attempt/Version/Revision 身份及指纹的冻结 source；endpoint 固定为 `/open-api/goods/product/publishOrEdit`；队列命令不含 raw body、图片 URL、token 或凭证。
+- 发送保护：默认 `executionEnabled=false`；关闭时不加载 source、不调用 sender。启用边界也必须先成功持久化 `send_started`，持久化失败或 sender 缺失均 fail closed，不发 SHEIN 请求。
+- 结果保护：完整官方 SPU/SKC/SKU/version 回执才投影 `accepted/submitted`；明确响应为 `failed`，`openapi00001` 仅要求重新授权，429/5xx 可重试；无明确响应、网络异常或不完整成功响应为 `unknown/result_unknown`，`retryable=false`，不得自动重发。
+- 回读占位：声明 `/open-api/goods/query-document-state`、`POST` 和 `not_implemented`，同时返回 `externalRead=false`、`resolvesResultUnknown=false`；占位不能恢复 Attempt、建立 PlatformProductLink 或标记完成。
+- 定向验证：adapter boundary 回归 `10/10` 通过，包含身份/指纹/敏感字段、默认关闭、显式授权、发送前持久化、成功/明确失败/未知结果、回读无网络、sender 缺失和持久化失败；只使用内存 fake。
+- 当前状态：`COMPLETE`；本 Run 全量测试 `1247/1247`、adapter 定向回归 `10/10`、秘密扫描 `findings=[]`、V2 构建、release audit、`node --check` 与 `git diff --check` 均通过；staging 容器仅做只读核对且未触碰。
+- 仍未完成：真实 SHEIN adapter/生产 Worker/`send_started` 与 receipt 持久化/官方回读/生产迁移与部署仍未开始；本 Run 不代表商品已向 SHEIN 发出或发布成功。
+- 下一执行单元：另行评审 `send_started`/receipt 持久化、官方 Webhook/单据状态/SPU 回读和生产 Worker 接入；未获单独批准前不执行外部写入。

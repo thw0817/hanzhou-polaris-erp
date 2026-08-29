@@ -1,7 +1,7 @@
 # ERP-06 数据模型与事件账本设计
 
-版本：2026-08-30-v5
-状态：`IN_PROGRESS`（非生产设计、版本冻结、原子交接、Outbox claim/lease 与 Worker dry-run 验证）
+版本：2026-08-30-v6
+状态：`IN_PROGRESS`（非生产设计、版本冻结、原子交接、Outbox claim/lease、Worker dry-run 与 SHEIN adapter boundary 隔离验证）
 适用边界：COS-first；历史数据冻结只读；不执行生产迁移、不修改历史记录、不调用 SHEIN 写接口
 
 ## 0. 本文用途
@@ -253,8 +253,8 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 
 ## 10. 当前状态与下一 Run
 
-- 当前 Run：`RUN-20260830-ERP06-OUTBOX-DISPATCH-WORKER-IMPLEMENTATION-09`
-- 当前状态：`IN_PROGRESS`
+- 当前 Run：`RUN-20260830-ERP06-PUBLISH-ADAPTER-BOUNDARY-10`
+- 当前状态：`COMPLETE`（本 Run 隔离边界与全量门禁已完成；ERP-06 整体仍为 `IN_PROGRESS`）
 - 已完成：COS-first 决策登记、ERP-05 历史映射冻结豁免登记、目标模型 additive migration 草案、preflight/verify/rollback、真实本机 PostgreSQL 隔离 rehearsal、DraftRevision/ProductVersion 版本冻结、ProductVersion → PublishAttempt → PublishCommand → ProductPublishOutbox 原子交接、PublishBatch/BatchItem 显式关联和 legacy read-only adapter 最小实现。
 - 本 Run 实现边界：PublishBatch 服务按租户/店铺和 selection fingerprint 幂等创建 BatchItem；handoff 在同一事务内锁定 Batch/BatchItem，验证 Draft/Version 来源关系，建立 Attempt=`created`、Command=`queued`、Outbox=`pending`、current pointers、Draft=`handed_off`/lockVersion+1、BatchItem=`handed_off` 和 4 类 ProductEvent；不修改旧历史行，不调用远端。
 - 失败保护：同一批次 idempotencyKey 选择指纹冲突拒绝；BatchItem 越界/错版本/已交接拒绝；同一 ProductVersion 已存在任意 Attempt 时阻断新 requestKey；已有 requestKey 只有在 BatchItem、Command、Outbox、current projection 和 Draft 状态完整时才幂等返回；`result_unknown` 仅允许原请求幂等回读，不自动重发。
@@ -262,5 +262,7 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 - 已验证：批次/adapter/handoff/foundation 定向测试 `23/23`；全量测试 `1231/1231`；`npm run ci:secret-scan` 通过且 `findings=[]`；`npm run build:v2` 通过；`git diff --check` 通过；独立本机 PostgreSQL `postgres:16-alpine` 的 handoff 批次演练和 foundation rollback 重跑均通过，临时容器已移除，staging 容器未触碰。
 - 已完成本 Run：隔离 Outbox Dispatcher/Worker 服务、确定性最小 job contract、Command/Outbox worker lease 字段、队列失败回归、`result_unknown` 禁止领取回归，以及真实一次性 PostgreSQL claim/dispatch/dry-run/rejection rehearsal。
 - 已验证：ERP-06 相关定向回归 `29/29`（含前序 handoff/foundation/Batch/adapter 与本 Run 6 项）；本 Run 的临时 PostgreSQL rehearsal 通过，容器已移除，现有 staging 未触碰；本 Run 没有生产数据库、COS、Redis、真实队列或 SHEIN 写入。
-- 尚未完成：生产 Dispatcher/Worker 接入、真实 SHEIN adapter/远端发布、生产切换评估、正式生产迁移、历史数据迁移和 SHEIN 写入；旧历史继续只读，不因本 Run 自动映射。
-- 下一执行单元：评审并在隔离环境实现真实 SHEIN 发布 adapter 的 boundary contract 与结果未知保护；在 ERP-06 完成门通过且另行批准前，不接入生产 Worker、不执行生产迁移、不进入 ERP-07。
+- 已完成当前 Run 的隔离实现：真实 `publishOrEdit` adapter boundary、同 scope/版本指纹校验、敏感 source 拒绝、显式授权与发送前 `send_started` hook、成功/明确失败/`result_unknown` 分类，以及官方 `query-document-state` 无网络回读占位。
+- 当前 Run 定向回归：`10/10` 通过；全量测试 `1247/1247` 通过，秘密扫描 `findings=[]`，V2 构建与 release audit 通过，`node --check`/`git diff --check` 通过；只使用内存 fake，未配置真实 sender、凭证或远端 HTTP；适配器默认关闭，`result_unknown` 不自动重试，回读占位不能解除未知状态。
+- 尚未完成：adapter 的生产 Worker 接入、`send_started`/receipt 持久化实现、真实 SHEIN sender/签名凭证、官方 Webhook/单据状态回读与 SPU 关系回读、生产切换评估、正式生产迁移、历史数据迁移和 SHEIN 写入；旧历史继续只读，不因本 Run 自动映射。
+- 下一执行单元：评审 adapter 与生产 Worker/持久化/官方回读的接入方案；在 ERP-06 完成门通过且另行批准前，不接入生产 Worker、不执行生产迁移、不进入 ERP-07。

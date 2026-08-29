@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v23
+版本：2026-08-30-v24
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结、原子发布交接与 Outbox claim/lease 的隔离验证，ERP-07～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结、原子发布交接、Outbox claim/lease 与 SHEIN adapter boundary 的隔离验证，ERP-07～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -157,6 +157,17 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - 失败保护已验证：队列失败只标记当前 lease 对应 Outbox 为 `failed`；scope/command identity 不一致拒绝；`result_unknown` Attempt 不得被 Worker 再次领取；payload 不含 credential、raw body、图片 URL。
 - 证据：新增服务定向回归 `6/6`；与前序 ERP-06 定向回归合计 `29/29`；一次性本机 Docker PostgreSQL `127.0.0.1:55437/erp06_outbox_rehearsal` 真实应用 001–046 与 047 草案并通过 handoff → dispatch → worker dry-run → `result_unknown` no-claim；临时容器已移除，现有 staging 未触碰。
 - 明确未完成：没有接入生产 Dispatcher/Worker，没有运行真实 SHEIN adapter/HTTP，没有发送、重发、上传、删除或修改生产数据；本 Run 的 Worker 结果不等于 SHEIN 接收或商品发布成功。
+
+### 4.4 ERP-06 SHEIN publish adapter boundary 隔离事实
+
+- 当前 Run：`RUN-20260830-ERP06-PUBLISH-ADAPTER-BOUNDARY-10`。
+- 已新增隔离契约：[erp06-shein-publish-adapter-contract.js](../server/cloud/erp06-shein-publish-adapter-contract.js) 与其测试；适配器只接受既有 `erp06-publish-command-v1` 队列命令和同租户/店铺、同 `ProductVersion` 指纹的冻结 source，唯一写 endpoint 固定为 `/open-api/goods/product/publishOrEdit`。
+- 边界要求发送前先持久化 `send_started`；默认 `executionEnabled=false`，关闭时不加载冻结 source、不配置 sender、不调用 SHEIN。适配器未接入生产 Worker，也没有真实 sender、凭证读取或远端 HTTP。
+- 结果分类：完整的官方成功回执才投影为 `accepted/submitted`；明确响应按 `failed` 分类，`openapi00001` 仅标记 `requiresReauthorization`，429/5xx 作为可重试明确失败；无明确响应、网络异常或成功响应缺少完整 SPU/SKC/SKU/版本均进入 `unknown/result_unknown`，禁止自动重试。
+- 结果回读先提供 `/open-api/goods/query-document-state` 的 `not_implemented` 占位，明确 `externalRead=false`、`resolvesResultUnknown=false`；占位不能解除 `result_unknown`，不能建立平台 Link 或完成状态。
+- 失败回归覆盖 10 项（含 sender 缺失与 `send_started` 持久化失败），只使用内存 fake，不连接生产 PostgreSQL/COS/Redis/队列/SHEIN；历史数据仍冻结只读。
+- 收尾证据：全量测试 `1247/1247`、秘密扫描 `findings=[]`、V2 构建、release audit、`node --check` 与 `git diff --check` 均通过；现有 staging 容器仅做只读核对且未触碰。本 Run 状态：`COMPLETE`。
+- 明确未完成：真实 SHEIN sender/签名凭证接入、`send_started`/receipt 持久化实现、官方 Webhook/单据状态回读、SPU 关系回读、生产 Worker/迁移/部署和任何 SHEIN 写入，均需单独评审与明确批准。
 
 ## 5. 历史已执行工作如何使用
 

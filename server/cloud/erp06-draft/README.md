@@ -43,6 +43,8 @@
 - `server/cloud/erp06-legacy-readonly-adapter.js`：只读投影旧 publish_jobs/publish_receipts；输出明确的 `legacy_readonly`/`legacy_unknown`，不泄露旧 JSON 中的凭证字段。
 - `server/cloud/erp06-outbox-dispatcher-service.js`：隔离的 Outbox Dispatcher/Worker claim、租约、确定性 job contract 和 dry-run release；不导入 SHEIN/远端执行器。
 - `server/cloud/erp06-outbox-dispatcher-service.test.js`：验证作用域、租约、队列失败、确定性最小 payload、Worker 无远端调用和 `result_unknown` 禁止领取。
+- `server/cloud/erp06-shein-publish-adapter-contract.js`：隔离的真实 SHEIN `publishOrEdit` adapter boundary；只接受已校验的 ERP-06 Command 与冻结版本 source，发送前要求 `send_started` 持久化，默认关闭远端写。
+- `server/cloud/erp06-shein-publish-adapter-contract.test.js`：验证 endpoint/身份/指纹/敏感字段、显式授权、发送前持久化、成功/明确失败/`result_unknown` 分类，以及官方单据状态回读占位不联网。
 - 以上服务及 handoff 的失败回归只使用 fake pool 和本地一次性数据库；没有接入生产路由、生产 Dispatcher、真实 Worker 或 SHEIN 写接口。
 
 ## 未在本 Run 做的事
@@ -51,4 +53,5 @@
 - 没有把历史 `product_drafts`、`publish_jobs`、`publish_receipts` 或媒体引用转换为新事实。
 - 没有打开新模型写开关，没有接入新发布 worker，没有发送 SHEIN 写请求。
 - 没有把发布 Outbox 接入生产 dispatcher；本 Run 只在隔离内验证 claim/lease、确定性队列 handoff 和 Worker dry-run release，不代表远端发布成功。
+- 没有把 adapter contract 接入生产 Worker，没有配置真实 sender、凭证读取或官方回读请求；测试中的 sender 仅为内存 fake。
 - 没有把本草案登记为正式 `047` 生产迁移；通过本地失败回归后仍需单独评审、实现代码和生产批准。
