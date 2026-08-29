@@ -1,6 +1,6 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v48
+版本：2026-08-30-v49
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结、原子发布交接、Worker 编排、结果持久化、官方回读单阶段编排与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
@@ -1865,8 +1865,12 @@
 - 本地接线结论：云端 Compose 仍以 `control` 与旧 `product-publish-worker` 为长期入口；旧 Worker 通过 `createProductPublishWorker`/`WebProductPublishExecutor` 工作。`erp06-official-readback-orchestrator.js`、`erp06-official-readback-repository.js` 和 `erp06-shein-remote-boundary.js` 目前仅由隔离测试/隔离组件互相引用，未进入 Control 路由或云端长期 Worker，不能宣称 ERP-06 已在线上生效。
 - 配置与安全结论：云端发布、合规写入、Webhook、同步 Worker 和 Outbox 均由显式开关/profile 控制，默认关闭；runtime 与 migration 连接配置在部署文档中分离。工作区 `.env` 未被 Git 跟踪，原权限为 `644`，其中存在非空 SHEIN 配置项；已仅将本机文件权限收紧为 `600`，未读取、打印或修改任何值。
 - 预发与公网只读证据：`hanzhou-polaris-staging` 的 PostgreSQL、Redis、MinIO 容器均为 healthy，未重启、未写入；`https://app.hanzhou.icu/` 返回 `200`，`https://api.hanzhou.icu/health` 返回 `200`；公网 `/ready` 返回 `404`，符合其仅供服务器本机/Docker 健康检查的部署边界。
-- 生产证据阻断：从当前 Codex 主机对 `ubuntu@42.193.179.216` 的非交互 SSH 只读连接返回 `Permission denied (publickey,password)`。因此当前没有生产 release、活动容器、数据库角色审计、队列状态、Worker 日志、COS 对象状态或回滚点的可验证现场证据；不使用历史截图替代当前事实。
-- 门禁结论：`NO-GO / BLOCKED`。本地静态测试、构建和 release audit 通过，只能证明候选代码质量；真实 ERP-06 接线未完成，且生产现场证据缺失，禁止进入预发/生产真实接入、正式 migration 或部署切换。
-- 环境边界：本 Run 未修改业务代码、数据库、预发容器、云端配置或 SHEIN 数据；唯一本机变更是将被 `.gitignore` 排除的 `.env` 权限从 `644` 收紧为 `600`。工作区提交仍为 `902f1aa`，无未提交代码变更。
-- 当前状态：`BLOCKED`；ERP-06 整体仍为 `IN_PROGRESS`，隔离设计与回归已完成，但真实 Worker/sender/凭证/生产队列/正式 migration/部署/SHEIN 写入均未开始。
-- 下一执行单元：先取得可验证的服务器只读证据并完成 ERP-06 真实 Worker → sender → 官方回读接线设计评审；随后只能在独立预发、保持真实写入关闭的条件下做接线演练。未完成接入评审和单独批准前，不执行外部写入。
+- 生产现场证据：使用本机专用部署公钥以非交互 SSH 登录 `ubuntu@42.193.179.216`，服务器 `.env` 权限为 `600`；当前 `current` 指向 `shein-cloud-deploy-20260829-cos-media-signing-v3`。该 release 的 V2 静态 manifest source revision 为 `7ff06fafbb130ab5b750331e18c08df4165fc40e`，不包含 ERP-06 三个新远端/回读文件；当前工作区代码提交为 `902f1aa`，两者不是同一候选制品。
+- 生产配置证据：`SHEIN_RUNTIME_MODE=cloud`，SHEIN 应用凭证、云端加密密钥、runtime/migration 数据库连接和 COS S3 配置均存在；`SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED=true`，`SHEIN_WEBHOOK_INGRESS_ENABLED=true`，但 `SHEIN_OUTBOX_DISPATCHER_ENABLED` 缺失。实际 compose `--profile publish config --services` 仅包含 `postgres`、`redis`、`control`、`product-publish-worker`，没有 `outbox-dispatcher` 服务。
+- 生产数据库证据：runtime 数据库角色只读审计通过 `50` 项；`schema_migrations` 最新为 `045_publish_lifecycle_indexes.sql`，`046`、`047`、`048` 均未记录；`product_versions`、`publish_attempts`、`publish_commands`、`product_publish_outbox`、`product_publish_receipts`、`official_event_inbox`、`product_events` 均不存在。ERP-06 正式 migration 尚未执行。
+- 生产运行证据：Control、Webhook、PostgreSQL、Redis 均 healthy；发布 Worker、媒体清理、规则刷新、经营刷新、合规同步和 Webhook Worker 均 running；采集到的容器 `restart=0`，未打印日志 payload，仅取得最近 24 小时行数摘要；Control `/health`、`/ready` 均返回 `200`。
+- 生产回滚证据：`current` 是 root 所有的 release 符号链接；`/opt/shein-console/releases/shein-cloud-deploy-20260829-frontend-restore-v1` 存在，可作为已记录的前端回切候选，但 `/opt/shein-console/previous` 和 `/opt/shein-console/rollback` 不存在。应用回滚和服务重建仍需维护窗口与变更记录，未在本 Run 执行。
+- 门禁结论：`NO-GO`。本地静态测试、构建和 release audit 只能证明候选代码质量；真实线上仍运行旧 release/旧 Worker，生产发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环，禁止直接部署 ERP-06、执行正式 migration、切换 release 或把现有生产开关当作 ERP-06 已验收证据。
+- 环境边界：本 Run 未修改生产业务代码、生产数据库、生产容器、云端配置或 SHEIN 数据；执行的 SSH、Docker、PostgreSQL、Redis、HTTP 命令均为只读。此前唯一本机变更是将被 `.gitignore` 排除的 `.env` 权限从 `644` 收紧为 `600`；本次审查记录提交后工作区保持干净。
+- 当前状态：`NO-GO / IN_PROGRESS`；ERP-06 隔离设计与回归完成，真实 Worker/sender/凭证/生产队列/正式 migration/部署/SHEIN 写入尚未完成。
+- 下一执行单元：另行批准并记录生产发布开关的安全处置方案（含正在运行任务的 drain/观察，不在本 Run 自动关闭），随后在真实写入关闭的独立预发环境接入 ERP-06 Worker → sender → 官方回读与持久化；通过预发回归、制品一致性、备份/回滚和观察窗口后，才可重新评审生产部署。
