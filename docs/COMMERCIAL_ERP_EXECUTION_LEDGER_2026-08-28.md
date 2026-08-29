@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v28
+版本：2026-08-29-v29
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前官方回读不匹配交叉关联 Run 进行中，前序完成门仍阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前官方回读不匹配交叉关联 Run 已完成但完成门仍阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / IN_PROGRESS / RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06
+当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06
 
 ## 0. 台账用途
 
@@ -30,7 +30,7 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | IN_PROGRESS | RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06 | ERP-04 | 正在核对 9 条官方 SPU 不匹配是否能同店铺/同版本唯一交叉关联；前序完成门仍阻断；ERP-06 不得开始 |
+| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06 | ERP-04 | 82 个目标官方回读完成；9 条 version 不匹配均无同店铺/同 SPU 交叉版本；ProductVersion/PublishAttempt/PlatformProductLink 与完整对象清单仍缺失；ERP-06 不得开始 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -1462,17 +1462,25 @@
 
 - 生产边界：目标主机 `VM-0-5-ubuntu`；Control 当前 release 为 `shein-cloud-deploy-20260829-frontend-restore-v1`；凭据仅在 Control 容器一次性进程内解密，未输出任何密钥或原始身份。
 - 官方 `query-document-state`：82/82 目标完成请求、HTTP/业务传输成功、规范化成功；返回状态为 failed 72、pending 7、passed 3；无传输错误、无规范化错误、无 API 鉴权/限流错误。
-- 目标映射：82 条返回记录均有 version 和 SPU 标识；73 条 version+SPU 完全匹配，9 条仅 version 匹配，不能强行建立 SPU 平台身份映射。
+- 目标映射：82 条返回记录均有 version 和 SPU 标识；73 条 version+SPU 完全匹配，9 条仅 SPU 匹配（version 不一致），不能强行建立版本平台身份映射。
 - 官方 `spu-info`：仅对 3 个官方审核通过目标调用；3/3 传输成功且规范化成功，共 3 个 SKC、18 个 SKU；79 个未通过/待审核目标按规则跳过，未提前调用。
 - 零写入证据：`stores`、`publish_jobs`、`publish_receipts`、`product_review_states`、`product_drafts`、`publish_execution_runs`、`webhook_events` 精确行数前后不变；PostgreSQL 对应写入/更新/删除统计前后不变。
 - 禁止事项已满足：未调用会写 Receipt/Review 的 Control 回读方法；未写数据库、Redis、队列、对象存储或 SHEIN；未部署、重启、切换或输出敏感数据。
-- 完成门结论：`BLOCKED`；官方来源已取得，但 9 条 SPU 标识不匹配、现有模型没有 ProductVersion/PublishAttempt/PlatformProductLink 专用事实、完整对象存储清单仍缺失；ERP-06、ERP-20 修复和任何生产清理/重试不得开始。
+- 完成门结论：`BLOCKED`；官方来源已取得，但 9 条 version 标识不匹配、现有模型没有 ProductVersion/PublishAttempt/PlatformProductLink 专用事实、完整对象存储清单仍缺失；ERP-06、ERP-20 修复和任何生产清理/重试不得开始。
 - 当前状态：`BLOCKED`；报告见 `docs/ERP05_HISTORICAL_DATA_EVIDENCE_REPORT_2026-08-29.md`。
 
 ### RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06
 
-- 类型：ERP-05 官方回读不匹配交叉关联只读核验；只检查 9 条仅版本匹配记录是否能与同店铺/同版本的其他目标唯一对应。
+- 类型：ERP-05 官方回读不匹配交叉关联只读核验；只检查 9 条仅 SPU 匹配但 version 不一致的记录是否能与同店铺/同 SPU 的其他 version 唯一对应。
 - 允许范围：非交互 SSH；生产 PostgreSQL `SELECT`；进程内解密凭据；官方 `query-document-state` 只读请求；输出分类计数和单向摘要。
 - 禁止范围：任何业务写接口、Control 持久化回读方法、数据库/Redis/队列/对象存储写入、重发/删除/修复/重命名和敏感输出。
 - 完成标准：9 条记录全部进入唯一交叉、无交叉、歧义或 `UNKNOWN`；前后关键表行数和写入统计不变；无充分证据则保持 `BLOCKED`。
-- 当前状态：`IN_PROGRESS`；生产交叉关联探针尚未执行。
+- 当前状态：`BLOCKED`；82/82 官方状态请求成功并规范化；9 条 version 不匹配均无同店铺/同 SPU 的交叉版本，数据库关键表行数与 PostgreSQL 写入统计前后不变。
+
+### RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06 结果
+
+- 官方只读覆盖：82/82 个去重目标完成 `query-document-state` 请求，HTTP/业务传输成功、规范化成功；状态为 failed 72、pending 7、passed 3；无 API 鉴权、限流、网络或规范化错误。
+- 交叉关联：73 条 version+SPU 完全匹配；9 条 SPU 匹配但官方 version 与请求 version 不同；这 9 条在同店铺/同 SPU 的本地目标集合中均无对应官方 version（`crossUnique=0`、`crossNone=9`、`crossAmbiguous=0`）。
+- 凭据与边界：4 个涉及店铺凭据均在一次性内存进程内成功解密；未调用会写 Receipt/Review 的 Control 方法，未输出密钥、Token、原始身份或完整响应。
+- 零写入证据：`stores`、`publish_jobs`、`publish_receipts`、`product_review_states`、`product_drafts`、`publish_execution_runs`、`webhook_events` 精确行数前后不变；对应 PostgreSQL 插入/更新/删除统计前后不变。
+- 完成门结论：`BLOCKED`；9 条无法安全建立平台 version 映射，且现有生产模型没有 ProductVersion/PublishAttempt/PlatformProductLink 专用事实，完整对象存储清单也未闭合；ERP-06、ERP-20 修复和任何生产清理/重试不得开始。

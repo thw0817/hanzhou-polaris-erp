@@ -3,8 +3,8 @@
 版本：2026-08-29-v7
 正式 Run：`RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06`
 步骤：ERP-05  
-状态：`IN_PROGRESS`（本 Run 只核对 9 条 SPU 标识不匹配是否能与同店铺/同版本的其他目标唯一关联）
-审计时间：2026-08-29 19:49:26（Asia/Shanghai；服务器 UTC `2026-08-29T11:49:26Z`）
+状态：`BLOCKED`（本 Run 已完成 9 条 version 标识不匹配的交叉关联核验；9 条均无同店铺/同 SPU 的可用交叉版本）
+审计时间：2026-08-29 19:55:12（Asia/Shanghai；服务器 UTC `2026-08-29T11:55:12Z`）
 
 ## 1. 审计结论
 
@@ -18,7 +18,7 @@
 6. 当前生产没有 ProductVersion 或 PublishAttempt 专用表；`shein_authorization_attempts` 的 21 条记录属于授权流程 Attempt，不能冒充商品发布 Attempt。发布 Job 的 `attempt_count`、`shein_version` 和 `readback` 字段也不能单独证明不可变版本或官方回读。
 7. 媒体只读 `HEAD` 结果为 585 条成功、173 条 404、62 条超时；成功项大小/类型与数据库记录均无不匹配，但对象清单仍不完整，404/超时记录不得自动删除、重试或改状态。
 8. 当前 Run 的分层复核结果为 579 条成功、169 条 404、72 条超时；404 集中在 `deleted` 状态（167/185），`referenced` 与 `ready` 均无 404，但仍有 54 条超时，完整对象证据仍未闭合。
-9. 当前 `publish_receipts` 没有独立 `readback` 类型，只有 `audited/document_state/received/submitted`；Job 的 219 条 `readback` JSON 只是本地字段。官方只读 Run 已对 82 个去重目标取得回读：73 条版本+SPU 完全匹配，9 条仅版本匹配；官方来源已证明，但 9 条不能安全建立平台身份映射，完成门继续阻断。
+9. 当前 `publish_receipts` 没有独立 `readback` 类型，只有 `audited/document_state/received/submitted`；Job 的 219 条 `readback` JSON 只是本地字段。官方只读 Run 已对 82 个去重目标取得回读：73 条 version+SPU 完全匹配，9 条仅 SPU 匹配（返回 version 与请求 version 不一致）；官方来源已证明，但 9 条不能安全建立版本身份映射，完成门继续阻断。
 
 此前补证 Run 只执行了非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；本正式 Run 另行执行了官方只读查询，未执行生产写入、队列副作用、部署、重启、切换或任何密钥输出。
 
@@ -369,13 +369,13 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 规则、模板和 schema 快照 ID/hash；
 - 导出时间、来源环境、导出工具版本和完整性 hash。
 
-本 Run 已在明确边界内执行 SHEIN 官方只读回读，但仍不得消费队列、revalidate 或把结果直接写回生产；9 条 SPU 标识不匹配和未建立的新模型版本/Attempt/平台链接仍必须保持 `UNKNOWN`，后续如需人工核对必须另建明确 Run。
+本 Run 已在明确边界内执行 SHEIN 官方只读回读，但仍不得消费队列、revalidate 或把结果直接写回生产；9 条 version 标识不匹配和未建立的新模型版本/Attempt/平台链接仍必须保持 `UNKNOWN`，后续如需人工核对必须另建明确 Run。
 
 ## 10. 安全与回滚
 
 - 本报告未记录 SecretId、SecretKey、Token、Cookie、签名、完整请求 payload、图片字节或个人敏感信息。
 - 本 Run 只有 Markdown 文档变更；生产检查全部是只读查询和元数据摘要；回滚仅需恢复本 Run 对应的文档提交，不触碰业务数据。
-- 原始 Run、生产聚合 Run、逐条对象 Run 和当前官方回读 Run 结论均为 `BLOCKED`，不是 `COMPLETE`。官方只读已覆盖 82 个目标，72 条失败、7 条待审核、3 条通过；3 条通过目标的 `spu-info` 均规范化成功，共 3 个 SKC、18 个 SKU；9 条仅版本匹配的 SPU 关系不能强行归并。ProductVersion/PublishAttempt/PlatformProductLink 逐条映射和完整对象存储清单仍缺失，ERP-06 不得开始。
+- 原始 Run、生产聚合 Run、逐条对象 Run 和当前官方回读 Run 结论均为 `BLOCKED`，不是 `COMPLETE`。官方只读已覆盖 82 个目标，72 条失败、7 条待审核、3 条通过；3 条通过目标的 `spu-info` 均规范化成功，共 3 个 SKC、18 个 SKU；9 条仅 SPU 匹配但 version 不一致，不能强行归并。ProductVersion/PublishAttempt/PlatformProductLink 逐条映射和完整对象存储清单仍缺失，ERP-06 不得开始。
 
 ## 11. 已结束 Run：官方只读回读证据补证
 
@@ -389,18 +389,26 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 失败关闭：生产配置、凭据作用域、目标版本/SPU、官方读路径或只读边界无法证明；需要交互认证；API 返回鉴权/参数/限流/网络不确定错误；发现任何写入迹象时立即停止，相关证据保持 `UNKNOWN`，不猜测、不重试业务命令。
 - 完成标准：每个实际请求均能归属到生产目标样本并记录脱敏结果；报告官方返回成功/失败/未知、业务码和结构覆盖；前后数据库关键表行数与审计证据无变化；若官方回读或映射仍不完整，ERP-05 仍为 `BLOCKED`，不得开始 ERP-06。
 - 回滚点：本 Run 不修改业务数据；仅新增本报告/台账记录，回滚为恢复本 Run 文档提交。
-- 当前状态：`BLOCKED`；本 Run 已完成 82 个官方 `query-document-state` 目标及 3 个通过目标的 `spu-info` 回读；数据库关键表行数与 PostgreSQL 写入统计前后无变化，但 9 条 SPU 标识不匹配，ProductVersion/PublishAttempt/PlatformProductLink 逐条映射和完整对象清单仍缺失。
+- 当前状态：`BLOCKED`；前一 Run 已完成 82 个官方 `query-document-state` 目标及 3 个通过目标的 `spu-info` 回读；数据库关键表行数与 PostgreSQL 写入统计前后无变化，但 9 条返回 version 与请求 version 不一致，ProductVersion/PublishAttempt/PlatformProductLink 逐条映射和完整对象清单仍缺失。
 
-## 12. 当前正式 Run：官方回读不匹配交叉关联
+## 12. 已结束 Run：官方回读不匹配交叉关联
 
 ### RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06
 
-- 类型：ERP-05 官方回读证据补证；仅核对前一 Run 的 9 条“仅版本匹配”记录能否与同店铺、同版本的其他本地目标唯一对应。
-- 启动依据：前一 Run 已完成 82 个目标的官方回读，发现 73 条 version+SPU 完全匹配、9 条仅 version 匹配；用户继续要求“下一步”。
-- 目标：重新调用官方只读 `/open-api/goods/query-document-state`，在进程内将返回 SPU 与生产 PostgreSQL 只读取得的 82 个目标按 `store_id + version + spu` 做精确、唯一、歧义或无匹配分类；不修改本地目标、不生成重发命令。
+- 类型：ERP-05 官方回读证据补证；仅核对前一 Run 的 9 条“仅 SPU 匹配”记录能否与同店铺、同 SPU 的其他本地 version 唯一对应。
+- 启动依据：前一 Run 已完成 82 个目标的官方回读，发现 73 条 version+SPU 完全匹配、9 条仅 SPU 匹配；用户继续要求“下一步”。
+- 目标：重新调用官方只读 `/open-api/goods/query-document-state`，在进程内将返回 version 与生产 PostgreSQL 只读取得的 82 个目标按 `store_id + spu` 做精确、唯一、歧义或无匹配分类；不修改本地目标、不生成重发命令。
 - 允许范围：非交互 SSH；生产 PostgreSQL `SELECT`；进程内解密生产已配置凭据；仅调用官方 `/open-api/goods/query-document-state`；输出数量、状态、唯一/歧义/无匹配分类和单向摘要。
 - 禁止范围：调用会写 Receipt/Review 的 Control 回读方法；SHEIN 写接口；任何数据库/Redis/队列/对象存储写入；重发、删除、修复或重命名目标；输出 SecretId、SecretKey、Token、签名、原始 ID、SPU 名或完整 payload。
 - 失败关闭：出现鉴权、限流、网络不确定、凭据解密失败、返回结构无法规范化或匹配关系非唯一时，保留 `UNKNOWN`，不猜测、不自动归并。
-- 完成标准：9 条不匹配逐条进入 `unique_cross_match`、`no_cross_match`、`ambiguous_cross_match` 或 `UNKNOWN`；查询前后关键表行数和写入统计无变化；无唯一交叉证据则 ERP-05 仍为 `BLOCKED`。
+- 完成标准：9 条 version 不匹配逐条进入 `unique_cross_match`、`no_cross_match`、`ambiguous_cross_match` 或 `UNKNOWN`；查询前后关键表行数和写入统计无变化；无唯一交叉证据则 ERP-05 仍为 `BLOCKED`。
 - 回滚点：本 Run 不修改业务数据；仅新增本报告/台账记录。
-- 当前状态：`IN_PROGRESS`；生产交叉关联探针尚未执行。
+- 当前状态：`BLOCKED`；82/82 官方状态请求成功并规范化；9 条 version 不匹配均无同店铺/同 SPU 的交叉版本，数据库关键表行数与 PostgreSQL 写入统计前后无变化。
+
+### RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06 结果
+
+- 官方只读覆盖：82/82 个去重目标完成 `query-document-state` 请求，HTTP/业务传输成功、规范化成功；状态仍为 failed 72、pending 7、passed 3；无 API 鉴权、限流、网络或规范化错误。
+- 交叉关联：73 条 version+SPU 完全匹配；9 条 SPU 匹配但官方 version 与请求 version 不同；这 9 条在同店铺/同 SPU 的本地目标集合中均无对应官方 version（`crossUnique=0`、`crossNone=9`、`crossAmbiguous=0`）。
+- 凭据与边界：4 个涉及店铺凭据均在一次性内存进程内成功解密；未调用会写 Receipt/Review 的 Control 方法，未输出密钥、Token、原始身份或完整响应。
+- 零写入证据：`stores`、`publish_jobs`、`publish_receipts`、`product_review_states`、`product_drafts`、`publish_execution_runs`、`webhook_events` 精确行数前后不变；对应 PostgreSQL 插入/更新/删除统计前后不变。
+- 完成门结论：`BLOCKED`；9 条无法安全建立平台 version 映射，且现有生产模型没有 ProductVersion/PublishAttempt/PlatformProductLink 专用事实，完整对象存储清单也未闭合；ERP-06、ERP-20 修复和任何生产清理/重试不得开始。
