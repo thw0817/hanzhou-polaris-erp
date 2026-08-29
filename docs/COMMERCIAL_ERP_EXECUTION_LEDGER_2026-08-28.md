@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v35
+版本：2026-08-29-v36
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 Run 09 对象清单权限复核仍被 HTTP 403 阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 Run 10 对象清单权限复核仍被 HTTP 403 阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-09
+当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-10
 
 ## 0. 台账用途
 
@@ -30,7 +30,7 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-09 | ERP-04 | 用户已创建并直接关联 `cos:GetBucket` 策略，但 Run 09 第 0 页仍 HTTP 403；需核对实际密钥主体与资源匹配，ERP-06 不得开始 |
+| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-10 | ERP-04 | Run 10 使用服务器当前运行时身份复核，`ListObjectsV2` 第 0 页仍 HTTP 403；需核对策略是否已直接绑定该身份及资源匹配，ERP-06 不得开始 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -1536,3 +1536,19 @@
 - 数据库：目标表行数和本轮观察到的 PostgreSQL 写入统计前后稳定；MediaAsset 820/820 有唯一 object_key，sha256 771。
 - 官方 version mismatch：沿用 `total=9/crossUnique=0/crossNone=9/crossAmbiguous=0`，分类 `UNKNOWN`。
 - 结论：`BLOCKED`；先核对实际 AccessKey 所属子用户与 `cos:GetBucket` 资源，再决定是否建立下一次 Run。
+
+### RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-10
+
+- 类型：ERP-05 修正子用户后的对象存储 `ListObjectsV2` 完整分页只读复核。
+- 允许范围：非交互 SSH；生产容器现有环境变量；PostgreSQL `SELECT`/系统统计；对象存储 `ListObjectsV2` 分页请求；仅输出计数、大小和完成标志。
+- 禁止范围：对象或数据库任何写入；SHEIN API、Redis/队列、部署、重启、切换、敏感值和原始对象键输出。
+- 完成标准：`ListObjectsV2` 成功并分页完成，数据库行数/媒体指标可审计，既有 9 条官方 mismatch 仍为 `UNKNOWN`。
+- 当前状态：`BLOCKED`；第 0 页仍 HTTP 403，失败关闭，不自动重试。
+
+### RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-10 结果
+
+- 执行时间：2026-08-29 21:08:11 左右（Asia/Shanghai）；生产只读。
+- Provider：第 0 页 HTTP 403；`pages=0`、`objects=0`、`bytes=0`、`complete=false`；未发生对象下载、上传、删除、复制或改名。
+- 数据库：13 张关键表行数前后相同；MediaAsset 820/820 有唯一 `object_key`，sha256 771；本 Run 内 PostgreSQL 统计 inserts 增加 10、updates 增加 7、deletes 不变，属于后台并发活动。
+- 既有异常：官方 version mismatch 继续沿用 `total=9/crossUnique=0/crossNone=9/crossAmbiguous=0`，分类 `UNKNOWN`，不回读、不重发。
+- 完成门结论：`BLOCKED`；继续核对实际运行时 AccessKey 所属 CAM 子用户、策略直接绑定关系以及 COS action/resource，ERP-06、ERP-20 和媒体清理不得开始。
