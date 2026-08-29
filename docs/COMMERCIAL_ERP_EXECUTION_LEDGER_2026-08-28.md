@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v31
+版本：2026-08-29-v33
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前行级关系证据 Run 已完成允许范围但完成门阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前对象清单对账 Run 已完成允许范围但完成门阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07
+当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-OBJECT-INVENTORY-RECONCILIATION-08
 
 ## 0. 台账用途
 
@@ -30,7 +30,7 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07 | ERP-04 | 允许范围内已完成 Draft/Batch/Job/Run/Receipt/Review/SPU/SKC/SKU/Media/Webhook 行级关系核对；完整对象证据、新模型逐条映射和 SKU 应用角色可读证据仍缺失；ERP-06 不得开始 |
+| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-OBJECT-INVENTORY-RECONCILIATION-08 | ERP-04 | 对象清单只读对账已执行但 provider `ListObjectsV2` 返回 HTTP 403；前序关系 Run 已完成但完整对象证据、新模型逐条映射和官方不匹配仍阻断；ERP-06 不得开始 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -804,6 +804,7 @@
 | Run ID | ERP 步骤 | Issue ID | 开始时间 | 状态 | 环境 | 外部写入 | 结论 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07 | ERP-05 | — | 2026-08-29 20:04:32 | BLOCKED | production（只读） | 否 | 关系证据已完成；50 个声明外键、目标表行数/字段缺口/孤儿关系已核对，SKU 表由数据库所有者确认 0 行但应用角色无 SELECT；ProductVersion/Attempt 逐条映射和官方不匹配仍阻断 |
+| RUN-20260829-ERP05-OBJECT-INVENTORY-RECONCILIATION-08 | ERP-05 | — | 2026-08-29 20:23:36 | BLOCKED | production（只读） | 否 | provider `ListObjectsV2` 第 1 页 HTTP 403；未取得完整对象清单，Asset 归属保持 `UNKNOWN`；数据库行数稳定但 `sync_jobs` 后台并发更新使写入统计变化 2；9 条官方 version 不匹配沿用 `crossNone=9` |
 
 ### 5.1 Run ID 规则
 
@@ -1501,3 +1502,20 @@
 - 其他证据：Receipt 缺 platform_code/trace/document/occurred_at 为 173/91/82/91；Review 缺 version/document/SPU/SKC 各 39，workflow_stage 全缺；严格本地 Review→Job 候选为 unique 57、unmatched 99、ambiguous 0；媒体孤儿/引用计数不一致为 0；Webhook queued 13；Sync active 无 started_at 4；无重复 request_key、Receipt dedupe_key 或 Webhook dedupe_key。
 - 零写入：目标表精确行数与 PostgreSQL inserts/updates/deletes 前后均不变；未调用 SHEIN API、业务写路径、Redis/队列或对象存储。
 - 新模型分类与结论：`mapped=0`；旧表记录保留 `legacy_unversioned`，官方身份及 ProductVersion/PublishAttempt/PlatformProductLink 逐条关系为 `UNKNOWN`；严格本地候选的 99 条记作 `unmatched`，不自动修复。Run 结果 `BLOCKED`，ERP-06、ERP-20 修复、生产清理和重试均不得开始。
+
+### RUN-20260829-ERP05-OBJECT-INVENTORY-RECONCILIATION-08
+
+- 类型：ERP-05 对象存储完整清单与媒体归属只读对账。
+- 允许范围：非交互 SSH；生产 PostgreSQL `SELECT`；S3-compatible `ListObjectsV2`/必要 `HEAD`；仅输出数量、总大小、分页完整性、状态分类和单向 key 指纹。
+- 禁止范围：对象下载/上传/删除/复制/改名；数据库写入；SHEIN API、Redis/队列、部署、重启、切换和敏感输出。
+- 完成标准：DB object_key 与 provider object key 完成 `verified/missing_object/orphan_object/unknown_role` 分类；前后数据库行数与写入统计不变；9 条官方 version 不匹配保持 `crossNone=9/UNKNOWN`。
+- 当前状态：`BLOCKED`；对象清单只读对账已执行但 provider 返回 HTTP 403，结果见下方。
+
+### RUN-20260829-ERP05-OBJECT-INVENTORY-RECONCILIATION-08 结果
+
+- 执行时间：2026-08-29 20:23:36～20:26:53（Asia/Shanghai）；生产只读。
+- MediaAsset：820 行、820 行有 object_key 且唯一；content_type/status 全覆盖，sha256 771 行。
+- Provider：`ListObjectsV2` 第 1 页 HTTP 403；未取得对象数量、总大小、分页完整性或 key 集合；所有对象归属保持 `UNKNOWN`，未下载/上传/删除/复制/改名。
+- 官方 version 异常：9 条沿用 `crossUnique=0`、`crossNone=9`、`crossAmbiguous=0`，分类 `UNKNOWN`，不发起新的业务回读或重发。
+- 写入审计：脚本仅执行 SELECT/系统目录与对象 GET 列表请求；行数前后稳定，但 `sync_jobs` 后台并发更新导致 PostgreSQL 更新统计增加 2，前后统计记为 `UNKNOWN/受并发影响`。
+- 完成门结论：`BLOCKED`；需 provider 受控只读 List 权限或可验证脱敏清单，未闭合前不得开始 ERP-06、ERP-20 修复或媒体清理。

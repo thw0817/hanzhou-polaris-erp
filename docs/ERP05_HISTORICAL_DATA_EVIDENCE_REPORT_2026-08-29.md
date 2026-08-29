@@ -1,10 +1,10 @@
 # ERP-05 历史数据证据审计报告
 
-版本：2026-08-29-v8
-正式 Run：`RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07`
+版本：2026-08-29-v10
+正式 Run：`RUN-20260829-ERP05-OBJECT-INVENTORY-RECONCILIATION-08`
 步骤：ERP-05  
-状态：`BLOCKED`（本 Run 的允许范围已完成；ERP-05 完成门仍未通过）
-审计时间：2026-08-29 20:14:23（Asia/Shanghai；服务器 UTC `2026-08-29T12:14:23Z`）
+状态：`BLOCKED`（Run 08 已完成允许范围；对象列表权限不足，ERP-05 完成门仍未通过）
+审计时间：2026-08-29 20:26:53（Asia/Shanghai；服务器 UTC `2026-08-29T12:26:53Z`）
 
 ## 1. 审计结论
 
@@ -19,9 +19,10 @@
 7. 媒体只读 `HEAD` 结果为 585 条成功、173 条 404、62 条超时；成功项大小/类型与数据库记录均无不匹配，但对象清单仍不完整，404/超时记录不得自动删除、重试或改状态。
 8. 当前 Run 的分层复核结果为 579 条成功、169 条 404、72 条超时；404 集中在 `deleted` 状态（167/185），`referenced` 与 `ready` 均无 404，但仍有 54 条超时，完整对象证据仍未闭合。
 9. 当前 `publish_receipts` 没有独立 `readback` 类型，只有 `audited/document_state/received/submitted`；Job 的 219 条 `readback` JSON 只是本地字段。官方只读 Run 已对 82 个去重目标取得回读：73 条 version+SPU 完全匹配，9 条仅 SPU 匹配（返回 version 与请求 version 不一致）；官方来源已证明，但 9 条不能安全建立版本身份映射，完成门继续阻断。
-10. 当前 Run 已完成生产关系核对：目标业务表精确行数为 Draft 93、Batch 33、BatchItem 266、Run 28、Job 219、Receipt 173、Review 156、SPU 518、SKC 547、MediaAsset 820、Reference 542、Webhook 2,985、SyncJob 578、SyncItem 339；前后行数与 PostgreSQL 插入/更新/删除统计均不变。
+10. Run 07 关系基线的目标业务表精确行数为 Draft 93、Batch 33、BatchItem 266、Run 28、Job 219、Receipt 173、Review 156、SPU 518、SKC 547、MediaAsset 820、Reference 542、Webhook 2,985、SyncJob 578、SyncItem 339；Run 08 快照中的 SyncJob 为 580、SyncItem 339，Run 08 内目标表行数稳定；后台并发使 PostgreSQL 更新统计变化，不能声称跨 Run 统计完全不变。
 11. 当前数据库系统目录确认目标关系上有 50 个声明外键；BatchItem→Batch/Draft、Job→Run/Batch/BatchItem/Draft、Receipt→Job/Webhook、SKC→SPU、SyncItem→SyncJob 的实际孤儿计数均为 0。外键完整只证明结构关系，不等于新 ProductVersion/PublishAttempt 映射完成。
 12. `public.skus` 是普通表且经数据库所有者只读核验为 0 行，但应用角色 `shein_runtime` 没有 SELECT 权限；因此本 Run 将 SKU 行级事实标为 `UNKNOWN`，不能用权限不可见替代业务数据结论。
+13. Run 08 对对象存储发起只读 `ListObjectsV2` 得到 HTTP 403；此前 820 条 HEAD 结果仍只能代表逐对象部分证据，无法证明 provider-level 清单完整性。对象清单、媒体所有权连续性和完整 hash 证据继续标为 `UNKNOWN`，不执行任何清理或状态修复。
 
 此前补证 Run 只执行了非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；本正式 Run 另行执行了官方只读查询，未执行生产写入、队列副作用、部署、重启、切换或任何密钥输出。
 
@@ -416,7 +417,7 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 零写入证据：`stores`、`publish_jobs`、`publish_receipts`、`product_review_states`、`product_drafts`、`publish_execution_runs`、`webhook_events` 精确行数前后不变；对应 PostgreSQL 插入/更新/删除统计前后不变。
 - 完成门结论：`BLOCKED`；9 条无法安全建立平台 version 映射，且现有生产模型没有 ProductVersion/PublishAttempt/PlatformProductLink 专用事实，完整对象存储清单也未闭合；ERP-06、ERP-20 修复和任何生产清理/重试不得开始。
 
-## 13. 当前正式 Run：行级关系与不可逆指纹补证
+## 13. 已结束 Run：行级关系与不可逆指纹补证
 
 ### RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07
 
@@ -442,3 +443,26 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 新模型分类：本 Run 没有建立任何可审计的 `mapped` 记录；旧关系表记录保留为 `legacy_unversioned`，官方身份、ProductVersion/PublishAttempt/PlatformProductLink、SKU 应用角色行证据及无法唯一归属的关联保持 `UNKNOWN`；严格本地候选的 99 条只记作 `unmatched`，不据此自动修复。
 - 零写入：全部目标表精确行数前后相同；`pg_stat_user_tables` 的 inserts/updates/deletes 前后相同；Run 仅产生本报告/台账文档变更。
 - 完成门结论：`BLOCKED`。ERP-05 仍缺完整对象清单、ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配的可解释身份和 SKU 应用角色可读证据；不得开始 ERP-06、ERP-20 修复、生产清理或重试。
+
+## 14. 当前正式 Run：对象清单与媒体归属对账
+
+### RUN-20260829-ERP05-OBJECT-INVENTORY-RECONCILIATION-08
+
+- 类型：ERP-05 对象存储清单与 MediaAsset/Reference 归属只读补证；复核已知 9 条官方 version 不匹配的最终安全分类。
+- 启动依据：Run 07 已证明 820 个 Asset/542 个 Reference 的数据库关系无孤儿且引用计数一致，但此前只做过逐资产 HEAD，尚未取得 provider-level 完整对象清单；用户批准开始下一步。
+- 目标：从生产数据库读取 MediaAsset/Reference 的非敏感元数据集合，使用既有 S3-compatible 配置执行只读 `ListObjectsV2`，用单向 key 指纹对账数据库 object_key 与对象清单；不下载对象字节。复核 9 条 version 不匹配只沿用已取得的 `crossNone=9` 证据，不发起新的业务回读。
+- 允许范围：非交互 SSH；生产 PostgreSQL `SELECT`；对象存储只读 `ListObjectsV2`/必要的 `HEAD`；内存计数、总大小、状态分类和不可逆 SHA-256 摘要；不得输出原始 object key、URL、bucket、凭据或 payload。
+- 禁止范围：对象上传/下载/删除/复制/改名；数据库写入/迁移；SHEIN API 和 Control 回读方法；Redis payload、队列消费/重试/claim；部署、重启、切换和任何媒体状态修复。
+- 失败关闭：对象存储 provider、Endpoint、分页边界、鉴权或响应无法证明只读；列表被截断、key 无法规范化、存在跨店/跨租户不确定归属或出现任意副作用时，停止并将对应对象归为 `UNKNOWN`，不自动处置。
+- 完成标准：取得 provider-level 对象总数/总大小/分页完整性；完成 DB Asset key 与 provider key 的 `verified`、`missing_object`、`orphan_object`、`unknown_role` 分类；9 条官方 version 不匹配仍明确为 `no_cross_match/UNKNOWN`；前后数据库行数与写入统计不变。
+- 回滚点：本 Run 不修改生产数据；仅新增本报告/台账记录。
+- 当前状态：`BLOCKED`；对象清单只读对账已执行但 provider 返回 HTTP 403，结果见下方。
+
+### RUN-20260829-ERP05-OBJECT-INVENTORY-RECONCILIATION-08 结果
+
+- 执行时间：2026-08-29 20:23:36～20:26:53（Asia/Shanghai）；生产环境只读。
+- 数据库侧：MediaAsset 820 行，820 行有 object_key，object_key 唯一；status/content_type 全覆盖，sha256 已有 771 行。数据库关键表本轮行数前后相同。
+- 对象存储侧：使用生产已配置 S3-compatible 凭据执行一次 `ListObjectsV2`，第 1 页返回 HTTP 403；未取得 provider 对象数量、总大小、分页完整性或 key 集合，因此 Asset 不能分类为 `verified`、`missing_object` 或 `orphan_object`，全部保持 `UNKNOWN`。未下载、上传、删除、复制或改名对象。
+- 官方 version 异常：沿用前序只读证据 `total=9`、`crossUnique=0`、`crossNone=9`、`crossAmbiguous=0`；最终安全分类为 `UNKNOWN`，不重新发起业务回读、不重发。
+- 写入审计：本脚本只包含 PostgreSQL `SELECT`/系统目录查询和对象存储 GET 列表请求；行数稳定，但 `sync_jobs` 的 PostgreSQL 更新统计受后台并发活动影响增加 2，前后统计不稳定，按 `UNKNOWN/受并发影响` 记录，不能声称本轮统计完全不变。
+- 完成门结论：`BLOCKED`。要闭合对象证据，需要 provider 授予受控只读 List 权限或提供可验证的脱敏对象清单；在此之前不得自动清理 404/超时对象、不得修正媒体状态、不得开始 ERP-06 或 ERP-20。
