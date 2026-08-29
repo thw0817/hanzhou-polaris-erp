@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v21
+版本：2026-08-29-v22
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 因缺少历史数据证据暂时 BLOCKED；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 正在执行限定生产只读补证；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-HISTORICAL-EVIDENCE-01
+当前活动步骤：ERP-05 / IN_PROGRESS / RUN-20260829-ERP05-PRODUCTION-READONLY-AUDIT-02
 
 ## 0. 台账用途
 
@@ -30,7 +30,7 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-HISTORICAL-EVIDENCE-01 | ERP-04 | 静态证据已盘点；缺少历史 DB/Redis/Worker/媒体证据；不得 UPDATE/DELETE/重试/清队列 |
+| ERP-05 | 历史数据证据盘点 | IN_PROGRESS | RUN-20260829-ERP05-PRODUCTION-READONLY-AUDIT-02 | ERP-04 | 已重开限定生产只读补证；原始阻断 Run 保留；禁止生产写入、SHEIN 写入、队列副作用和密钥输出 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -1400,3 +1400,13 @@
 - 结果：本地投影已完成非敏感数量/状态盘点；结构性风险已登记；PostgreSQL 历史记录、队列现场、媒体对象和平台回读全部按证据可得性分类，缺证项目保持 `UNKNOWN`。
 - 禁止事项已满足：未连接生产 PostgreSQL/Redis/对象存储，未调用 SHEIN API，未执行数据库写入、队列重试/清理/消费、部署或重启。
 - 恢复条件：取得脱敏、可校验、只读的历史证据包后，才能重开 ERP-05 并完成逐条分类；在此之前不得开始 ERP-06 或 ERP-20 修复。
+
+### RUN-20260829-ERP05-PRODUCTION-READONLY-AUDIT-02
+
+- 类型：ERP-05 生产限定只读补证；用于补齐上一 Run 缺失的 PostgreSQL/Redis/Worker/媒体元数据证据。
+- 启动依据：用户于 2026-08-29 明确授权“好，开始，全权授权”；上一 Run 已确认本地投影不足以完成历史事实链。
+- 允许范围：通过非交互 SSH 读取服务器身份、当前 release、容器健康状态；执行 PostgreSQL `SELECT`/系统目录聚合查询、Redis `DBSIZE`/`INFO keyspace` 等无 payload 读取、Worker 日志数量摘要和媒体元数据摘要；更新非敏感 Markdown 报告与台账。
+- 禁止范围：任何生产 `INSERT/UPDATE/DELETE` 或迁移；生产队列消费、重试、清理、claim、回读和 revalidate；SHEIN API 读写；部署、重启、Nginx reload、current 切换；读取或输出 SecretId、SecretKey、Token、Cookie、签名、完整 payload、图片字节或个人敏感信息。
+- 失败关闭：SSH 主机/用户不匹配、无法证明只读、需要交互式密码或 sudo、命令可能触发副作用、目标容器不明确时立即停止，不改用猜测或高权限替代。
+- 完成标准：取得的每项证据均标注来源环境、时间、查询边界和完整性信息；历史记录可取得部分进入 `mapped`、`legacy_unversioned`、`unmatched`、`conflict` 或 `UNKNOWN`；若仍缺证，保持 `BLOCKED`，不得以网页 200 或容器健康代替历史完成门。
+- 当前状态：`IN_PROGRESS`；生产只读通道验证和证据查询尚未完成。

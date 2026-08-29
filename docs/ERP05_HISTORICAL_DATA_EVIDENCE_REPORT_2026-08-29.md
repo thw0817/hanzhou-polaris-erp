@@ -1,21 +1,21 @@
 # ERP-05 历史数据证据审计报告
 
-版本：2026-08-29-v1  
+版本：2026-08-29-v2
 正式 Run：`RUN-20260829-ERP05-HISTORICAL-EVIDENCE-01`  
 步骤：ERP-05  
-状态：`BLOCKED`（已发现本地投影证据，但仍缺少完整历史事实链，不允许用猜测补齐）
+状态：`IN_PROGRESS`（原始本地审计 Run 曾因证据缺口阻断；现按用户授权执行限定生产只读补证，不允许用猜测补齐）
 审计时间：2026-08-29（Asia/Shanghai）
 
 ## 1. 审计结论
 
-本次 Run 已完成本地静态证据盘点，并发现可逐条读取的本地业务投影和 V2 本地 Draft/Asset 状态；但没有取得完整 PostgreSQL 历史事实链。因此：
+原始 Run 已完成本地静态证据盘点，并发现可逐条读取的本地业务投影和 V2 本地 Draft/Asset 状态，但没有取得完整 PostgreSQL 历史事实链而阻断。现 Run 按用户于 2026-08-29 明确授权重新进入限定生产只读补证；在补证完成前：
 
 1. 本地投影中已确认：1 个 store-scoped business record，包含 1,179 个商品投影、声明 805 个 SPU 和 6,077 个 SKU；V2 本地状态包含 4 个 Draft 和 13 个 Asset。
 2. 这些文件不是 PostgreSQL 的 Draft/Batch/Job/Run/Receipt/Review 历史表，也没有证明 ProductVersion、PublishAttempt、PlatformProductLink、Webhook、队列和 Worker 事实链；对应关系仍必须标记为 `UNKNOWN`。
 3. 源码和迁移已经证明若干结构性风险：发布 Job 直接绑定可变 Draft、当前迁移没有 ProductVersion 边界、媒体引用没有 ProductVersion 类型、页面存在多路查询和二次归并、草稿列表使用“是否存在任意 Job”排除并受 `LIMIT 100` 影响。
 4. ERP-20 的修复范围目前可精确到“本地投影核验 + 结构性风险清单”，仍不能精确到历史记录 ID、租户、店铺、SKC、版本和 Attempt；因此 ERP-05 完成门未通过，ERP-06 不得开始。
 
-本报告没有连接生产 PostgreSQL、Redis、对象存储或 SHEIN API，没有执行任何队列重试、清理、消费、部署、重启、切换或数据库写入。
+当前补证 Run 只允许非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；禁止生产写入、队列副作用、部署、重启、切换、SHEIN API 和任何密钥输出。
 
 ## 2. 证据边界
 
@@ -218,4 +218,4 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 
 - 本报告未记录 SecretId、SecretKey、Token、Cookie、签名、完整请求 payload、图片字节或个人敏感信息。
 - 本 Run 只有 Markdown 文档变更；回滚仅需恢复本 Run 对应的文档提交，不触碰业务数据。
-- 当前状态保持 `BLOCKED`，不是 `COMPLETE`；没有历史数据证据就不能开始 ERP-06。
+- 原始 Run 状态保持 `BLOCKED`；当前补证 Run 为 `IN_PROGRESS`，不是 `COMPLETE`。只有历史证据逐项分类并通过完成门后，才能开始 ERP-06。
