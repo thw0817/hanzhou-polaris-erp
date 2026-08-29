@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v23
+版本：2026-08-29-v24
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 正在执行逐条脱敏证据补证；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前 Run 已完成允许范围内的只读补证但完成门阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / IN_PROGRESS / RUN-20260829-ERP05-ROW-LEVEL-EVIDENCE-03
+当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-ROW-LEVEL-EVIDENCE-03
 
 ## 0. 台账用途
 
@@ -30,7 +30,7 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | IN_PROGRESS | RUN-20260829-ERP05-ROW-LEVEL-EVIDENCE-03 | ERP-04 | 补取逐条非敏感指纹、媒体对象只读存在性和数据库内回执关联；原始阻断 Run 保留；禁止生产写入、SHEIN API、队列副作用和密钥输出 |
+| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-ROW-LEVEL-EVIDENCE-03 | ERP-04 | 已取得核心表/关系单向指纹和媒体 HEAD 部分结果；ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、完整对象清单和官方回读仍缺失；原始阻断 Run 保留；ERP-06 不得开始 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -1422,4 +1422,9 @@
 - 指纹规则：只输出 UUID/业务键的单向摘要或计数，不输出原始身份值；不把哈希当作平台映射成功，无法证明的关系仍标记 `UNKNOWN`。
 - 失败关闭：无法证明 HEAD 为只读、对象存储 provider 不明确、目标容器/凭证作用域不明确、命令需要交互或出现副作用时立即停止。
 - 完成标准：所有可读行按 `mapped`、`legacy_unversioned`、`unmatched`、`conflict` 或 `UNKNOWN` 分类并给出数量/指纹摘要/来源；媒体对象存在性和引用账本差异可核对；仍有缺口则保持 `BLOCKED`，不得开始 ERP-06。
-- 当前状态：`IN_PROGRESS`；逐条指纹与媒体只读存在性查询尚未完成。
+- 结果：数据库 15 个核心表集合指纹和 6 个关系集合指纹已取得；当前快照包含 Draft 93、Batch 32、BatchItem 250、Job 219、Run 28、Receipt 157、Review 156、SPU 518、SKC 547、SKU 0、MediaAsset/Reference 820/542、Webhook 2,978、SyncJob/Item 571/339。逐条指纹只输出单向哈希，不暴露原始身份。
+- 结果：媒体只读 `HEAD` 820 条中成功 585、404 173、超时 62；成功项大小/类型不匹配均为 0；未下载、上传、删除或复制对象。
+- 结果：当前生产未发现 ProductVersion 或 PublishAttempt 专用表；`shein_authorization_attempts` 21 条属于授权流程 Attempt；Job `readback` JSON 219 条仅为本地字段，不能证明官方回读。
+- 结果：61 个 Draft 被多个 Job 复用（最多 6 个）、12 个 running Run 全部超过 1 小时、2 个 claim 已过期、82 个 submitted Job 缺 completed_at、13 个 queued Webhook 已有 processed_at、媒体引用计数不一致 280 条；外键孤儿为 0。
+- 完成门结论：`BLOCKED`；允许范围内的只读补证已经结束，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、完整对象存储清单和 SHEIN 官方回读仍缺失；不得开始 ERP-06、不得执行 ERP-20 修复。
+- 当前状态：`BLOCKED`；报告见 `docs/ERP05_HISTORICAL_DATA_EVIDENCE_REPORT_2026-08-29.md`，完整证据时间和单向指纹均已登记。
