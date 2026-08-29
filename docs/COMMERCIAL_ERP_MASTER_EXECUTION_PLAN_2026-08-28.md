@@ -10,7 +10,7 @@
 
 本文件是未来修复、重构、测试和上线工作的唯一执行顺序。历史交接文件继续作为事实档案和证据来源，但不再作为可以直接执行的步骤清单。
 
-> **重要校正：** ERP-00～ERP-23 是在 17 个板块方案完成后编制的工程实施路线，不是旧“第 1～20 步”的改名版。历史旧步骤与本路线仍然分开；本计划的当前执行状态以执行台账为准。2026-08-29 已取得用户明确启动，ERP-00～ERP-04 已完成，ERP-05 Run 08、Run 09、Run 10 和 Run 11 的 provider `ListObjectsV2` 均被 HTTP 403 阻断；Run 11 已核对服务器掩码密钥与 `wow-rug-cos-service` API 密钥前缀/后缀一致，但仍需确认策略在该用户权限页直接关联且最终 action/resource JSON 已保存生效，且仍因 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条 version 标识不匹配、完整对象证据和 SKU 应用角色可读证据缺失而未通过；新对话不得在没有用户明确启动时自行开始后续步骤。
+> **重要校正：** ERP-00～ERP-23 是在 17 个板块方案完成后编制的工程实施路线，不是旧“第 1～20 步”的改名版。历史旧步骤与本路线仍然分开；本计划的当前执行状态以执行台账为准。2026-08-29 已取得用户明确启动，ERP-00～ERP-04 已完成，ERP-05 Run 08、Run 09、Run 10 和 Run 11 的 provider `ListObjectsV2` 均被 HTTP 403 阻断；Run 11 已核对服务器掩码密钥与 `wow-rug-cos-service` API 密钥前缀/后缀一致，且权限页显示 `polaris-media-list-readonly` 为直接关联，但仍需确认最终 action/resource JSON 已保存生效，且仍因 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条 version 标识不匹配、完整对象证据和 SKU 应用角色可读证据缺失而未通过；新对话不得在没有用户明确启动时自行开始后续步骤。
 
 本计划解决四个长期问题：
 

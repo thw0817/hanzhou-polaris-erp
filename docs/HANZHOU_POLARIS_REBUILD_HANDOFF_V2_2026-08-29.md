@@ -48,7 +48,7 @@
 5. docs/REBUILD_HANDOFF_MASTER_2026-08-28.md
 6. docs/REBUILD_HANDOFF_2026-08-03.md
 
-ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并完成 ERP-00～ERP-04，ERP-05 的原始只读历史证据审计和前序生产补证均因逐条证据缺口阻断，行级关系 Run 已完成允许范围内检查，Run 08、Run 09、Run 10 和 Run 11 均因 provider 返回 HTTP 403 阻断；Run 11 已核对服务器掩码密钥与 `wow-rug-cos-service` API 密钥前缀/后缀一致，但仍需确认策略在该用户权限页直接关联且最终 action/resource JSON 已保存生效，仍因完整对象证据、9 条官方 version 不匹配、新模型逐条映射和 SKU 应用角色可读证据缺失而未通过。后续步骤仍只有在前一步完成且用户明确要求后，才读取执行计划和台账并创建 Run。
+ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并完成 ERP-00～ERP-04，ERP-05 的原始只读历史证据审计和前序生产补证均因逐条证据缺口阻断，行级关系 Run 已完成允许范围内检查，Run 08、Run 09、Run 10 和 Run 11 均因 provider 返回 HTTP 403 阻断；Run 11 已核对服务器掩码密钥与 `wow-rug-cos-service` API 密钥前缀/后缀一致，且权限页显示 `polaris-media-list-readonly` 为直接关联，但仍需确认最终 action/resource JSON 已保存生效，仍因完整对象证据、9 条官方 version 不匹配、新模型逐条映射和 SKU 应用角色可读证据缺失而未通过。后续步骤仍只有在前一步完成且用户明确要求后，才读取执行计划和台账并创建 Run。
 
 先只读理解并向我汇报：
 - 17 个板块的整体目标和相互依赖；
@@ -118,7 +118,7 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 
 - ERP 步骤总数：24。
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
-- `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11 的对象清单请求均返回 HTTP 403，Run 11 已核对服务器掩码密钥与 `wow-rug-cos-service` API 密钥前缀/后缀一致，但策略直接关联/最终 JSON 生效仍未闭合；目标关系孤儿为 0，但完整对象证据、9 条官方 version 不匹配、新模型逐条映射和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
+- `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11 的对象清单请求均返回 HTTP 403，Run 11 已核对服务器掩码密钥与 `wow-rug-cos-service` API 密钥前缀/后缀一致，权限页已显示 `polaris-media-list-readonly` 直接关联，但最终 JSON 生效仍未闭合；目标关系孤儿为 0，但完整对象证据、9 条官方 version 不匹配、新模型逐条映射和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
 - `NOT_STARTED`：ERP-06～ERP-23。
 - 当前正式 ERP Run：`RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-11`；前序 Run 作为阻断历史保留。当前 Run 已在确认目标子用户并调整策略后执行对象存储只读清单复核但第 0 页仍 HTTP 403，未完成前不得进入 ERP-06。
 
