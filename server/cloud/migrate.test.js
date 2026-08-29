@@ -48,6 +48,25 @@ test("045发布生命周期查询索引覆盖草稿和任务关联", async () =>
   assert.doesNotMatch(sql, /DROP TABLE|DELETE FROM|TRUNCATE/i);
 });
 
+test("046发布 Outbox 迁移提供租约、幂等和可重试约束", async () => {
+  const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
+  const sql = await fs.readFile(
+    path.join(currentDirectory, "migrations/046_publish_outbox_events.sql"),
+    "utf8",
+  );
+
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS publish_outbox_events/);
+  assert.match(sql, /publish_job_id uuid NOT NULL REFERENCES publish_jobs/);
+  assert.match(sql, /event_type text NOT NULL DEFAULT 'publish_command_requested'/);
+  assert.match(sql, /UNIQUE \(tenant_id, store_id, publish_job_id, event_type\)/);
+  assert.match(sql, /UNIQUE \(tenant_id, store_id, dedupe_key\)/);
+  assert.match(sql, /lease_expires_at timestamptz/);
+  assert.match(sql, /state IN \('pending', 'dispatching', 'dispatched'\)/);
+  assert.match(sql, /publish_outbox_pending_idx/);
+  assert.match(sql, /publish_outbox_lease_expiry_idx/);
+  assert.doesNotMatch(sql, /DROP TABLE|DELETE FROM|TRUNCATE/i);
+});
+
 test("040运行时保留策略只清理未引用规则快照并回收失效证据", async () => {
   const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
   const sql = await fs.readFile(

@@ -1585,11 +1585,11 @@ test("real execution stays unavailable without the server execution gate", async
   );
 });
 
-test("execute consumes the exact one-time protocol and enqueues one non-retrying run", async () => {
+test("execute consumes the exact one-time protocol and returns after durable handoff", async () => {
   let current = confirmedRow();
   let protocolWrites = 0;
   let consumeCalls = 0;
-  const queued = [];
+  let queueCalls = 0;
   const repository = {
     async get() { return current; },
     async recordExecutionPlan(input) {
@@ -1620,9 +1620,8 @@ test("execute consumes the exact one-time protocol and enqueues one non-retrying
     async preflightPublish() {},
     async preparePublishCandidate() {},
     executionQueue: {
-      async add(name, data, options) {
-        queued.push({ name, data, options });
-        return { id: options.jobId };
+      async add() {
+        queueCalls += 1;
       },
     },
     executionEnabled: true,
@@ -1641,7 +1640,6 @@ test("execute consumes the exact one-time protocol and enqueues one non-retrying
     (error) => error?.code === "PRODUCT_PUBLISH_CONFIRMATION_REQUIRED",
   );
   assert.equal(consumeCalls, 0);
-  assert.equal(queued.length, 0);
   const first = await service.act({
     ...input,
     action: "execute",
@@ -1655,29 +1653,17 @@ test("execute consumes the exact one-time protocol and enqueues one non-retrying
 
   assert.equal(protocolWrites, 1);
   assert.equal(consumeCalls, 1);
+  assert.equal(queueCalls, 0);
   assert.equal(first.batch.executionState, "running");
   assert.equal(first.executionStage, "queued");
   assert.equal(second.executionQueued, true);
   assert.equal(second.executionStage, "queued");
   assert.equal(second.idempotentReplay, true);
-  assert.equal(queued.length, 1);
-  assert.equal(queued[0].name, "product-publish-run");
-  assert.deepEqual(queued[0].data, {
-    tenantId: "tenant-1",
-    storeId: "store-1",
-    batchId: "batch-1",
-    executionRunId: "run-1",
-    requestedBy: "user-1",
-  });
-  assert.equal(queued[0].options.jobId, "product-publish-run-1");
-  assert.equal(queued[0].options.attempts, 1);
-  assert.equal(queued[0].options.removeOnComplete, true);
-  assert.equal(queued[0].options.removeOnFail, true);
 });
 
-test("marks the execution failed when the publish queue rejects the job", async () => {
+test("does not couple durable execution handoff to an inline queue add", async () => {
   let current = confirmedRow();
-  let queueFailure = null;
+  let queueCalls = 0;
   const repository = {
     async get() { return current; },
     async recordExecutionPlan(input) {
@@ -1700,17 +1686,6 @@ test("marks the execution failed when the publish queue rejects the job", async 
       current = confirmedRow({ preflight: input.batchPreflight });
       return current;
     },
-    async recordQueueFailure(input) {
-      queueFailure = input;
-      current = confirmedRow({
-        state: "failed",
-        preflight: {
-          ...input.batchPreflight,
-          executionProtocol: { state: "failed" },
-        },
-      });
-      return current;
-    },
   };
   const service = new WebPublishBatchService({
     repository,
@@ -1718,7 +1693,8 @@ test("marks the execution failed when the publish queue rejects the job", async 
     async preparePublishCandidate() {},
     executionQueue: {
       async add() {
-        throw new Error("Custom Id cannot contain :");
+        queueCalls += 1;
+        throw new Error("inline queue must not be called");
       },
     },
     executionEnabled: true,
@@ -1733,16 +1709,12 @@ test("marks the execution failed when the publish queue rejects the job", async 
   await service.act({ ...input, action: "plan-execution" });
   await service.act({ ...input, action: "authorize-execution" });
 
-  await assert.rejects(
-    service.act({
-      ...input,
-      action: "execute",
-      confirmation: "CONFIRM_SHEIN_PRODUCT_PUBLISH",
-    }),
-    (error) =>
-      error?.code === "PRODUCT_PUBLISH_QUEUE_ENQUEUE_FAILED" &&
-      error?.status === 503,
-  );
-  assert.equal(queueFailure.executionRunId, "run-queue-failure");
-  assert.equal(queueFailure.error.code, "PRODUCT_PUBLISH_QUEUE_ENQUEUE_FAILED");
+  const result = await service.act({
+    ...input,
+    action: "execute",
+    confirmation: "CONFIRM_SHEIN_PRODUCT_PUBLISH",
+  });
+  assert.equal(queueCalls, 0);
+  assert.equal(result.executionQueued, true);
+  assert.equal(result.executionStage, "queued");
 });

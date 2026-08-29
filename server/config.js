@@ -201,6 +201,14 @@ export function loadConfig(env = process.env) {
         env.SHEIN_PRODUCT_PUBLISH_FAST_ACK_POLL_MS || 150,
       ),
     },
+    outboxDispatcher: {
+      enabled: env.SHEIN_OUTBOX_DISPATCHER_ENABLED === "true",
+      batchSize: Number(env.SHEIN_OUTBOX_DISPATCHER_BATCH_SIZE || 50),
+      leaseSeconds: Number(env.SHEIN_OUTBOX_DISPATCHER_LEASE_SECONDS || 60),
+      pollIntervalMs: Number(
+        env.SHEIN_OUTBOX_DISPATCHER_POLL_INTERVAL_MS || 1_000,
+      ),
+    },
     cloudApiBaseUrl: stripTrailingSlash(
       env.SHEIN_CLOUD_API_BASE_URL || "https://api.hanzhou.icu",
     ),

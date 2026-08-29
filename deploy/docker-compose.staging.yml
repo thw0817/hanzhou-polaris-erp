@@ -118,6 +118,27 @@ services:
       redis:
         condition: service_healthy
 
+  # Dispatches durable publish commands into the isolated staging Redis queue.
+  # The dispatcher never calls SHEIN and remains opt-in until its full worker
+  # contract is verified in a later ERP step.
+  outbox-dispatcher:
+    profiles: ["publish"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    env_file:
+      - ../.env.staging.example
+    environment:
+      SHEIN_OUTBOX_DISPATCHER_ENABLED: "false"
+      DATABASE_URL: postgres://shein:staging-only@postgres:5432/polaris_staging
+      REDIS_URL: redis://redis:6379
+    command: ["npm", "run", "outbox-dispatcher:cloud"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   polaris_staging_postgres_data:
   polaris_staging_redis_data:

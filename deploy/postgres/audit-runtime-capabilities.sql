@@ -23,6 +23,7 @@ WITH expected_capabilities (object_name, object_kind, expected_operations) AS (
     ('publish_batches', 'table', ARRAY['SELECT', 'INSERT', 'UPDATE']::text[]),
     ('publish_execution_runs', 'table', ARRAY['SELECT', 'INSERT', 'UPDATE']::text[]),
     ('publish_jobs', 'table', ARRAY['SELECT', 'INSERT', 'UPDATE']::text[]),
+    ('publish_outbox_events', 'table', ARRAY['SELECT', 'INSERT', 'UPDATE']::text[]),
     ('publish_receipts', 'table', ARRAY['SELECT', 'INSERT']::text[]),
     ('publish_templates', 'table', ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE']::text[]),
     ('shein_authorization_attempts', 'table', ARRAY['SELECT', 'INSERT', 'UPDATE']::text[]),

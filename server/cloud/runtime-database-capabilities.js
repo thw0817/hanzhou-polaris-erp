@@ -7,6 +7,7 @@ export const runtimeEntrypoints = [
   "compliance-sync-worker-server.js",
   "control-server.js",
   "media-cleanup-worker-server.js",
+  "outbox-dispatcher.js",
   "product-publish-worker-server.js",
   "rule-refresh-worker-server.js",
   "store-business-refresh-worker-server.js",

@@ -55,7 +55,6 @@ import {
 import {
   BullMqJobQueue,
   COMPLIANCE_SYNC_QUEUE_NAME,
-  PRODUCT_PUBLISH_QUEUE_NAME,
   RULE_REFRESH_QUEUE_NAME,
   STORE_BUSINESS_REFRESH_QUEUE_NAME,
 } from "./job-queue.js";
@@ -2798,7 +2797,6 @@ export async function startCloudControlServer(config = loadConfig()) {
   let ruleRefreshQueue = null;
   let webComplianceSync = null;
   let complianceSyncQueue = null;
-  let productPublishQueue = null;
   let webMedia = null;
   let webComplianceWrites = null;
   let webPublishTemplates = null;
@@ -2984,12 +2982,6 @@ export async function startCloudControlServer(config = loadConfig()) {
       executionEnabled: config.complianceWritesEnabled,
     });
   }
-  productPublishQueue = config.productPublish?.executionEnabled
-    ? new BullMqJobQueue({
-        redisUrl: config.redisUrl,
-        queueName: PRODUCT_PUBLISH_QUEUE_NAME,
-      })
-    : null;
   webPublishBatches = new WebPublishBatchService({
     repository: new PostgresPublishBatchRepository({ pool: authPool }),
     readbackRepository: publishExecutionRepository,
@@ -3046,7 +3038,6 @@ export async function startCloudControlServer(config = loadConfig()) {
         },
       });
     },
-    executionQueue: productPublishQueue,
     executionEnabled: config.productPublish?.executionEnabled === true,
     fastAckTimeoutMs: config.productPublish?.fastAckTimeoutMs,
     fastAckPollMs: config.productPublish?.fastAckPollMs,
@@ -3093,7 +3084,6 @@ export async function startCloudControlServer(config = loadConfig()) {
     storeBusinessRefreshQueue?.close().catch(() => {});
     ruleRefreshQueue?.close().catch(() => {});
     complianceSyncQueue?.close().catch(() => {});
-    productPublishQueue?.close().catch(() => {});
     authPool.end().catch(() => {});
   });
   server.listen(config.cloudControlPort, config.cloudControlHost, () => {

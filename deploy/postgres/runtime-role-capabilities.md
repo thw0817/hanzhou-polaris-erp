@@ -5,6 +5,7 @@ Generated from the import graph of these long-running cloud entrypoints:
 - `compliance-sync-worker-server.js`
 - `control-server.js`
 - `media-cleanup-worker-server.js`
+- `outbox-dispatcher.js`
 - `product-publish-worker-server.js`
 - `rule-refresh-worker-server.js`
 - `store-business-refresh-worker-server.js`
@@ -36,7 +37,8 @@ This is a review inventory only. It does not create roles, change privileges, or
 | `publish_batch_items` | table | SELECT, INSERT, UPDATE | `server/cloud/publish-batch-service.js`<br>`server/cloud/publish-execution-repository.js` |
 | `publish_batches` | table | SELECT, INSERT, UPDATE | `server/cloud/publish-batch-service.js`<br>`server/cloud/publish-execution-repository.js` |
 | `publish_execution_runs` | table | SELECT, INSERT, UPDATE | `server/cloud/publish-batch-service.js`<br>`server/cloud/publish-execution-repository.js`<br>`server/cloud/web-auth.js` |
-| `publish_jobs` | table | SELECT, INSERT, UPDATE | `server/cloud/product-draft-service.js`<br>`server/cloud/product-review-service.js`<br>`server/cloud/publish-batch-service.js`<br>`server/cloud/publish-execution-repository.js`<br>`server/cloud/today-work-service.js`<br>`server/cloud/web-auth.js` |
+| `publish_jobs` | table | SELECT, INSERT, UPDATE | `server/cloud/outbox-dispatcher.js`<br>`server/cloud/product-draft-service.js`<br>`server/cloud/product-review-service.js`<br>`server/cloud/publish-batch-service.js`<br>`server/cloud/publish-execution-repository.js`<br>`server/cloud/today-work-service.js`<br>`server/cloud/web-auth.js` |
+| `publish_outbox_events` | table | SELECT, INSERT, UPDATE | `server/cloud/outbox-dispatcher.js` |
 | `publish_receipts` | table | SELECT, INSERT | `server/cloud/product-review-service.js`<br>`server/cloud/publish-batch-service.js`<br>`server/cloud/publish-execution-repository.js` |
 | `publish_templates` | table | SELECT, INSERT, UPDATE, DELETE | `server/cloud/product-draft-service.js`<br>`server/cloud/publish-template-service.js`<br>`server/cloud/rule-refresh-service.js` |
 | `shein_authorization_attempts` | table | SELECT, INSERT, UPDATE | `server/cloud/shein-device-authorization.js`<br>`server/cloud/web-shein-authorization.js` |
@@ -56,4 +58,4 @@ This is a review inventory only. It does not create roles, change privileges, or
 | `web_sessions` | table | SELECT, INSERT, UPDATE | `server/cloud/web-auth.js` |
 | `webhook_events` | table | SELECT, INSERT, UPDATE | `server/cloud/product-review-service.js`<br>`server/cloud/today-work-service.js`<br>`server/cloud/webhook-audit-repository.js`<br>`server/cloud/webhook-event-store.js` |
 
-Tables: 39. Sequences: 1.
+Tables: 40. Sequences: 1.

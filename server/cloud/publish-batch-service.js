@@ -13,11 +13,11 @@ import {
   productPublishCandidateFingerprint,
   verifyProductPublishCandidate,
 } from "./product-publish-candidate.js";
+import { createPublishOutboxEvents } from "./outbox-dispatcher.js";
 import {
   verifyProductRemotePublishCandidate,
 } from "./product-remote-preflight.js";
 import { createRuleFingerprint } from "./rule-snapshot-service.js";
-import { PRODUCT_PUBLISH_JOB_NAME } from "./job-queue.js";
 import { classifyReviewCenterStatus } from "./review-center-status.js";
 
 const ACTIVE_STATES = new Set([
@@ -880,6 +880,13 @@ export class PostgresPublishBatchRepository {
           409,
         );
       }
+      await createPublishOutboxEvents({
+        client,
+        tenantId,
+        storeId,
+        executionRunId,
+        availableAt: consumedAt,
+      });
       return this.get({ tenantId, storeId, batchId }, client);
     });
   }
@@ -1104,7 +1111,6 @@ export class WebPublishBatchService {
     now = () => new Date(),
     randomId = randomUUID,
     executionAuthorizationTtlMs = EXECUTION_AUTHORIZATION_TTL_MS,
-    executionQueue = null,
     executionEnabled = false,
     revalidateDrafts = null,
     fastAckTimeoutMs = PRODUCT_PUBLISH_FAST_ACK_TIMEOUT_MS,
@@ -1124,7 +1130,6 @@ export class WebPublishBatchService {
     this.now = now;
     this.randomId = randomId;
     this.executionAuthorizationTtlMs = executionAuthorizationTtlMs;
-    this.executionQueue = executionQueue;
     this.executionEnabled = executionEnabled === true;
     this.revalidateDrafts = revalidateDrafts;
     this.fastAckTimeoutMs = Math.max(0, Number(fastAckTimeoutMs) || 0);
@@ -1278,7 +1283,7 @@ export class WebPublishBatchService {
   }
 
   async publishNow({ context, storeId, input = {} } = {}) {
-    if (!this.executionEnabled || !this.executionQueue) {
+    if (!this.executionEnabled) {
       throw new PublishBatchError(
         "PRODUCT_PUBLISH_EXECUTION_DISABLED",
         "SHEIN商品真实发布执行尚未启用",
@@ -1577,7 +1582,7 @@ export class WebPublishBatchService {
     }
 
     if (normalizedAction === "execute") {
-      if (!this.executionEnabled || !this.executionQueue) {
+      if (!this.executionEnabled) {
         throw new PublishBatchError(
           "PRODUCT_PUBLISH_EXECUTION_DISABLED",
           "SHEIN商品真实发布执行尚未启用",
@@ -1640,46 +1645,6 @@ export class WebPublishBatchService {
           consumedAt,
           userId: context.userId,
         });
-      }
-      try {
-        await this.executionQueue.add(
-          PRODUCT_PUBLISH_JOB_NAME,
-          {
-            tenantId: context.tenantId,
-            storeId,
-            batchId,
-            executionRunId,
-            requestedBy: context.userId,
-          },
-          {
-            // BullMQ reserves ':' in custom job ids. Keep this id deterministic
-            // for safe replays while using a queue-compatible separator.
-            jobId: `product-publish-${executionRunId}`,
-            attempts: 1,
-            removeOnComplete: true,
-            removeOnFail: true,
-          },
-        );
-      } catch (error) {
-        const queueError = {
-          code: "PRODUCT_PUBLISH_QUEUE_ENQUEUE_FAILED",
-          message: "商品发布任务入队失败，未调用SHEIN，请稍后重试",
-          traceId: error?.traceId || null,
-        };
-        if (typeof this.repository.recordQueueFailure === "function") {
-          await this.repository.recordQueueFailure({
-            tenantId: context.tenantId,
-            storeId,
-            executionRunId,
-            error: queueError,
-            failedAt: this.now(),
-          });
-        }
-        throw new PublishBatchError(
-          queueError.code,
-          queueError.message,
-          503,
-        );
       }
       return {
         batch: publicBatch(row, row.items.map((item, index) => publicItem(item, index))),

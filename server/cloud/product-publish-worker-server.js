@@ -76,6 +76,7 @@ export async function startProductPublishWorkerServer(
   workerService.worker.on("completed", (job, result) => {
     writeLog(logger, "info", "completed", {
       queueJobId: String(job.id || ""),
+      commandId: String(job.data?.commandId || ""),
       executionRunId: String(job.data?.executionRunId || ""),
       submittedCount: Number(result?.submittedCount || 0),
       retryableFailureCount: Number(result?.retryableFailureCount || 0),
@@ -86,6 +87,7 @@ export async function startProductPublishWorkerServer(
   workerService.worker.on("failed", (job, error) => {
     writeLog(logger, "error", "failed", {
       queueJobId: String(job?.id || ""),
+      commandId: String(job?.data?.commandId || ""),
       executionRunId: String(job?.data?.executionRunId || ""),
       errorCode: String(error?.code || "PRODUCT_PUBLISH_PROCESSING_FAILED"),
       executorError: error instanceof ProductPublishExecutorError,

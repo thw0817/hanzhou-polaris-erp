@@ -101,6 +101,10 @@ export const v2RequiredMigrations = Object.freeze([
     filename: "045_publish_lifecycle_indexes.sql",
     checksum: "1c1e011a6318b7f869fd8c0e37e7628dbd139a9e9a088bc794f5bd234d55077d",
   },
+  {
+    filename: "046_publish_outbox_events.sql",
+    checksum: "4fda7ffef0c2efb3da3f625228acf25e1484e503f5d426e0f15b967ec754ca95",
+  },
 ]);
 
 const releaseContracts = Object.freeze([

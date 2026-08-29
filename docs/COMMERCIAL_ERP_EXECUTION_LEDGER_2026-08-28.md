@@ -1317,3 +1317,17 @@
 - 证据报告：[ERP03_CI_STAGING_GATE_REPORT_2026-08-29.md](./ERP03_CI_STAGING_GATE_REPORT_2026-08-29.md)。
 - 外部写入：未连接生产 PostgreSQL/Redis/对象存储；未执行生产迁移、Nginx reload、current 切换、服务重启或 SHEIN 写入。
 - 当前状态：GATE_FAILED；staging 与本机 bundled Chromium 运行态已补证，但不满足 ERP-03 完成门，不得开始 ERP-04；必须先实现并验证 Outbox Dispatcher，并在需要时补充远端 CI runner 实际运行证据，再重新跑完整门禁。
+
+## 16. 正式 ERP-03 Outbox 补证 Run
+
+### RUN-20260829-ERP03-OUTBOX-BRIDGE-01
+
+- 类型：ERP-03 补证；可靠发布命令的 durable Outbox 与队列边界实现。
+- 启动依据：上一 Run 的明确失败项是 Outbox Dispatcher 缺失；用户继续明确要求按计划执行下一步。
+- 目标：使发布 execute 在 PostgreSQL 事务内形成可恢复的 Outbox 事件，由独立 Dispatcher 以 lease/claim/确定性 jobId 投递到 BullMQ，再由 command-scoped Publish Worker 消费；消除 Control 直接写发布队列的失电窗口。
+- 允许范围：新增 Outbox 迁移、Dispatcher、配置和 staging profile；改造 publish execute durable handoff、Control queue ownership、Worker command contract；新增单元/静态/迁移/能力审计；不启用 SHEIN 写入。
+- 禁止范围：真实 SHEIN 写接口、生产迁移、生产队列/Redis/对象存储、生产服务重启、生产 current 切换；不将 ERP-09 的 ProductVersion、完整发布编排和真实平台写入提前伪装完成。
+- 已实施：`046_publish_outbox_events.sql`；`outbox-dispatcher.js`；事务内 `createPublishOutboxEvents`；Dispatcher claim/lease/retry；确定性 `jobId=commandId`；Worker contract version 校验和单命令范围；Control 不再拥有 publish queue；staging 默认关闭 Dispatcher 和 publish live-write。
+- 已验证：全量 `npm test` 1200/1200；Outbox/Worker/Repository 定向测试通过；工具链、secret scan、staging isolation、V2 build、release audit、runtime capability audit 通过；046 已应用到独立 staging PostgreSQL；真实 DB Dispatcher 探针 `claimed=0, dispatched=0, failed=0`；无生产写入、无 SHEIN 调用。
+- 关键边界：`0/0/0` 只证明 staging 空队列安全探针，不证明真实命令已完成队列投递；真实 PublishCommand 投递仍因 live-write false 未执行；远端 GitHub Actions runner 尚未执行。
+- 当前结论：`GATE_FAILED`；Outbox 缺失这一具体实现阻断已解除，但 ERP-03 完成门仍未闭合；不得启动 ERP-04，不得把该 Run 标记为 ERP-09 完成。

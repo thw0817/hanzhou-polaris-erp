@@ -351,7 +351,8 @@ export class PostgresPublishExecutionRepository {
   async claimNextJob({
     tenantId,
     storeId,
-    executionRunId,
+    executionRunId = null,
+    commandId = null,
     workerId,
     claimId,
     claimedAt = new Date(),
@@ -371,7 +372,8 @@ export class PostgresPublishExecutionRepository {
            AND run.store_id = job.store_id
           WHERE job.tenant_id = $1
             AND job.store_id = $2
-            AND job.execution_run_id = $3
+            AND ($3::uuid IS NULL OR job.execution_run_id = $3)
+            AND ($9::uuid IS NULL OR job.id = $9)
             AND run.state = 'running'
             AND run.execution_enabled = true
             AND run.authorizes_publishing = true
@@ -409,6 +411,7 @@ export class PostgresPublishExecutionRepository {
         }),
         PUBLISH_REQUEST_CLAIM_TTL_SECONDS,
         excludedJobIds,
+        commandId,
       ],
     });
     return presentJob(result.rows[0] || null);
@@ -472,7 +475,8 @@ export class PostgresPublishExecutionRepository {
   async markExpiredClaimsUnknown({
     tenantId,
     storeId,
-    executionRunId,
+    executionRunId = null,
+    jobId = null,
     expiredAt = new Date(),
     limit = 100,
   } = {}) {
@@ -483,7 +487,8 @@ export class PostgresPublishExecutionRepository {
           FROM publish_jobs AS job
           WHERE job.tenant_id = $1
             AND job.store_id = $2
-            AND job.execution_run_id = $3
+            AND ($3::uuid IS NULL OR job.execution_run_id = $3)
+            AND ($6::uuid IS NULL OR job.id = $6)
             AND job.state = 'claimed'
             AND job.claim_expires_at <= $4::timestamptz
           ORDER BY job.claim_expires_at, job.id
@@ -506,7 +511,7 @@ export class PostgresPublishExecutionRepository {
         WHERE job.id = expired.id
         RETURNING job.*
       `,
-      values: [tenantId, storeId, executionRunId, expiredAt, limit],
+      values: [tenantId, storeId, executionRunId, expiredAt, limit, jobId],
     });
     return result.rows.map(presentJob);
   }

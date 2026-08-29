@@ -438,6 +438,7 @@ test("server keeps guarded execution behind the direct publish endpoint", () => 
   assert.match(serviceSource, /async publishNow/);
   assert.match(serviceSource, /PRODUCT_PUBLISH_EXECUTION_CONFIRMATION/);
   assert.match(serviceSource, /this\.act\(\{[\s\S]{0,400}action: "execute"/);
-  assert.match(serviceSource, /PRODUCT_PUBLISH_JOB_NAME/);
+  assert.match(serviceSource, /createPublishOutboxEvents/);
+  assert.doesNotMatch(serviceSource, /this\.executionQueue\.add/);
   assert.match(serviceSource, /taskId:/);
 });

@@ -53,6 +53,85 @@ test("product publish worker rejects queue messages without scoped run identifie
   );
 });
 
+test("product publish worker rejects an unknown Outbox queue contract", async () => {
+  await assert.rejects(
+    processProductPublishRun({
+      job: {
+        name: PRODUCT_PUBLISH_JOB_NAME,
+        data: {
+          commandId: "job-1",
+          tenantId: "tenant-1",
+          storeId: "store-1",
+          contractVersion: "unknown",
+        },
+      },
+      repository: {},
+      executor: {},
+    }),
+    /队列消息无效/,
+  );
+});
+
+test("product publish worker processes only the command named by an Outbox queue message", async () => {
+  const { source, remote } = candidates();
+  const calls = [];
+  const repository = {
+    async markExpiredClaimsUnknown(input) {
+      calls.push(["expire", input]);
+      return [];
+    },
+    async claimNextJob(input) {
+      calls.push(["claim", input]);
+      return {
+        id: "job-1",
+        execution_run_id: "run-1",
+        claim_id: input.claimId,
+        source_candidate_fingerprint: source.fingerprint,
+        remote_candidate_fingerprint: remote.fingerprint,
+      };
+    },
+    async loadClaimedExecutionSource(input) {
+      calls.push(["load", input]);
+      return {
+        job: { id: "job-1" },
+        currentSourceCandidate: source,
+        remoteCandidate: remote,
+      };
+    },
+    async recordSubmitted(input) {
+      calls.push(["submitted", input]);
+      return { id: "job-1", state: "submitted" };
+    },
+  };
+  const executor = {
+    async execute(input) {
+      calls.push(["execute", input]);
+      return { outcome: "accepted", receipt: { version: "VERSION-1" } };
+    },
+  };
+
+  const result = await processProductPublishRun({
+    job: {
+      name: PRODUCT_PUBLISH_JOB_NAME,
+      data: {
+        commandId: "job-1",
+        tenantId: "tenant-1",
+        storeId: "store-1",
+        contractVersion: "publish-command-v1",
+      },
+    },
+    repository,
+    executor,
+    randomId: () => "claim-1",
+  });
+
+  assert.equal(result.submittedCount, 1);
+  assert.equal(calls[0][1].jobId, "job-1");
+  assert.equal(calls[1][1].commandId, "job-1");
+  assert.equal(calls[2][1].executionRunId, "run-1");
+  assert.equal(calls.filter(([name]) => name === "settle").length, 0);
+});
+
 test("product publish worker executes a verified frozen candidate once and persists submission", async () => {
   const { source, remote } = candidates();
   const calls = [];

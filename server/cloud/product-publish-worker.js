@@ -7,6 +7,7 @@ import {
   PRODUCT_PUBLISH_JOB_NAME,
   PRODUCT_PUBLISH_QUEUE_NAME,
 } from "./job-queue.js";
+import { OUTBOX_JOB_CONTRACT_VERSION } from "./outbox-dispatcher.js";
 
 function invalidJob() {
   const error = new Error("商品发布队列消息无效");
@@ -43,13 +44,18 @@ export async function processProductPublishRun({
   }
   const tenantId = text(job.data?.tenantId);
   const storeId = text(job.data?.storeId);
+  const commandId = text(job.data?.commandId);
   const executionRunId = text(job.data?.executionRunId);
-  if (!tenantId || !storeId || !executionRunId) throw invalidJob();
+  if (!tenantId || !storeId || (!executionRunId && !commandId)) throw invalidJob();
+  if (commandId && text(job.data?.contractVersion) !== OUTBOX_JOB_CONTRACT_VERSION) {
+    throw invalidJob();
+  }
 
   await repository.markExpiredClaimsUnknown({
     tenantId,
     storeId,
-    executionRunId,
+    executionRunId: executionRunId || null,
+    jobId: commandId || null,
     expiredAt: now(),
   });
 
@@ -61,24 +67,31 @@ export async function processProductPublishRun({
     terminalFailureCount: 0,
     unknownCount: 0,
   };
-  while (true) {
+  const claimNext = async () => {
     const claimId = randomId();
     const claimed = await repository.claimNextJob({
       tenantId,
       storeId,
-      executionRunId,
+      executionRunId: executionRunId || null,
+      commandId: commandId || null,
       workerId,
       claimId,
       claimedAt: now(),
       excludedJobIds: processedJobIds,
     });
-    if (!claimed) break;
+    if (!claimed) return null;
+    const claimedExecutionRunId = text(claimed.execution_run_id || executionRunId);
+    if (!claimedExecutionRunId) throw invalidJob();
+    return { claimed, claimId, claimedExecutionRunId };
+  };
+
+  const processOwned = async ({ claimed, claimId, claimedExecutionRunId }) => {
     processedJobIds.push(claimed.id);
 
     const source = await repository.loadClaimedExecutionSource({
       tenantId,
       storeId,
-      executionRunId,
+      executionRunId: claimedExecutionRunId,
       jobId: claimed.id,
       claimId,
     });
@@ -97,7 +110,7 @@ export async function processProductPublishRun({
       await repository.recordExecutionFailure({
         tenantId,
         storeId,
-        executionRunId,
+        executionRunId: claimedExecutionRunId,
         jobId: claimed.id,
         claimId,
         outcome: "failed",
@@ -106,7 +119,7 @@ export async function processProductPublishRun({
         failedAt: now(),
       });
       summary.terminalFailureCount += 1;
-      continue;
+      return;
     }
 
     const result = await executor.execute({
@@ -120,7 +133,7 @@ export async function processProductPublishRun({
       const persisted = await repository.recordSubmitted({
         tenantId,
         storeId,
-        executionRunId,
+        executionRunId: claimedExecutionRunId,
         jobId: claimed.id,
         claimId,
         receipt: result.receipt,
@@ -130,12 +143,12 @@ export async function processProductPublishRun({
         throw new Error("商品发布结果无法关联当前领取任务");
       }
       summary.submittedCount += 1;
-      continue;
+      return;
     }
     await repository.recordExecutionFailure({
       tenantId,
       storeId,
-      executionRunId,
+      executionRunId: claimedExecutionRunId,
       jobId: claimed.id,
       claimId,
       outcome: result.outcome,
@@ -146,6 +159,18 @@ export async function processProductPublishRun({
     if (result.outcome === "unknown") summary.unknownCount += 1;
     else if (result.retryable === true) summary.retryableFailureCount += 1;
     else summary.terminalFailureCount += 1;
+  };
+
+  if (commandId) {
+    const claimed = await claimNext();
+    if (claimed) await processOwned(claimed);
+    return summary;
+  }
+
+  while (true) {
+    const claimed = await claimNext();
+    if (!claimed) break;
+    await processOwned(claimed);
   }
   await repository.settleExecutionRun({
     tenantId,
