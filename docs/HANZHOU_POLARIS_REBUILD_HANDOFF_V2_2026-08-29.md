@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v22
+版本：2026-08-30-v23
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结与原子发布交接的隔离验证，ERP-07～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结、原子发布交接与 Outbox claim/lease 的隔离验证，ERP-07～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -147,7 +147,16 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - PublishBatch/BatchItem 已在隔离 additive 草案中通过 nullable 扩展接入新链路；新 BatchItem 显式绑定 ProductVersion、来源 Draft、CatalogProduct 和租户/店铺范围，历史批次行不回填。
 - PublishAttempt/Command/Outbox 原子交接现在必须携带 Batch/BatchItem，幂等返回会复核完整批次项关联；`result_unknown` 仍禁止新 requestKey 重发。
 - 旧 `publish_jobs`/`publish_receipts` 仅由 `legacy_readonly` adapter 读取和分类，不生成新版本/尝试，不写回旧表，不泄露 raw JSON 凭证。
-- 本 Run 仍只在本地 fake pool 与一次性 PostgreSQL rehearsal 验证；未接入生产路由、Dispatcher/Worker、生产迁移或 SHEIN 写接口。
+- 本 Run 仍只在本地 fake pool 与一次性 PostgreSQL rehearsal 验证；未接入生产路由、生产 Dispatcher/Worker、生产迁移或 SHEIN 写接口。
+
+### 4.3 ERP-06 Outbox Dispatcher/Worker 隔离事实
+
+- 当前 Run：`RUN-20260830-ERP06-OUTBOX-DISPATCH-WORKER-IMPLEMENTATION-09`。
+- 已实现隔离服务：`server/cloud/erp06-outbox-dispatcher-service.js`。Dispatcher 按租户/店铺 claim Outbox，使用 `FOR UPDATE SKIP LOCKED`、递增 attempt、lease 和确定性 `jobId=publish_command_id`；Worker 只领取已 dispatched 且 Attempt 非 `result_unknown` 的 Command，写入 worker lease 后在本 Run dry-run 释放回 `queued`。
+- 新增数据库草案字段用于 worker claim 与投递证据：`publish_commands.worker_id/worker_claim_id/worker_claimed_at/worker_lease_expires_at`；`product_publish_outbox.queue_job_id/dispatched_at/last_error`，并增加状态配对约束。仍属于隔离 additive draft，不是正式生产迁移。
+- 失败保护已验证：队列失败只标记当前 lease 对应 Outbox 为 `failed`；scope/command identity 不一致拒绝；`result_unknown` Attempt 不得被 Worker 再次领取；payload 不含 credential、raw body、图片 URL。
+- 证据：新增服务定向回归 `6/6`；与前序 ERP-06 定向回归合计 `29/29`；一次性本机 Docker PostgreSQL `127.0.0.1:55437/erp06_outbox_rehearsal` 真实应用 001–046 与 047 草案并通过 handoff → dispatch → worker dry-run → `result_unknown` no-claim；临时容器已移除，现有 staging 未触碰。
+- 明确未完成：没有接入生产 Dispatcher/Worker，没有运行真实 SHEIN adapter/HTTP，没有发送、重发、上传、删除或修改生产数据；本 Run 的 Worker 结果不等于 SHEIN 接收或商品发布成功。
 
 ## 5. 历史已执行工作如何使用
 

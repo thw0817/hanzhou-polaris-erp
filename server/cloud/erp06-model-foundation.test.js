@@ -90,6 +90,12 @@ test("ERP-06 apply draft is additive and has no cleanup statements", async () =>
   assert.match(sql, /publish_batch_items_publish_attempt_fk/);
   assert.match(sql, /publish_batch_id uuid/);
   assert.match(sql, /publish_batch_item_id uuid/);
+  assert.match(sql, /worker_claim_id text/);
+  assert.match(sql, /worker_lease_expires_at timestamptz/);
+  assert.match(sql, /publish_commands_worker_claim_pair_chk/);
+  assert.match(sql, /product_publish_outbox_dispatched_evidence_chk/);
+  assert.match(sql, /queue_job_id text/);
+  assert.match(sql, /last_error jsonb/);
   assert.match(sql, /ERP06_RESULT_UNKNOWN_COMMAND_BLOCKED/);
   assert.match(sql, /ERP06_IMMUTABLE_FACT_UPDATE_BLOCKED/);
 });
@@ -115,6 +121,8 @@ test("ERP-06 draft encodes the required failure protections", async () => {
   assert.match(verify, /publish_batch_additive_columns/);
   assert.match(verify, /publish_batch_association_constraints/);
   assert.match(verify, /publish_attempt_batch_association_columns/);
+  assert.match(verify, /publish_dispatch_worker_claim_columns/);
+  assert.match(verify, /publish_outbox_dispatch_evidence_constraint/);
   assert.match(verify, /legacy_history_not_backfilled/);
   assert.match(rollback, /current_database\(\) !~\* '\(\^\|\[-_\]\)\(test\|rehearsal\|scratch\)\(\[-_\]\|\$\)'/);
   assert.match(rollback, /requires empty table/);

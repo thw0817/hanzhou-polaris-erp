@@ -20,6 +20,12 @@ import {
 import {
   PostgresErp06PublishBatchRepository,
 } from "./erp06-publish-batch-service.js";
+import { MemoryJobQueue } from "./job-queue.js";
+import {
+  dispatchErp06OutboxOnce,
+  processErp06PublishQueueJob,
+  PostgresErp06OutboxRepository,
+} from "./erp06-outbox-dispatcher-service.js";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const activeMigrationDirectory = path.join(currentDirectory, "migrations");
@@ -208,6 +214,39 @@ async function runHandoffChecks(pool) {
   assert.equal(first.draftLockVersion, 1);
   assert.equal(first.remoteCallMade, false);
 
+  const outboxRepository = new PostgresErp06OutboxRepository({ pool });
+  const queue = new MemoryJobQueue();
+  const dispatch = await dispatchErp06OutboxOnce({
+    repository: outboxRepository,
+    queue,
+    tenantId: ids.tenant,
+    storeId: ids.store,
+    dispatcherId: "erp06-rehearsal-dispatcher",
+    now: () => new Date("2026-08-30T10:00:00.000Z"),
+  });
+  assert.deepEqual(dispatch, { claimed: 1, dispatched: 1, failed: 0 });
+  assert.equal(queue.jobs.length, 1);
+  const workerResult = await processErp06PublishQueueJob({
+    job: queue.jobs[0],
+    repository: outboxRepository,
+    workerId: "erp06-rehearsal-worker",
+    randomId: () => "erp06-rehearsal-worker:claim-1",
+    now: () => new Date("2026-08-30T10:01:00.000Z"),
+  });
+  assert.equal(workerResult.claimed, true);
+  assert.equal(workerResult.remoteCallMade, false);
+  assert.equal(workerResult.commandState, "queued");
+  const repeatDispatch = await dispatchErp06OutboxOnce({
+    repository: outboxRepository,
+    queue,
+    tenantId: ids.tenant,
+    storeId: ids.store,
+    dispatcherId: "erp06-rehearsal-dispatcher",
+    now: () => new Date("2026-08-30T10:02:00.000Z"),
+  });
+  assert.deepEqual(repeatDispatch, { claimed: 0, dispatched: 0, failed: 0 });
+  assert.equal(queue.jobs.length, 1);
+
   const client = await pool.connect();
   try {
     const facts = await client.query(
@@ -233,7 +272,8 @@ async function runHandoffChecks(pool) {
               cp.current_version_id, cp.current_attempt_id,
               pbi.batch_id, pbi.product_version_id AS batch_product_version_id,
               pbi.publish_attempt_id AS batch_attempt_id,
-              pc.state AS command_state, po.state AS outbox_state,
+              pc.state AS command_state, pc.worker_claim_id,
+              po.state AS outbox_state, po.queue_job_id,
               pc.payload_summary AS command_summary,
               po.payload_summary AS outbox_summary
        FROM product_drafts d
@@ -263,7 +303,9 @@ async function runHandoffChecks(pool) {
     assert.equal(state.rows[0].batch_product_version_id, frozen.productVersionId);
     assert.equal(state.rows[0].batch_attempt_id, first.publishAttemptId);
     assert.equal(state.rows[0].command_state, "queued");
-    assert.equal(state.rows[0].outbox_state, "pending");
+    assert.equal(state.rows[0].worker_claim_id, null);
+    assert.equal(state.rows[0].outbox_state, "dispatched");
+    assert.equal(state.rows[0].queue_job_id, first.publishCommandId);
     assert.equal(state.rows[0].command_summary.versionFingerprint, frozen.versionFingerprint);
     assert.equal(state.rows[0].outbox_summary.publishCommandId, first.publishCommandId);
     assert.doesNotMatch(JSON.stringify(state.rows[0]), /Secret|secret|token|password/i);
@@ -315,6 +357,15 @@ async function runHandoffChecks(pool) {
   assert.equal(unknownRepeat.idempotent, true);
   assert.equal(unknownRepeat.attemptState, "result_unknown");
   assert.equal(unknownRepeat.commandState, "result_unknown");
+  const unknownWorker = await processErp06PublishQueueJob({
+    job: queue.jobs[0],
+    repository: outboxRepository,
+    workerId: "erp06-rehearsal-worker-unknown",
+    randomId: () => "erp06-rehearsal-worker-unknown:claim-1",
+    now: () => new Date("2026-08-30T10:03:00.000Z"),
+  });
+  assert.equal(unknownWorker.claimed, false);
+  assert.equal(unknownWorker.remoteCallMade, false);
 
   const finalFacts = await pool.query({
     text: `SELECT
@@ -343,6 +394,9 @@ async function runHandoffChecks(pool) {
     requestKeyIdempotentAfterLockBump: true,
     sameVersionResendBlocked: true,
     resultUnknownNoResend: true,
+    outboxDispatchedWithDeterministicJob: true,
+    workerClaimLeaseReleasedWithoutRemoteCall: true,
+    resultUnknownWorkerNoClaim: true,
     noRemoteCallOrQueueConsumer: true,
     legacyRowsUntouched: true,
   };

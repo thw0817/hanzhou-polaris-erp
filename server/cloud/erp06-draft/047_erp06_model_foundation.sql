@@ -407,6 +407,10 @@ CREATE TABLE publish_commands (
   created_at timestamptz NOT NULL DEFAULT now(),
   dispatched_at timestamptz,
   updated_at timestamptz NOT NULL DEFAULT now(),
+  worker_id text,
+  worker_claim_id text,
+  worker_claimed_at timestamptz,
+  worker_lease_expires_at timestamptz,
   UNIQUE (tenant_id, store_id, publish_attempt_id),
   UNIQUE (tenant_id, store_id, request_key),
   UNIQUE (tenant_id, store_id, id),
@@ -416,6 +420,13 @@ CREATE TABLE publish_commands (
     REFERENCES publish_attempts (tenant_id, store_id, id) ON DELETE RESTRICT,
   CHECK (state NOT IN ('dispatched', 'succeeded') OR dispatched_at IS NOT NULL)
 );
+
+ALTER TABLE publish_commands
+  ADD CONSTRAINT publish_commands_worker_claim_pair_chk
+    CHECK ((worker_claim_id IS NULL) = (worker_lease_expires_at IS NULL)),
+  ADD CONSTRAINT publish_commands_worker_dispatch_claim_chk
+    CHECK (state <> 'dispatching'
+      OR (worker_claim_id IS NOT NULL AND worker_lease_expires_at IS NOT NULL));
 
 CREATE OR REPLACE FUNCTION erp06_block_result_unknown_command()
 RETURNS trigger
@@ -581,6 +592,9 @@ CREATE TABLE product_publish_outbox (
   lease_id text,
   lease_expires_at timestamptz,
   payload_summary jsonb NOT NULL DEFAULT '{}'::jsonb,
+  queue_job_id text,
+  dispatched_at timestamptz,
+  last_error jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (tenant_id, store_id, publish_command_id),
@@ -593,7 +607,9 @@ CREATE TABLE product_publish_outbox (
   CHECK (
     state <> 'dispatching'
     OR (lease_id IS NOT NULL AND lease_expires_at IS NOT NULL)
-  )
+  ),
+  CONSTRAINT product_publish_outbox_dispatched_evidence_chk
+    CHECK (state <> 'dispatched' OR (queue_job_id IS NOT NULL AND dispatched_at IS NOT NULL))
 );
 
 -- New-query indexes are scoped first, so tenant/store predicates remain part
@@ -622,6 +638,9 @@ CREATE INDEX publish_attempts_version_idx
 CREATE INDEX publish_commands_dispatch_idx
   ON publish_commands (tenant_id, store_id, state, created_at)
   WHERE state IN ('queued', 'dispatching');
+CREATE INDEX publish_commands_worker_lease_idx
+  ON publish_commands (tenant_id, store_id, worker_lease_expires_at, created_at)
+  WHERE state = 'dispatching';
 CREATE INDEX official_event_inbox_state_idx
   ON official_event_inbox (tenant_id, store_id, verification_state, received_at);
 CREATE INDEX platform_product_links_product_idx

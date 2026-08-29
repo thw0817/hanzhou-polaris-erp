@@ -1,7 +1,7 @@
 # ERP-06 数据模型与事件账本设计
 
-版本：2026-08-30-v4
-状态：`IN_PROGRESS`（非生产设计、版本冻结、原子交接实现与验证）
+版本：2026-08-30-v5
+状态：`IN_PROGRESS`（非生产设计、版本冻结、原子交接、Outbox claim/lease 与 Worker dry-run 验证）
 适用边界：COS-first；历史数据冻结只读；不执行生产迁移、不修改历史记录、不调用 SHEIN 写接口
 
 ## 0. 本文用途
@@ -139,6 +139,10 @@ ProductDraft -> DraftRevision -> ProductVersion
 
 官方 Webhook/回读进入受控 `OfficialEventInbox`：先按来源、事件 ID、签名/结构和租户店铺范围验收，再以幂等键落账；禁止直接覆盖当前状态。投递意图进入 `PublishOutbox`，队列成功只代表投递事实，不代表 SHEIN 成功。
 
+ERP-06 Outbox Dispatcher/Worker 的隔离契约：Dispatcher 只在同一 `tenant_id/store_id` 内领取 `pending`、可重试 `failed` 或已过期 `dispatching` 行，使用 `FOR UPDATE SKIP LOCKED`、递增 `attempt_count` 和 lease；只有关联 Command=`queued` 且 Attempt 不为 `result_unknown`/`superseded_by_new_attempt` 时才可领取。队列 job 的 `jobId` 固定为 `publish_command_id`，payload 只包含 scope、Batch/BatchItem/Attempt/Version/Revision 身份、contract version 和不可变版本指纹，不包含凭证、raw body 或图片地址。队列加入成功后必须用相同 lease 标记 Outbox=`dispatched`；lease 失效或队列失败则 fail closed 并记录受控错误。
+
+Worker 只领取 Outbox=`dispatched` 且同 scope、Attempt 仍可执行的 Command；领取时写入 worker claim/lease，隔离 dry-run 随后释放回 Command=`queued`，不执行 SHEIN adapter、远端 HTTP、COS 或真实队列消费者。Attempt=`result_unknown` 的 Command 不可再次领取，必须先走官方回读/人工决策边界。
+
 每条事件至少包含：事件 ID、租户/店铺、aggregate type/ID、event type、schema version、发生时间、写入时间、producer、dedupe key、前序事件/版本指针、脱敏 payload、payload hash 和审计主体。状态投影只能从合法事件归并，不能由 UI 直接写成功状态。
 
 ## 4. 身份、唯一键与隔离
@@ -249,12 +253,14 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 
 ## 10. 当前状态与下一 Run
 
-- 当前 Run：`RUN-20260830-ERP06-BATCH-LEGACY-IMPLEMENTATION-08`
+- 当前 Run：`RUN-20260830-ERP06-OUTBOX-DISPATCH-WORKER-IMPLEMENTATION-09`
 - 当前状态：`IN_PROGRESS`
 - 已完成：COS-first 决策登记、ERP-05 历史映射冻结豁免登记、目标模型 additive migration 草案、preflight/verify/rollback、真实本机 PostgreSQL 隔离 rehearsal、DraftRevision/ProductVersion 版本冻结、ProductVersion → PublishAttempt → PublishCommand → ProductPublishOutbox 原子交接、PublishBatch/BatchItem 显式关联和 legacy read-only adapter 最小实现。
 - 本 Run 实现边界：PublishBatch 服务按租户/店铺和 selection fingerprint 幂等创建 BatchItem；handoff 在同一事务内锁定 Batch/BatchItem，验证 Draft/Version 来源关系，建立 Attempt=`created`、Command=`queued`、Outbox=`pending`、current pointers、Draft=`handed_off`/lockVersion+1、BatchItem=`handed_off` 和 4 类 ProductEvent；不修改旧历史行，不调用远端。
 - 失败保护：同一批次 idempotencyKey 选择指纹冲突拒绝；BatchItem 越界/错版本/已交接拒绝；同一 ProductVersion 已存在任意 Attempt 时阻断新 requestKey；已有 requestKey 只有在 BatchItem、Command、Outbox、current projection 和 Draft 状态完整时才幂等返回；`result_unknown` 仅允许原请求幂等回读，不自动重发。
 - Legacy 边界：adapter 只读 `publish_jobs`/`publish_receipts`，输出 `legacy_readonly` 与 `legacy_unknown` 等明确分类，ProductVersion/PublishAttempt 恒为 null，禁止读取 raw JSON 凭证和任何旧表写入。
 - 已验证：批次/adapter/handoff/foundation 定向测试 `23/23`；全量测试 `1231/1231`；`npm run ci:secret-scan` 通过且 `findings=[]`；`npm run build:v2` 通过；`git diff --check` 通过；独立本机 PostgreSQL `postgres:16-alpine` 的 handoff 批次演练和 foundation rollback 重跑均通过，临时容器已移除，staging 容器未触碰。
-- 尚未完成：实际 Dispatcher/Worker 接入、生产切换评估、正式生产迁移、历史数据迁移和 SHEIN 写入；旧历史继续只读，不因本 Run 自动映射。
-- 下一执行单元：在隔离环境实现并验证 Outbox Dispatcher/Worker 的本地 claim/lease 与零远端写入演练；ERP-06 完成门通过前不得进入 ERP-07。
+- 已完成本 Run：隔离 Outbox Dispatcher/Worker 服务、确定性最小 job contract、Command/Outbox worker lease 字段、队列失败回归、`result_unknown` 禁止领取回归，以及真实一次性 PostgreSQL claim/dispatch/dry-run/rejection rehearsal。
+- 已验证：ERP-06 相关定向回归 `29/29`（含前序 handoff/foundation/Batch/adapter 与本 Run 6 项）；本 Run 的临时 PostgreSQL rehearsal 通过，容器已移除，现有 staging 未触碰；本 Run 没有生产数据库、COS、Redis、真实队列或 SHEIN 写入。
+- 尚未完成：生产 Dispatcher/Worker 接入、真实 SHEIN adapter/远端发布、生产切换评估、正式生产迁移、历史数据迁移和 SHEIN 写入；旧历史继续只读，不因本 Run 自动映射。
+- 下一执行单元：评审并在隔离环境实现真实 SHEIN 发布 adapter 的 boundary contract 与结果未知保护；在 ERP-06 完成门通过且另行批准前，不接入生产 Worker、不执行生产迁移、不进入 ERP-07。

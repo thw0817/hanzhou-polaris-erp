@@ -126,6 +126,27 @@ SELECT
   AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'publish_attempts_publish_batch_item_fk') AS passed;
 
 SELECT
+  'publish_dispatch_worker_claim_columns' AS check_name,
+  (SELECT count(*) FROM information_schema.columns
+   WHERE table_schema='public' AND table_name='publish_commands'
+     AND column_name IN (
+       'worker_id', 'worker_claim_id', 'worker_claimed_at',
+       'worker_lease_expires_at'
+     )) = 4
+  AND (SELECT count(*) FROM information_schema.columns
+   WHERE table_schema='public' AND table_name='product_publish_outbox'
+     AND column_name IN ('queue_job_id', 'dispatched_at', 'last_error')) = 3
+  AND EXISTS (SELECT 1 FROM pg_constraint
+              WHERE conname = 'publish_commands_worker_claim_pair_chk')
+  AND EXISTS (SELECT 1 FROM pg_constraint
+              WHERE conname = 'publish_commands_worker_dispatch_claim_chk') AS passed;
+
+SELECT
+  'publish_outbox_dispatch_evidence_constraint' AS check_name,
+  EXISTS (SELECT 1 FROM pg_constraint
+          WHERE conname = 'product_publish_outbox_dispatched_evidence_chk') AS passed;
+
+SELECT
   'legacy_history_not_backfilled' AS check_name,
   (SELECT count(*) FROM product_versions) = 0
   AND (SELECT count(*) FROM publish_attempts) = 0

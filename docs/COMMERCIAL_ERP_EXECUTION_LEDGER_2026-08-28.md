@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v41
+版本：2026-08-30-v42
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结、原子发布交接与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-PUBLISH-HANDOFF-IMPLEMENTATION-07
+当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-OUTBOX-DISPATCH-WORKER-IMPLEMENTATION-09
 
 ## 0. 台账用途
 
@@ -31,7 +31,7 @@
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
-| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-VERSION-FREEZE-IMPLEMENTATION-06 | ERP-05 | additive model foundation 草案与真实隔离 rehearsal 已通过；DraftRevision/ProductVersion 版本冻结服务、SKU/媒体版本引用、事件账本和失败回归已通过；完整原子 handoff、legacy adapter、生产迁移仍未完成 |
+| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-OUTBOX-DISPATCH-WORKER-IMPLEMENTATION-09 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter 和隔离 Outbox claim/lease dry-run 均已验证；生产迁移、真实 SHEIN adapter/发布仍未完成 |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
@@ -1736,3 +1736,20 @@
 - 数据库 rehearsal：已通过全新本机 Docker `postgres:16-alpine` 的 handoff 批次关联演练（`127.0.0.1:55434/erp06_handoff_rehearsal`）及 foundation verify/空库 rollback/重应用演练（`127.0.0.1:55435/erp06_foundation_rehearsal`）；临时容器已移除，现有 staging 容器未触碰。legacy adapter 当前完成 fake-pool 契约回归，尚未接入生产读取路径。
 - 当前状态：`COMPLETE`；本 Run 的 Batch/BatchItem、legacy 只读边界和 handoff 关联完成。ERP-06 整体仍为 `IN_PROGRESS`，实际 Dispatcher/Worker、生产迁移/部署和 SHEIN 写入仍未开始，ERP-07 不得进入。
 - 下一执行单元：隔离实现 Outbox Dispatcher/Worker 的本地 claim/lease 与零远端写入演练；生产事项必须另行评审和批准。
+
+## 29. ERP-06 Outbox Dispatcher/Worker claim/lease 与零远端演练
+
+### RUN-20260830-ERP06-OUTBOX-DISPATCH-WORKER-IMPLEMENTATION-09
+
+- 类型：ERP-06 当前隔离实现单元；实现 Outbox Dispatcher/Worker 的 claim、lease、确定性队列 handoff 和零远端 dry-run，不触碰生产。
+- 启动依据：第 28 Run 已完成 PublishBatch/BatchItem 关联、legacy read-only adapter 和原子 handoff；本 Run 进入下一执行单元，补齐 `product_publish_outbox` 到确定性本地 job 以及 Worker lease 边界。
+- 允许范围：047 additive draft 的 worker claim/lease 与 Outbox 投递证据字段、隔离 Dispatcher/Worker service、最小 job contract、fake-pool 失败回归、一次性 PostgreSQL rehearsal、verify 和文档台账更新。
+- 禁止范围：生产 PostgreSQL/COS/Redis/队列/SHEIN 访问或写入；生产部署/重启/切换；真实 SHEIN adapter/HTTP；历史回填、删除、恢复、重试或生产发布。
+- 实际文件：[erp06-outbox-dispatcher-service.js](../server/cloud/erp06-outbox-dispatcher-service.js)、[erp06-outbox-dispatcher-service.test.js](../server/cloud/erp06-outbox-dispatcher-service.test.js)、[rehearse-erp06-publish-handoff.js](../server/cloud/rehearse-erp06-publish-handoff.js)、[047_erp06_model_foundation.sql](../server/cloud/erp06-draft/047_erp06_model_foundation.sql)、[verify.sql](../server/cloud/erp06-draft/verify.sql)、[README.md](../server/cloud/erp06-draft/README.md)、[erp06-model-foundation.test.js](../server/cloud/erp06-model-foundation.test.js)。
+- Dispatcher 边界：按租户/店铺 claim `pending`、可重试 `failed` 或过期 `dispatching`；使用 `FOR UPDATE OF outbox SKIP LOCKED`、attempt_count 和 lease；仅允许关联 Command=`queued` 且 Attempt 不为 `result_unknown`/`superseded_by_new_attempt` 的行。队列 job 使用 `jobId=publish_command_id`，payload 只含 scope、批次/尝试/版本身份和 fingerprint，不含凭证、raw body、图片 URL。
+- Worker 边界：仅领取 Outbox=`dispatched` 的同 scope Command，写入 worker claim/lease；本 Run 只 dry-run 释放回 `queued`，`remoteCallMade=false`，不导入或调用 SHEIN/远端执行器。`result_unknown` Attempt 在 claim 查询中排除，禁止猜测性重发。
+- 失败保护：队列失败只更新同一 lease 的 Outbox=`failed` 并设置受控 `last_error/available_at`；lease 不匹配不推进状态；Command/队列 scope 不一致 fail closed；新增字段由状态配对约束保护。
+- 本地静态验证：本 Run 新增回归 `6/6`；ERP-06 相关定向回归合计 `29/29`；新增/修改 JS `node --check` 通过；`git diff --check` 待全量收尾时复核。
+- 数据库 rehearsal：`PASS`。一次性本机 Docker `postgres:16-alpine` 临时数据库 `127.0.0.1:55437/erp06_outbox_rehearsal` 真实应用现有 001–046 与 047 草案，验证 handoff 创建 pending Outbox、Dispatcher claim/dispatch、确定性 job、Worker claim lease 后 dry-run release、重复 Dispatcher 不重复投递，以及 Attempt=`result_unknown` 后 Worker 不再领取；临时容器已移除，现有 staging 容器未触碰。
+- 当前状态：`COMPLETE`；本 Run 的隔离 Dispatcher/Worker claim/lease、确定性队列 handoff 和零远端演练完成。ERP-06 整体仍为 `IN_PROGRESS`，生产 Dispatcher/Worker、真实 SHEIN adapter/发布、生产迁移和 ERP-07 均未开始。
+- 下一执行单元：隔离评审并实现真实 SHEIN publish adapter 的 boundary contract、结果未知与官方回读占位；生产事项必须另行评审和明确批准。
