@@ -26,10 +26,10 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 | tracked-file secret scan | PASS | `npm run ci:secret-scan`；591 个 tracked 文件，无运行时 secret finding；4 个官方文档/密码学测试向量以 reference-only 明示保留 |
 | 故障契约门 | PASS | 17/17 `server/ci/erp03-fault-gates.test.js` |
 | 完整测试 | PASS | `npm test`：1194 pass、0 fail、0 skipped |
-| V2 build | PASS | `npm run build:v2` 与 `npm run build:web` 均成功；clean revision `d67e7815a7f8e2dd71a2b83fb99160b30d773a78` 的 V2 tree hash：`61922cfca2ca733d20f40756f0e68e83123d55174ba2e93d0dd3c3f8d480959b` |
+| V2 build | PASS | `npm run build:v2` 与 `npm run build:web` 均成功；clean revision `b1fc965d23bfbc72f3ce03f5e18976a83720ab45` 的 source tree：`8c9004b4cbf9fe9403c79cf20f4020cdd037d13c`，asset manifest SHA-256：`fa13c9d28d80ee532fe221af59789b1a883ed65604cdb37c0aea5318bef64682` |
 | V2 artifact audit | PASS | `npm run release:audit:v2 -- --json`；`ready=true`、blockers=[]、publishingEnabled=false、authorizesPublishing=false |
 | 完整 release manifest | PASS（clean revision） | `node server/ci/release-manifest.js --json`：`passed=true`、`errors=[]`、`sourceDirty=false`、UI source revision 与完整 manifest 相同；PublishCommand 仍因 Outbox 未实现和 live-write false 被阻断 |
-| staging 候选制品打包 | PASS（仅候选，不放行生产） | `POLARIS_CI_GATE=passed POLARIS_ARTIFACT_CHANNEL=staging npm run ci:release-package`；候选包 SHA-256：`8ef36894b88d1472aacbab9dfc0ac48cde12eef86388e35b87ccc9968f70b564`，权限 `0444` |
+| staging 候选制品打包 | PASS（仅候选，不放行生产） | `POLARIS_CI_GATE=passed POLARIS_ARTIFACT_CHANNEL=staging npm run ci:release-package`；候选包 `artifacts/polaris-staging-b1fc965d23bfbc72f3ce03f5e18976a83720ab45.tar.gz`，SHA-256：`b91d2be68b7af497351b2ddbeacb4caddf3d4e2edcc85aba8a43108c730188e0`，权限 `0444` |
 | staging 配置隔离 | PASS（静态） | `npm run ci:staging-audit`；独立端口/volume/bucket/project，生产 API 域名排除，6 个 live-write/sync flags 全 false |
 | Playwright 配置 | PASS | `npx playwright test --list`：2 个核心测试已被发现 |
 | Playwright 实际浏览器 | PASS | `POLARIS_USE_SYSTEM_CHROME=1 npx playwright test tests/e2e/v2-core-flow.spec.ts --project=chromium`；系统 Chrome `152.0.7977.64`，2/2 通过；无 live SHEIN |
