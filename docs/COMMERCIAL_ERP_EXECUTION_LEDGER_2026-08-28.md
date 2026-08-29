@@ -1388,7 +1388,7 @@
 - 允许范围：只读检查本地代码、迁移、测试、脱敏 schema/fixture、非生产可访问的本地数据证据、部署/队列审计定义和历史报告；生成不含密钥、Token、Cookie、完整 payload 或图片字节的报告。
 - 禁止范围：任何数据库 `INSERT/UPDATE/DELETE`；生产 PostgreSQL/Redis/对象存储连接；SHEIN API 读写；队列重试、清理或消费；生产部署、服务重启、Nginx reload、current 切换；输出 SecretId/SecretKey、session、签名或完整个人信息。
 - 进入门结果：ERP-00～ERP-04 `COMPLETE`；当前 Git 为 `7f2abec`；ERP-04 设计已提交且工作树启动前 clean；生产 PostgreSQL 备份与隔离恢复证据已存在。
-- 初始未知：当前工作区是否包含可安全读取的历史业务数据库快照、生产队列快照、Worker 日志和媒体对象清单尚未确认；没有证据的项目必须标记 `UNKNOWN`，不得用历史文档推断当前数据。
+- 初始未知修正：已确认工作区存在被 `.gitignore` 排除的本地业务投影（1,179 个商品、805 个 SPU、6,077 个 SKU）和 V2 本地状态（4 个 Draft、13 个 Asset）；仍未确认可安全读取的 PostgreSQL 历史表、生产队列快照、Worker 日志和媒体对象清单。没有证据的项目必须标记 `UNKNOWN`，不得用历史文档推断当前数据。
 - 必做范围：按 tenant/store/SKC/version 关联；分类执行状态；识别 Draft/Job/Batch 不一致、旧驳回覆盖新 Attempt、缺失 Version/Platform ID/Receipt、stale running、mutable Draft 复用、名称/时间/SKC 启发式关系、媒体/规则快照所有权、页面 fan-out/二次归并和 LIMIT 100 影响。
 - 成功标准：100% 可取得的历史记录进入 `mapped`、`legacy_unversioned`、`unmatched`、`conflict` 或明确 `UNKNOWN`；报告给出数量、非敏感 ID 和证据来源；没有执行 UPDATE、DELETE、重试或清队列；ERP-20 修复范围可由报告精确指定。
 - 回滚点：本 Run 仅新增/更新非敏感 Markdown 报告；回滚为恢复本 Run 变更前的文档提交，不触碰业务数据。
@@ -1397,6 +1397,6 @@
 ### ERP-05 审计报告
 
 - 报告：`docs/ERP05_HISTORICAL_DATA_EVIDENCE_REPORT_2026-08-29.md`。
-- 结果：结构性风险已登记；实际历史记录、队列现场、媒体对象和平台回读全部按证据可得性分类，缺证项目保持 `UNKNOWN`。
+- 结果：本地投影已完成非敏感数量/状态盘点；结构性风险已登记；PostgreSQL 历史记录、队列现场、媒体对象和平台回读全部按证据可得性分类，缺证项目保持 `UNKNOWN`。
 - 禁止事项已满足：未连接生产 PostgreSQL/Redis/对象存储，未调用 SHEIN API，未执行数据库写入、队列重试/清理/消费、部署或重启。
 - 恢复条件：取得脱敏、可校验、只读的历史证据包后，才能重开 ERP-05 并完成逐条分类；在此之前不得开始 ERP-06 或 ERP-20 修复。
