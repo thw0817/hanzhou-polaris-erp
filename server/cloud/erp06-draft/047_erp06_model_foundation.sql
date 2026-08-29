@@ -80,6 +80,12 @@ CREATE TABLE catalog_products (
     REFERENCES stores (tenant_id, id) ON DELETE RESTRICT
 );
 
+-- These are mutable read projections only. The immutable ProductVersion and
+-- PublishAttempt facts remain the source of truth for reconstruction.
+ALTER TABLE catalog_products
+  ADD COLUMN current_version_id uuid,
+  ADD COLUMN current_attempt_id uuid;
+
 CREATE TABLE catalog_skus (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL,
@@ -291,6 +297,14 @@ CREATE TABLE publish_attempts (
     supersedes_attempt_id IS NULL OR reason <> ''
   )
 );
+
+ALTER TABLE catalog_products
+  ADD CONSTRAINT catalog_products_current_version_fk
+    FOREIGN KEY (tenant_id, store_id, current_version_id)
+    REFERENCES product_versions (tenant_id, store_id, id) ON DELETE RESTRICT,
+  ADD CONSTRAINT catalog_products_current_attempt_fk
+    FOREIGN KEY (tenant_id, store_id, current_attempt_id)
+    REFERENCES publish_attempts (tenant_id, store_id, id) ON DELETE RESTRICT;
 
 CREATE OR REPLACE FUNCTION erp06_block_result_unknown_transition()
 RETURNS trigger

@@ -10,6 +10,7 @@
 - `DraftRevision`：可变 `product_drafts` 的不可变快照。
 - `ProductVersion` / `ProductVersionSku` / `ProductVersionMedia`：handoff 后可独立还原的不可变版本事实。
 - `PublishAttempt` / `PublishCommand` / `PublishReceipt`：版本级尝试、幂等键、平台事实和 `result_unknown` 禁止重发保护。
+- `CatalogProduct.current_version_id/current_attempt_id`：同一事务内维护的当前版本/尝试读投影，不替代不可变事实。
 - `PlatformProductLink`：必须带官方证据，不能凭本地成功字段建立。
 - `ProductEvent`：租户/店铺范围的追加式事件账本。
 - `OfficialEventInbox` / `ProductPublishOutbox`：官方事实入口和发布投递意图，投递成功不等于平台成功。
@@ -38,4 +39,5 @@
 - 没有向生产 PostgreSQL 添加字段或表。
 - 没有把历史 `product_drafts`、`publish_jobs`、`publish_receipts` 或媒体引用转换为新事实。
 - 没有打开新模型写开关，没有接入新发布 worker，没有发送 SHEIN 写请求。
+- 没有把发布 Outbox 交给 dispatcher；本 Run 只验证原子落库和投影，不代表远端发布成功。
 - 没有把本草案登记为正式 `047` 生产迁移；通过本地失败回归后仍需单独评审、实现代码和生产批准。

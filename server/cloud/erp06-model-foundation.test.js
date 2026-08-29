@@ -80,6 +80,10 @@ test("ERP-06 apply draft is additive and has no cleanup statements", async () =>
   assert.match(sql, /ALTER TABLE media_assets\s+ADD COLUMN/i);
   assert.match(sql, /ON DELETE RESTRICT/i);
   assert.match(sql, /UNIQUE \(tenant_id, store_id, catalog_product_id, version_no\)/);
+  assert.match(sql, /current_version_id uuid/);
+  assert.match(sql, /current_attempt_id uuid/);
+  assert.match(sql, /catalog_products_current_version_fk/);
+  assert.match(sql, /catalog_products_current_attempt_fk/);
   assert.match(sql, /ERP06_RESULT_UNKNOWN_COMMAND_BLOCKED/);
   assert.match(sql, /ERP06_IMMUTABLE_FACT_UPDATE_BLOCKED/);
 });
@@ -100,6 +104,8 @@ test("ERP-06 draft encodes the required failure protections", async () => {
   assert.match(sql, /receipt_type text NOT NULL/);
   assert.match(sql, /FOREIGN KEY \(tenant_id, store_id, product_version_id\)/g);
   assert.match(sql, /CREATE TRIGGER product_events_immutable_guard/);
+  assert.match(verify, /catalog_product_current_projection_columns/);
+  assert.match(verify, /catalog_product_current_projection_foreign_keys/);
   assert.match(verify, /legacy_history_not_backfilled/);
   assert.match(rollback, /current_database\(\) !~\* '\(\^\|\[-_\]\)\(test\|rehearsal\|scratch\)\(\[-_\]\|\$\)'/);
   assert.match(rollback, /requires empty table/);
@@ -110,6 +116,14 @@ test("ERP-06 draft encodes the required failure protections", async () => {
   assert.ok(
     rollback.indexOf("DROP CONSTRAINT product_drafts_catalog_product_fk") <
       rollback.indexOf("DROP TABLE catalog_products"),
+  );
+  assert.ok(
+    rollback.indexOf("DROP CONSTRAINT catalog_products_current_attempt_fk") <
+      rollback.indexOf("DROP TABLE publish_attempts"),
+  );
+  assert.ok(
+    rollback.indexOf("DROP CONSTRAINT catalog_products_current_version_fk") <
+      rollback.indexOf("DROP TABLE product_versions"),
   );
   assert.match(readme, /不连接生产 PostgreSQL、COS、Redis、队列或 SHEIN/);
 });

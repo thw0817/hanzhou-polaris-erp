@@ -55,6 +55,10 @@ ALTER TABLE product_drafts
   DROP CONSTRAINT product_drafts_base_version_fk,
   DROP CONSTRAINT product_drafts_catalog_product_fk;
 
+ALTER TABLE catalog_products
+  DROP CONSTRAINT catalog_products_current_version_fk,
+  DROP CONSTRAINT catalog_products_current_attempt_fk;
+
 DROP TRIGGER IF EXISTS product_events_immutable_guard ON product_events;
 DROP TRIGGER IF EXISTS product_version_media_immutable_guard ON product_version_media;
 DROP TRIGGER IF EXISTS product_version_skus_immutable_guard ON product_version_skus;

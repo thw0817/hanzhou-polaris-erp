@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v40
+版本：2026-08-30-v41
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结实现与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结、原子发布交接与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-VERSION-FREEZE-IMPLEMENTATION-06
+当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-PUBLISH-HANDOFF-IMPLEMENTATION-07
 
 ## 0. 台账用途
 
@@ -1704,3 +1704,18 @@
 - 本地静态验证：版本冻结定向测试 `5/5`；ERP-06 基础草案与回归测试 `6/6`；全量测试 `1214/1214`；`npm run ci:secret-scan` 通过且无新发现；`npm run build:v2` 通过；`git diff --check` 通过。
 - 数据库 rehearsal：在全新本机 Docker `postgres:16-alpine` 临时容器（`127.0.0.1:55433/erp06_version_rehearsal`）中真实应用 001–046 与 047 草案，并验证成功冻结、版本快照不受 Draft 后续修改影响、重复请求幂等、verified 媒体引用、stale lock、未核验媒体、跨店隔离和无 PublishAttempt/Command/Outbox 副作用；临时容器已停止并删除，现有 staging 容器未触碰。
 - 当前状态：`COMPLETE`；本 Run 的版本冻结实现和隔离验证完成。ERP-06 整体仍为 `IN_PROGRESS`，下一 Run 实现 ProductVersion → PublishAttempt/PublishCommand/PublishOutbox 的完整原子 handoff；生产迁移、生产部署和 SHEIN 写入仍需单独批准。
+
+## 27. ERP-06 ProductVersion 发布原子交接实现与隔离回归
+
+### RUN-20260830-ERP06-PUBLISH-HANDOFF-IMPLEMENTATION-07
+
+- 类型：ERP-06 新模型的 ProductVersion → PublishAttempt → PublishCommand → ProductPublishOutbox 原子交接实现；只在本地/隔离环境执行，不触碰生产。
+- 启动依据：第 26 Run 已完成不可变 ProductVersion 冻结；本 Run 补齐当前版本/当前尝试投影、草稿 handed_off、事务内 Attempt/Command/Outbox 和 result_unknown 防重发边界。
+- 允许范围：新增隔离 handoff service、current projection additive 字段、4 类 ProductEvent、失败回归和一次性本机 PostgreSQL rehearsal。
+- 禁止范围：生产 PostgreSQL/COS/Redis/队列/SHEIN 访问或写入；生产部署/重启/切换；历史 187 条记录恢复、回填、删除或重试；实际 Dispatcher/Worker/远端发布调用。
+- 实际文件：[erp06-publish-handoff-service.js](../server/cloud/erp06-publish-handoff-service.js)、[erp06-publish-handoff-service.test.js](../server/cloud/erp06-publish-handoff-service.test.js)、[rehearse-erp06-publish-handoff.js](../server/cloud/rehearse-erp06-publish-handoff.js)、更新 `server/cloud/erp06-draft/047_erp06_model_foundation.sql`、`verify.sql`、`rollback_empty.sql`、`README.md`、`erp06-model-foundation.test.js` 和 `package.json` 的 `db:rehearse:erp06-handoff`。
+- 实现边界：requestKey 幂等检查先于 draft lock；同 key 只返回同一完整 Attempt/Command/Outbox；同一 ProductVersion 存在任一 Attempt 即阻断新请求；ProductVersion 来源 DraftRevision、Draft 和 CatalogProduct 必须同租户/店铺一致；Attempt=`created`、Command=`queued`、Outbox=`pending`、current pointers、Draft=`handed_off`/lockVersion+1 和 ProductEvent 在一个 PostgreSQL transaction 内提交；不调用远端。
+- 失败保护：stale lock 409；跨 scope fail closed；RequestKey 跨版本复用 409；缺少 Command/Outbox/current projection 不猜测修复；`result_unknown` 原 request 仅幂等返回，新的 requestKey 仍被已有 Attempt 阻断；摘要/事件只保存 ID、fingerprint、schema/capability/reason，不保存 raw snapshot/credential；真实回滚依赖顺序也已修正。
+- 本地静态验证：handoff 定向测试 `8/8`；foundation static/contract `6/6`；全量测试 `1222/1222`；`npm run ci:secret-scan` 通过、`findings=[]`；`npm run build:v2` 通过；`git diff --check` 通过。
+- 数据库 rehearsal：`PASS`。全新本机 Docker `postgres:16-alpine` 临时数据库 `127.0.0.1:55434/erp06_handoff_rehearsal` 真实应用 001–046+047 草案，验证版本冻结、handoff 4 事实写入、current projection、draft handoff、幂等、same-version resend block、result_unknown no-resend；另在 `127.0.0.1:55435/erp06_foundation_rehearsal` 重跑 foundation 的失败回归、verify、空库 rollback、重应用验证；临时容器均已停止删除，staging 容器未触碰。
+- 当前状态：`COMPLETE`；本 Run handoff 实现和隔离验证完成。ERP-06 整体仍为 `IN_PROGRESS`，PublishBatch/BatchItem 关联、legacy 只读 adapter、实际 dispatcher/worker 接入、生产迁移/部署和 SHEIN 写入仍未开始，ERP-07 不得进入。

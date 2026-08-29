@@ -1,7 +1,7 @@
 # ERP-06 数据模型与事件账本设计
 
-版本：2026-08-30-v2
-状态：`IN_PROGRESS`（非生产设计、版本冻结实现与验证）
+版本：2026-08-30-v3
+状态：`IN_PROGRESS`（非生产设计、版本冻结、原子交接实现与验证）
 适用边界：COS-first；历史数据冻结只读；不执行生产迁移、不修改历史记录、不调用 SHEIN 写接口
 
 ## 0. 本文用途
@@ -240,10 +240,11 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 
 ## 10. 当前状态与下一 Run
 
-- 当前 Run：`RUN-20260830-ERP06-VERSION-FREEZE-IMPLEMENTATION-06`
+- 当前 Run：`RUN-20260830-ERP06-PUBLISH-HANDOFF-IMPLEMENTATION-07`
 - 当前状态：`IN_PROGRESS`
-- 已完成：COS-first 决策登记、ERP-05 历史映射冻结豁免登记、目标模型 additive migration 草案、preflight/verify/rollback、真实本机 PostgreSQL 隔离 rehearsal，以及 DraftRevision/ProductVersion 版本冻结服务和失败回归。
-- 版本冻结实现边界：只生成不可变 DraftRevision、ProductVersion、ProductVersionSku、ProductVersionMedia 和 ProductEvent；不修改生产、不调用 COS/SHEIN、不创建 PublishAttempt/PublishCommand/Outbox、不把草稿标记为 handed_off。
-- 已验证：定向版本冻结测试 5/5；ERP-06 基础草案测试 6/6；全量测试 1214/1214；秘密扫描通过且无新发现；V2 构建通过；独立本机 PostgreSQL `postgres:16-alpine` 版本冻结演练通过，临时容器已移除。
-- 尚未完成：ERP-06 完整原子 handoff（PublishAttempt/PublishCommand/PublishOutbox、current projection、发布批次关联）、legacy 只读 adapter 接入、生产切换评估和生产迁移。
-- 下一执行单元：继续在隔离环境实现并验证 ProductVersion → PublishAttempt/PublishCommand/PublishOutbox 的事务边界和 `result_unknown` 防重发保护；完成 ERP-06 完成门前不得进入 ERP-07。
+- 已完成：COS-first 决策登记、ERP-05 历史映射冻结豁免登记、目标模型 additive migration 草案、preflight/verify/rollback、真实本机 PostgreSQL 隔离 rehearsal、DraftRevision/ProductVersion 版本冻结，以及本 Run 的 ProductVersion → PublishAttempt → PublishCommand → ProductPublishOutbox 原子交接。
+- 原子交接实现边界：在同一事务内建立 Attempt=`created`、Command=`queued`、Outbox=`pending`、CatalogProduct current version/current attempt 投影、Draft=`handed_off`/lockVersion+1 和 4 类 ProductEvent；requestKey 幂等检查先于草稿锁定；不修改生产、不调用 COS/SHEIN、队列或远端 Dispatcher。
+- 失败保护：同一 ProductVersion 已存在任意 Attempt 时阻断新 requestKey；已有 requestKey 只返回完整同一套事实；缺少 Command/Outbox/current projection 时拒绝猜测性补写；stale lock、跨 scope 和 requestKey 跨版本复用均 fail closed；`result_unknown` 仅允许原请求幂等回读，不自动重发。
+- 已验证：handoff 定向测试 8/8；ERP-06 基础草案测试 6/6；全量测试 1222/1222；秘密扫描通过且无新发现；V2 构建通过；`git diff --check` 通过；独立本机 PostgreSQL `postgres:16-alpine` handoff 演练和 foundation 重跑均通过，临时容器已移除，staging 容器未触碰。
+- 尚未完成：PublishBatch/BatchItem 关联（若按完整架构启用）、legacy 只读 adapter 接入、实际 Dispatcher/Worker 接入、生产切换评估和生产迁移。
+- 下一执行单元：继续在隔离环境补齐 PublishBatch/BatchItem 关联及 legacy 只读 adapter 的最小实现和失败回归；ERP-06 完成门通过前不得进入 ERP-07。

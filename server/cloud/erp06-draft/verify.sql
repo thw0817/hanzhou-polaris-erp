@@ -74,6 +74,25 @@ WHERE table_schema = 'public'
   );
 
 SELECT
+  'catalog_product_current_projection_columns' AS check_name,
+  count(*) = 2 AS passed
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'catalog_products'
+  AND column_name IN ('current_version_id', 'current_attempt_id');
+
+SELECT
+  'catalog_product_current_projection_foreign_keys' AS check_name,
+  EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'catalog_products_current_version_fk'
+  )
+  AND EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'catalog_products_current_attempt_fk'
+  ) AS passed;
+
+SELECT
   'legacy_history_not_backfilled' AS check_name,
   (SELECT count(*) FROM product_versions) = 0
   AND (SELECT count(*) FROM publish_attempts) = 0
