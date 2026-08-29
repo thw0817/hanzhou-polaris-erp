@@ -44,13 +44,15 @@ export class S3ObjectStorage {
     bucket,
     accessKeyId,
     secretAccessKey,
+    allowInsecureEndpoint = false,
     fetchImpl = globalThis.fetch,
     now = () => new Date(),
   } = {}) {
     this.endpoint = new URL(requiredText(endpoint, "对象存储Endpoint"));
     if (
       this.endpoint.protocol !== "https:" &&
-      !["localhost", "127.0.0.1"].includes(this.endpoint.hostname)
+      !["localhost", "127.0.0.1"].includes(this.endpoint.hostname) &&
+      allowInsecureEndpoint !== true
     ) {
       throw new TypeError("对象存储Endpoint必须使用HTTPS");
     }

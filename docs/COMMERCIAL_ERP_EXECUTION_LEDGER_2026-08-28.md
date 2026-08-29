@@ -2,7 +2,7 @@
 
 版本：2026-08-29-v18  
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02 已完成；ERP-03 门禁失败待环境补证；ERP-04～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02 已完成；ERP-03 staging 运行态已补证但仍因 Outbox/CI runner 门禁保持失败；ERP-04～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
 当前活动步骤：ERP-03 / GATE_FAILED / RUN-20260829-ERP03-CI-STAGING-GATE-01
@@ -28,7 +28,7 @@
 | ERP-00 | 变更冻结与真相基线 | COMPLETE | RUN-20260829-ERP00-BASELINE-01 | 无 | [ERP-00 基线报告](./ERP00_BASELINE_REPORT_2026-08-29.md)；备份与隔离恢复验证通过 |
 | ERP-01 | 源码资产救援与版本控制 | COMPLETE | RUN-20260829-ERP01-ASSET-BASELINE-01 | ERP-00 | [ERP-01 基线报告](./ERP01_BASELINE_REPORT_2026-08-29.md)；commit/tag、私有镜像、空目录 clone、1170 测试、双构建和静态审计通过 |
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
-| ERP-03 | CI、预发与发布门禁 | GATE_FAILED | RUN-20260829-ERP03-CI-STAGING-GATE-01 | ERP-02 | 基础设施已落地；本机 Docker/Chromium 环境缺失，staging 运行和 Playwright 实测待补证 |
+| ERP-03 | CI、预发与发布门禁 | GATE_FAILED | RUN-20260829-ERP03-CI-STAGING-GATE-01 | ERP-02 | staging DB/Redis/MinIO/Control、迁移和隔离已实测通过；Outbox Dispatcher 未实现，CI bundled Chromium 仍待 runner 证据 |
 | ERP-04 | 商品生命周期与状态字典定稿 | NOT_STARTED | — | ERP-03 | — |
 | ERP-05 | 历史数据证据盘点 | NOT_STARTED | — | ERP-04 | — |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
@@ -1311,9 +1311,9 @@
 - 进入门结果：ERP-00、ERP-01、ERP-02 COMPLETE；V2 单一产物和 audit 已通过；当前仓库 clean、生产写入未授权。
 - 初始失败/未知：当前无 CI workflow；Playwright/MSW/Storybook/Lighthouse 是否已安装需核对；Control、Worker、Outbox、schema range 和 flags 尚未由同一 manifest 串联；staging 运行环境尚未建立；12 类故障门尚未完整覆盖。
 - 成功标准：CI 失败时不得产出正式制品；clean clone 能执行固定版本检查、secret scan、定向/全量测试、V2 build、release audit；staging 的 DB/Redis/bucket/flags 明确独立且默认不写 SHEIN；manifest 能证明 Control/Publish Worker/Outbox/schema/flags 同版本；故障 fixture 对重复、超时、断线、回读、媒体异常给出确定结果；所有无法执行的项显式标记 `UNKNOWN`。
-- 实际改动：新增固定工具链声明、CI workflow、tracked-file secret scan、staging Compose/环境模板、Playwright 核心流程、完整 release manifest/audit、故障契约测试和候选制品打包脚本；将 cloud control Dockerfile 固定到 `node:24.16.0-alpine`；未修改业务 API/数据库语义。
-- 验证结果：固定工具链 PASS；secret scan PASS（591 个 tracked 文件，4 个 reference-only 文档/测试向量已明示）；故障契约 17/17 PASS；全量测试 1193/1193 PASS；V2 build/build:web PASS；V2 artifact audit PASS；完整 release manifest 在 clean revision 上 PASS（`sourceDirty=false` 且 UI source revision 一致）；staging 静态隔离 PASS；staging 候选制品打包 PASS（候选包 SHA-256：`8ef36894b88d1472aacbab9dfc0ac48cde12eef86388e35b87ccc9968f70b564`，权限 `0444`）；Playwright `--list` 发现 2 个测试；系统 Chrome 下 Playwright 实际 E2E 2/2 PASS；in-app browser 深层路由补充验证 PASS。
-- 未闭合门：本机未安装 Docker，且用户授权后通过 Homebrew 两次安装 Docker Desktop 均因官方 DMG 下载连接被重置失败，随后浏览器下载路径在 30 秒内未完成且未留下 DMG，无法做 staging 实际启动/迁移/隔离验证；当前没有 Outbox Dispatcher，manifest 固定标记 `not_implemented` 并阻断新 PublishCommand；Playwright bundled Chromium 下载失败，但系统 Chrome 实测已通过，CI 默认 bundled Chromium 路径仍需在 CI runner 验证。
+- 实际改动：新增固定工具链声明、CI workflow、tracked-file secret scan、staging Compose/环境模板、Playwright 核心流程、完整 release manifest/audit、故障契约测试和候选制品打包脚本；将 cloud control Dockerfile 固定到 `node:24.16.0-alpine`；为本地 staging MinIO 增加仅 staging 可启用的显式 HTTP Endpoint 门；未修改生产业务 API/数据库语义。
+- 验证结果：固定工具链 PASS；secret scan PASS（591 个 tracked 文件，4 个 reference-only 文档/测试向量已明示）；故障契约 17/17 PASS；全量测试 1194/1194 PASS；V2 build/build:web PASS；V2 artifact audit PASS；完整 release manifest 在 clean revision 上 PASS（`sourceDirty=false` 且 UI source revision 一致）；staging 静态隔离 PASS；Docker Desktop `4.88.1` 已安装并通过 DMG CRC/Gatekeeper 验证；staging 实际运行 PASS（PostgreSQL/Redis/MinIO/Control healthy，46 条迁移记录、51 张 public tables，Redis PONG，Control `/health`/`/ready` 通过，MinIO 写入/读取/删除闭环通过，Publish Worker 未启动）；staging 候选制品打包 PASS（候选包保持 `0444`）；Playwright `--list` 发现 2 个测试；系统 Chrome 下 Playwright 实际 E2E 2/2 PASS；in-app browser 深层路由补充验证 PASS。
+- 未闭合门：当前没有 Outbox Dispatcher，manifest 固定标记 `not_implemented` 并阻断新 PublishCommand；Playwright bundled Chromium 下载失败，但系统 Chrome 实测已通过，CI 默认 bundled Chromium 路径仍需在 CI runner 验证；`npm audit` 仍有 5 个 high、0 个 critical，依赖治理留待后续独立步骤。
 - 证据报告：[ERP03_CI_STAGING_GATE_REPORT_2026-08-29.md](./ERP03_CI_STAGING_GATE_REPORT_2026-08-29.md)。
 - 外部写入：未连接生产 PostgreSQL/Redis/对象存储；未执行生产迁移、Nginx reload、current 切换、服务重启或 SHEIN 写入。
-- 当前状态：GATE_FAILED；不满足 ERP-03 完成门，不得开始 ERP-04；待具备 Docker/Chromium 的隔离验收环境后，从同一 clean revision 重跑全部门禁。
+- 当前状态：GATE_FAILED；staging 运行态已补证，但不满足 ERP-03 完成门，不得开始 ERP-04；必须先实现并验证 Outbox Dispatcher，并补齐 CI runner bundled Chromium 证据，再重新跑完整门禁。

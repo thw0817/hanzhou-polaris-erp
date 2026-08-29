@@ -2943,6 +2943,7 @@ export async function startCloudControlServer(config = loadConfig()) {
       bucket: config.mediaStorage.bucket,
       accessKeyId: config.mediaStorage.accessKeyId,
       secretAccessKey: config.mediaStorage.secretAccessKey,
+      allowInsecureEndpoint: config.mediaStorage.allowInsecureEndpoint,
     });
     webMedia = new WebMediaService({
       repository: mediaRepository,

@@ -117,6 +117,9 @@ export function loadConfig(env = process.env) {
             bucket: env.SHEIN_MEDIA_S3_BUCKET,
             accessKeyId: env.SHEIN_MEDIA_S3_ACCESS_KEY_ID,
             secretAccessKey: env.SHEIN_MEDIA_S3_SECRET_ACCESS_KEY,
+            allowInsecureEndpoint:
+              env.SHEIN_MEDIA_S3_ALLOW_INSECURE === "true" &&
+              env.SHEIN_ENVIRONMENT === "staging",
             maxUploadBytes: Number(
               env.SHEIN_MEDIA_MAX_UPLOAD_BYTES || 20 * 1024 * 1024,
             ),

@@ -24,6 +24,7 @@ export async function startMediaCleanupWorker(config = loadConfig()) {
     bucket: config.mediaStorage.bucket,
     accessKeyId: config.mediaStorage.accessKeyId,
     secretAccessKey: config.mediaStorage.secretAccessKey,
+    allowInsecureEndpoint: config.mediaStorage.allowInsecureEndpoint,
   });
   const worker = new MediaCleanupWorker({
     repository: new PostgresMediaCleanupRepository({ pool }),

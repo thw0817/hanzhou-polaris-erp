@@ -52,6 +52,7 @@ export async function startProductPublishWorkerServer(
           bucket: config.mediaStorage.bucket,
           accessKeyId: config.mediaStorage.accessKeyId,
           secretAccessKey: config.mediaStorage.secretAccessKey,
+          allowInsecureEndpoint: config.mediaStorage.allowInsecureEndpoint,
         }),
         provider: config.mediaStorage.provider,
         bucket: config.mediaStorage.bucket,

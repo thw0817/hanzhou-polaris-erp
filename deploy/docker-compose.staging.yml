@@ -83,6 +83,7 @@ services:
       DATABASE_URL: postgres://shein:staging-only@postgres:5432/polaris_staging
       REDIS_URL: redis://redis:6379
       SHEIN_MEDIA_S3_ENDPOINT: http://minio:9000
+      SHEIN_MEDIA_S3_ALLOW_INSECURE: "true"
     ports:
       - "127.0.0.1:8870:8870"
     depends_on:

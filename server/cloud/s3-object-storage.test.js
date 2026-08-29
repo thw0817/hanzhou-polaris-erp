@@ -26,6 +26,29 @@ test("creates a short-lived S3-compatible upload URL without exposing the secret
   assert.equal(ticket.expiresAt, "2026-07-31T10:10:00.000Z");
 });
 
+test("rejects a remote HTTP endpoint unless insecure staging access is explicit", () => {
+  assert.throws(
+    () => new S3ObjectStorage({
+      endpoint: "http://minio:9000",
+      region: "us-east-1",
+      bucket: "shein-media",
+      accessKeyId: "AKIDEXAMPLE",
+      secretAccessKey: "secret-value",
+    }),
+    /对象存储Endpoint必须使用HTTPS/,
+  );
+
+  const storage = new S3ObjectStorage({
+    endpoint: "http://minio:9000",
+    region: "us-east-1",
+    bucket: "shein-media",
+    accessKeyId: "AKIDEXAMPLE",
+    secretAccessKey: "secret-value",
+    allowInsecureEndpoint: true,
+  });
+  assert.equal(storage.endpoint.href, "http://minio:9000/");
+});
+
 test("creates a signed browser download URL without requiring content headers", () => {
   const storage = new S3ObjectStorage({
     endpoint: "https://bucket.example.test",
