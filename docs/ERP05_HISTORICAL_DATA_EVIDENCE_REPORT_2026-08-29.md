@@ -1,10 +1,10 @@
 # ERP-05 历史数据证据审计报告
 
-版本：2026-08-29-v10
-正式 Run：`RUN-20260829-ERP05-OBJECT-INVENTORY-RECONCILIATION-08`
+版本：2026-08-29-v12
+正式 Run：`RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-09`
 步骤：ERP-05  
-状态：`BLOCKED`（Run 08 已完成允许范围；对象列表权限不足，ERP-05 完成门仍未通过）
-审计时间：2026-08-29 20:26:53（Asia/Shanghai；服务器 UTC `2026-08-29T12:26:53Z`）
+状态：`BLOCKED`（Run 09 已执行；对象列表请求仍被 HTTP 403 拒绝）
+审计时间：2026-08-29 20:56:51（Asia/Shanghai；服务器 UTC `2026-08-29T12:56:51Z`）
 
 ## 1. 审计结论
 
@@ -23,6 +23,7 @@
 11. 当前数据库系统目录确认目标关系上有 50 个声明外键；BatchItem→Batch/Draft、Job→Run/Batch/BatchItem/Draft、Receipt→Job/Webhook、SKC→SPU、SyncItem→SyncJob 的实际孤儿计数均为 0。外键完整只证明结构关系，不等于新 ProductVersion/PublishAttempt 映射完成。
 12. `public.skus` 是普通表且经数据库所有者只读核验为 0 行，但应用角色 `shein_runtime` 没有 SELECT 权限；因此本 Run 将 SKU 行级事实标为 `UNKNOWN`，不能用权限不可见替代业务数据结论。
 13. Run 08 对对象存储发起只读 `ListObjectsV2` 得到 HTTP 403；此前 820 条 HEAD 结果仍只能代表逐对象部分证据，无法证明 provider-level 清单完整性。对象清单、媒体所有权连续性和完整 hash 证据继续标为 `UNKNOWN`，不执行任何清理或状态修复。
+14. Run 09 已在用户完成最小 `cos:GetBucket` 授权后执行，但第 0 页仍返回 HTTP 403；这不能证明策略已绑定到服务器实际使用的密钥主体或资源匹配，对象证据继续为 `UNKNOWN`，不再自动重试。
 
 此前补证 Run 只执行了非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；本正式 Run 另行执行了官方只读查询，未执行生产写入、队列副作用、部署、重启、切换或任何密钥输出。
 
@@ -466,3 +467,24 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 官方 version 异常：沿用前序只读证据 `total=9`、`crossUnique=0`、`crossNone=9`、`crossAmbiguous=0`；最终安全分类为 `UNKNOWN`，不重新发起业务回读、不重发。
 - 写入审计：本脚本只包含 PostgreSQL `SELECT`/系统目录查询和对象存储 GET 列表请求；行数稳定，但 `sync_jobs` 的 PostgreSQL 更新统计受后台并发活动影响增加 2，前后统计不稳定，按 `UNKNOWN/受并发影响` 记录，不能声称本轮统计完全不变。
 - 完成门结论：`BLOCKED`。要闭合对象证据，需要 provider 授予受控只读 List 权限或提供可验证的脱敏对象清单；在此之前不得自动清理 404/超时对象、不得修正媒体状态、不得开始 ERP-06 或 ERP-20。
+
+## 15. 当前正式 Run：对象清单权限复核
+
+### RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-09
+
+- 类型：ERP-05 对象存储 `ListObjectsV2` 权限恢复后的完整分页只读复核。
+- 启动依据：Run 08 第 1 页返回 HTTP 403；用户已在目标 COS 子用户上直接绑定限定存储桶的 `cos:GetBucket` 策略。
+- 允许范围：非交互 SSH；使用现有生产环境变量；PostgreSQL `SELECT`/系统统计只读查询；对象存储 `ListObjectsV2` 分页请求；内存计数、总大小、分页完整性和不可逆 key 摘要。
+- 禁止范围：对象下载/上传/删除/复制/改名；数据库写入/迁移；SHEIN API、Redis/队列、部署、重启、切换和任何敏感值输出。
+- 失败关闭：任何鉴权、Endpoint、分页、跨租户归属或副作用不确定时立即停止；不自动重试、不自动修复、不改变媒体状态。
+- 完成标准：对象列表返回成功并分页到 `IsTruncated=false`；只输出数量/大小/摘要，不输出原始 key；数据库关键表行数在 Run 内稳定；既有 9 条官方 version mismatch 证据仍沿用，不发起业务重读。
+- 回滚点：本 Run 不修改生产数据；仅新增证据文档记录。
+- 当前状态：`BLOCKED`；Run 09 已执行但 provider 第 0 页仍返回 HTTP 403，结果见下方。
+
+### RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-09 结果
+
+- 执行时间：2026-08-29 20:53:23～20:56:51（Asia/Shanghai）；生产环境只读。
+- Provider：使用当前生产容器内配置的 S3-compatible 凭据发起一次 `ListObjectsV2`，第 0 页返回 HTTP 403；未取得对象数量、总大小、分页完整性或 key 集合，未下载、上传、删除、复制或改名对象。
+- 数据库：目标表行数本轮前后稳定；MediaAsset 820 行、820 行有 object_key、object_key 唯一、sha256 771 行；本轮观察到的 PostgreSQL 写入统计前后稳定。
+- 官方 version 异常：沿用既有 `total=9`、`crossUnique=0`、`crossNone=9`、`crossAmbiguous=0`，分类仍为 `UNKNOWN`，不发起业务回读或重发。
+- 完成门结论：`BLOCKED`。需先核对服务器实际 `SHEIN_MEDIA_S3_ACCESS_KEY_ID` 所属 CAM 子用户是否就是策略直接关联主体，并核对策略 action/resource；核对完成前不得继续重试、清理媒体或开始 ERP-06/ERP-20。
