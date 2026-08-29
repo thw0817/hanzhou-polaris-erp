@@ -1,10 +1,10 @@
 # ERP-05 历史数据证据审计报告
 
-版本：2026-08-29-v4
-正式 Run：`RUN-20260829-ERP05-ROW-LEVEL-EVIDENCE-03`
+版本：2026-08-29-v5
+正式 Run：`RUN-20260829-ERP05-OBJECT-READBACK-EVIDENCE-04`
 步骤：ERP-05  
-状态：`BLOCKED`（当前 Run 已完成允许范围内的只读补证；ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、完整对象存储清单和 SHEIN 官方回读仍缺失）
-审计时间：2026-08-29 19:05:17（Asia/Shanghai；服务器 UTC `2026-08-29T11:05:17Z`）
+状态：`IN_PROGRESS`（本 Run 正在执行媒体 provider-level 只读分层和本地回执/回读结构索引；前一 Run 的阻断结论保留）
+审计时间：2026-08-29（Asia/Shanghai；本 Run 结果待采集）
 
 ## 1. 审计结论
 
@@ -74,9 +74,9 @@
 
 生产补证因此足以确认真实数据规模和结构性风险，但不足以证明平台回读、对象存储对象归属或新模型 Version/Attempt 的逐条映射。
 
-### 2.5 当前 Run 的逐条脱敏证据补证
+### 2.5 上一 Run 的逐条脱敏证据补证
 
-本节对应 `RUN-20260829-ERP05-ROW-LEVEL-EVIDENCE-03`。数据库指纹采集时间为 `2026-08-29T11:02:24Z`；异常/版本字段采集时间为 `2026-08-29T11:03:38Z`；状态分布采集时间为 `2026-08-29T11:05:17Z`。所有查询均为生产 PostgreSQL 只读 `SELECT`/系统目录查询；哈希为单向摘要，不输出原始 ID、业务键、密钥、Token、Cookie、payload 或图片字节。
+本节对应已结束的 `RUN-20260829-ERP05-ROW-LEVEL-EVIDENCE-03`。数据库指纹采集时间为 `2026-08-29T11:02:24Z`；异常/版本字段采集时间为 `2026-08-29T11:03:38Z`；状态分布采集时间为 `2026-08-29T11:05:17Z`。所有查询均为生产 PostgreSQL 只读 `SELECT`/系统目录查询；哈希为单向摘要，不输出原始 ID、业务键、密钥、Token、Cookie、payload 或图片字节。
 
 #### 关系表集合指纹
 

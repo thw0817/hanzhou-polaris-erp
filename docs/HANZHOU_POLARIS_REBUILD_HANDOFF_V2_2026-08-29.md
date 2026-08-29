@@ -1,6 +1,6 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-29-v4
+版本：2026-08-29-v5
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
@@ -18,7 +18,7 @@
 | --- | --- | --- | --- | --- |
 | A | 历史修复与部署记录 | 旧“第 1～20 步”、NEXUS/EVO/SRF、发布/同步/审核中心/复选框等历次修复和 release | 历史上确实执行过许多步骤并有部署记录；当前效果仍需现场核验 | `REBUILD_HANDOFF_MASTER_2026-08-28.md`、`REBUILD_HANDOFF_2026-08-03.md` 等历史交接 |
 | B | 17 个板块最新详细方案 | 账号权限、店铺、商品、建档、发布、回读、素材、AI、合规、经营、履约、售后、财务、价格、增长、协同、BI | **最新产品与架构目标，已讨论并完整记录；尚未作为整体实施完成** | `COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md` |
-| C | ERP-00～ERP-23 | 为落实 17 个板块而新编制的分阶段工程治理与实施路线 | **当前路线：ERP-00～ERP-04 已完成，ERP-05 当前 Run 已完成允许范围内的只读补证但完成门阻断，ERP-06～ERP-23 尚未开始；原始阻断 Run 保留** | `COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md`、执行台账 |
+| C | ERP-00～ERP-23 | 为落实 17 个板块而新编制的分阶段工程治理与实施路线 | **当前路线：ERP-00～ERP-04 已完成，ERP-05 正在执行新的只读缺口证据补证 Run，ERP-06～ERP-23 尚未开始；前序阻断 Run 保留** | `COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md`、执行台账 |
 
 必须牢记：
 
@@ -47,7 +47,7 @@
 5. docs/REBUILD_HANDOFF_MASTER_2026-08-28.md
 6. docs/REBUILD_HANDOFF_2026-08-03.md
 
-ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并完成 ERP-00～ERP-04，ERP-05 的原始只读历史证据审计和第一轮生产聚合补证均因逐条证据缺口阻断，当前逐条脱敏证据补证 Run 已完成允许范围内的只读检查但仍因 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、完整对象清单和 SHEIN 官方回读缺失而阻断。后续步骤仍只有在前一步完成且用户明确要求后，才读取执行计划和台账并创建 Run。
+ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并完成 ERP-00～ERP-04，ERP-05 的原始只读历史证据审计和前一轮生产补证均因逐条证据缺口阻断，现已按用户继续要求建立新的只读缺口证据补证 Run。后续步骤仍只有在前一步完成且用户明确要求后，才读取执行计划和台账并创建 Run。
 
 先只读理解并向我汇报：
 - 17 个板块的整体目标和相互依赖；
@@ -117,7 +117,7 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 
 - ERP 步骤总数：24。
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
-- `BLOCKED`：ERP-05（允许范围内的逐条非敏感指纹和媒体对象只读存在性已补取；ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、完整对象清单和官方回读仍缺失；原始阻断记录保留）。
+- `IN_PROGRESS`：ERP-05（新 Run 补做媒体 provider-level 只读分层和本地回执/回读结构索引；前序阻断记录保留）。
 - `NOT_STARTED`：ERP-06～ERP-23。
 - 当前正式 ERP Run：`RUN-20260829-ERP05-ROW-LEVEL-EVIDENCE-03`；前两次 Run `RUN-20260829-ERP05-HISTORICAL-EVIDENCE-01`、`RUN-20260829-ERP05-PRODUCTION-READONLY-AUDIT-02` 作为阻断历史保留。
 
