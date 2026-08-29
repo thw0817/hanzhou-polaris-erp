@@ -1,7 +1,7 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-29-v2  
-状态：**当前唯一有效的新对话入口**  
+版本：2026-08-29-v3
+状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -18,7 +18,7 @@
 | --- | --- | --- | --- | --- |
 | A | 历史修复与部署记录 | 旧“第 1～20 步”、NEXUS/EVO/SRF、发布/同步/审核中心/复选框等历次修复和 release | 历史上确实执行过许多步骤并有部署记录；当前效果仍需现场核验 | `REBUILD_HANDOFF_MASTER_2026-08-28.md`、`REBUILD_HANDOFF_2026-08-03.md` 等历史交接 |
 | B | 17 个板块最新详细方案 | 账号权限、店铺、商品、建档、发布、回读、素材、AI、合规、经营、履约、售后、财务、价格、增长、协同、BI | **最新产品与架构目标，已讨论并完整记录；尚未作为整体实施完成** | `COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md` |
-| C | ERP-00～ERP-23 | 为落实 17 个板块而新编制的分阶段工程治理与实施路线 | **未来路线草案，24 步全部 `NOT_STARTED`** | `COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md`、执行台账 |
+| C | ERP-00～ERP-23 | 为落实 17 个板块而新编制的分阶段工程治理与实施路线 | **当前路线：ERP-00～ERP-03 已完成，ERP-04 正在进行，后续步骤尚未开始** | `COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md`、执行台账 |
 
 必须牢记：
 
@@ -47,7 +47,7 @@
 5. docs/REBUILD_HANDOFF_MASTER_2026-08-28.md
 6. docs/REBUILD_HANDOFF_2026-08-03.md
 
-ERP-00～ERP-23 是尚未启动的未来实施路线，不是历史已执行步骤。只有在我明确要求采用或开始某个 ERP 步骤时，才读取执行计划和台账并创建 Run。
+ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并完成 ERP-00～ERP-03，ERP-04 正在执行。后续步骤仍只有在前一步完成且用户明确要求后，才读取执行计划和台账并创建 Run。
 
 先只读理解并向我汇报：
 - 17 个板块的整体目标和相互依赖；
@@ -116,10 +116,10 @@ ERP-00～ERP-23 是尚未启动的未来实施路线，不是历史已执行步�
 当前状态：
 
 - ERP 步骤总数：24。
-- `NOT_STARTED`：24。
-- `IN_PROGRESS`：0。
-- `COMPLETE`：0。
-- 当前正式 ERP Run：无。
+- `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03。
+- `IN_PROGRESS`：ERP-04。
+- `NOT_STARTED`：ERP-05～ERP-23。
+- 当前正式 ERP Run：`RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01`。
 
 使用规则：
 

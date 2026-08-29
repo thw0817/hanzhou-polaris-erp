@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v19
+版本：2026-08-29-v20
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02 已完成；ERP-03 staging Outbox 全链路与本机 bundled Chromium 已补证，但远端 CI runner 门禁仍为 UNKNOWN，保持 GATE_FAILED；ERP-04～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03 已完成；ERP-04 已启动为 IN_PROGRESS；ERP-05～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-03 / GATE_FAILED / RUN-20260829-ERP03-STAGING-CHAIN-02
+当前活动步骤：ERP-04 / IN_PROGRESS / RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01
 
 ## 0. 台账用途
 
@@ -28,8 +28,8 @@
 | ERP-00 | 变更冻结与真相基线 | COMPLETE | RUN-20260829-ERP00-BASELINE-01 | 无 | [ERP-00 基线报告](./ERP00_BASELINE_REPORT_2026-08-29.md)；备份与隔离恢复验证通过 |
 | ERP-01 | 源码资产救援与版本控制 | COMPLETE | RUN-20260829-ERP01-ASSET-BASELINE-01 | ERP-00 | [ERP-01 基线报告](./ERP01_BASELINE_REPORT_2026-08-29.md)；commit/tag、私有镜像、空目录 clone、1170 测试、双构建和静态审计通过 |
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
-| ERP-03 | CI、预发与发布门禁 | GATE_FAILED | RUN-20260829-ERP03-STAGING-CHAIN-02 | ERP-02 | staging DB/Redis/MinIO/Control、迁移、隔离和 Outbox→BullMQ→Worker synthetic 全链路已实测通过；本机 bundled Chromium 2/2 通过；远端 CI runner 尚未执行 |
-| ERP-04 | 商品生命周期与状态字典定稿 | NOT_STARTED | — | ERP-03 | — |
+| ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
+| ERP-04 | 商品生命周期与状态字典定稿 | IN_PROGRESS | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 待用户批准状态名称与工作流；本阶段只做设计 |
 | ERP-05 | 历史数据证据盘点 | NOT_STARTED | — | ERP-04 | — |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
@@ -1330,7 +1330,7 @@
 - 已实施：`046_publish_outbox_events.sql`；`outbox-dispatcher.js`；事务内 `createPublishOutboxEvents`；Dispatcher claim/lease/retry；确定性 `jobId=commandId`；Worker contract version 校验和单命令范围；Control 不再拥有 publish queue；staging 默认关闭 Dispatcher 和 publish live-write。
 - 已验证：全量 `npm test` 1202/1202；Outbox/Worker/Repository 定向测试通过；工具链、secret scan、staging isolation、V2 build、release audit、runtime capability audit 通过；默认 bundled Chromium E2E 2/2 通过；046 已应用到独立 staging PostgreSQL；真实 DB Dispatcher 探针 `claimed=0, dispatched=0, failed=0`；无生产写入、无 SHEIN 调用。
 - 关键边界：`0/0/0` 只证明 staging 空队列安全探针，不证明真实命令已完成队列投递；真实 PublishCommand 投递仍因 live-write false 未执行；远端 GitHub Actions runner 尚未执行。
-- 当前结论：`GATE_FAILED`；Outbox 缺失这一具体实现阻断已解除，但 ERP-03 完成门仍未闭合；不得启动 ERP-04，不得把该 Run 标记为 ERP-09 完成。
+- 补证前当前结论：`GATE_FAILED`；Outbox 缺失这一具体实现阻断已解除。远端 runner 结果见后续 `RUN-20260829-ERP03-GITHUB-ACTIONS-02`。
 
 ## 17. ERP-03 staging 全链路补证 Run
 
@@ -1346,4 +1346,34 @@
 - 清理核验：`syntheticTenants=0`、`outboxRows=0`；随机 Redis prefix 无残留；无生产连接、无 SHEIN 写入。
 - 本 Run 验证：Outbox/Worker 定向 10/10；全量 `npm test` 1202/1202；staging isolation PASS；fault gates 17/17。
 - 未闭合门：远端 GitHub Actions runner 尚未实际执行；本机结果不能冒充远端 CI 通过。
-- 当前状态：`GATE_FAILED`；staging 全链路具体阻断已解除，但 ERP-03 完成门仍未闭合；不得启动 ERP-04，不得把本 Run 标记为 ERP-09 完成。
+- 补证前当前状态：`GATE_FAILED`；staging 全链路具体阻断已解除。远端 runner 结果见后续 `RUN-20260829-ERP03-GITHUB-ACTIONS-02`。
+
+## 18. ERP-03 远端 GitHub Actions 补证 Run
+
+### RUN-20260829-ERP03-GITHUB-ACTIONS-02
+
+- 类型：ERP-03 完成门远端补证。
+- 启动依据：用户将修复后的提交 `805a43d` 推送至 GitHub，并提供 Actions 实际运行结果。
+- 目标：取得不能由本机等价运行替代的 GitHub Actions runner 真实证据，确认远端 gate 与候选打包均成功。
+- 允许范围：仅读取 GitHub Actions 结果并更新非敏感报告/台账；不修改生产、不执行 SHEIN 写入。
+- 禁止范围：生产部署、生产迁移、Nginx reload、current 切换、真实 SHEIN 写接口、提交或读取任何凭证。
+- 远端证据：Workflow `Polaris ERP-03 gate`，Run `ci: fix release artifact download path #2`，提交 `805a43d`，分支 `main`；状态 `Success`，耗时约 2 分 4 秒，Artifacts 2。
+- Job 结果：`Static, tests, build, audit, staging and browser gate` PASS；`Package only after all gates pass` PASS。
+- 关闭项：artifact 下载目录修复后，`source_dirty` / `v2_release_manifest_missing` 已不再阻断候选打包。
+- 外部写入：无生产部署、迁移、服务重启、current 切换或真实 SHEIN 写入。
+- 当前状态：`COMPLETE`；ERP-04 进入条件满足。
+
+## 19. 正式 ERP-04 Run
+
+### RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01
+
+- 类型：ERP 实施步骤；商品生命周期与状态字典定稿。
+- 启动依据：ERP-03 已由远端 GitHub Actions runner 对 `805a43d` 实际执行并返回 `Success`；用户明确要求“下一阶段”。
+- 目标：在任何商品模型、历史数据盘点或 UI 大规模实现前，冻结 Product/Draft/Version/Attempt/Link/Projection 的职责、六维状态、状态转换、当前尝试选择、未知结果恢复、中文标签和兼容策略。
+- 允许范围：只读分析方案/代码事实；新增 ERP-04 非敏感设计交付物；更新 ERP-03 完成证据、台账和交接索引；新增状态/转换/映射测试设计，不执行代码和数据库改动。
+- 禁止范围：修改业务代码、数据库迁移、生产配置、生产服务、Redis/对象存储、真实 SHEIN 读写、部署、改变发布开关、把设计文档写成已实现。
+- 进入门结果：ERP-00～ERP-03 `COMPLETE`；当前 Git `805a43d`；工作树在 Run 启动时 clean；生产 PostgreSQL 备份与隔离恢复证据已存在；真实 SHEIN 写入仍关闭。
+- 初始失败/未知：存量 `product_drafts/publish_jobs/product_review_states/spus/skcs/skus` 的关系与脏数据尚未完成 ERP-05 只读盘点；当前状态词典仍有旧版审核中心兼容码，不能在本阶段直接改存量数据。
+- 成功标准：完成 Lifecycle ADR、六维状态字典、转换/非法转换矩阵、UI 标签/筛选映射、兼容旧状态迁移策略；每一状态可追溯事实源/时间/版本；result_unknown 无盲重发；当前尝试不按更新时间猜；待用户批准业务名称和工作流后才可标记 `COMPLETE`。
+- 回滚点：本 Run 仅新增/更新 Markdown；回滚为恢复本 Run 变更前的文档 commit，不触碰业务代码、数据库或生产。
+- 当前状态：`IN_PROGRESS`。
