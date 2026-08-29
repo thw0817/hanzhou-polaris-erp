@@ -2,7 +2,7 @@
 
 Run：`RUN-20260829-ERP02-V2-ARTIFACT-01`  
 执行时间：2026-08-29 12:06～12:10 +0800  
-状态：`IN_PROGRESS`（待最终提交后的无 dirty manifest 复验）
+状态：`COMPLETE`
 
 ## 1. 本步骤合同
 
@@ -38,6 +38,8 @@ legacy 源码没有删除；没有复制/覆盖生产 `dist-web`，也没有把�
 - `npm run release:audit:v2 -- --root "$PWD" --web-root "$PWD/dist-v2" --json` 的静态结果：`ready=true`、`blockers=[]`、`assetCount=46`、`publishingEnabled=false`、`authorizesPublishing=false`。
 - 浏览器验收（本地 V2 preview）：登录页 title 为 `SHEIN超级运营中心`，`polaris-ui=v2`，buildId/source revision marker 均存在；`/login`、overview、单品、批量、草稿、发布、合规 7 个关键深层路由均保持原 URL、不循环；旧壳层标识为 0。
 - Git 差异 probe：临时修改能被 `status`/`diff` 捕获，撤销后 clone 干净。
+- 最终 clean commit 复验：`npm run build:v2` 与兼容命令 `npm run build:web` 产生相同的 `dist-v2` tree hash `98d3a0c8d9d3e88ba3498d3d7e4b51b5d150fa470ca71a7309511b2294afc6b3`；manifest `sourceDirty=false`，buildId/sourceRevision 为实现 commit `d25ef7f059bed576fd7a3aa4b3709493349cc856`；静态审计 `ready=true`、`blockers=[]`、46 个资产通过逐文件校验。
+- 最终浏览器 reload：`polaris-ui=v2`、品牌 title 正确，7 个关键路由保持原 URL，legacy 标识为 0。
 
 ## 5. 外部边界与未执行项
 
@@ -47,4 +49,4 @@ legacy 源码没有删除；没有复制/覆盖生产 `dist-web`，也没有把�
 
 ## 6. 完成标准
 
-只有最终提交后的 clean build、manifest 审计、浏览器复验和台账更新全部通过后，才将本 Run 标记 `COMPLETE`；未完成前不得开始 ERP-03。
+最终提交后的 clean build、manifest 审计、浏览器复验和台账更新全部通过，本 Run 标记 `COMPLETE`。ERP-03 尚未开始。
