@@ -26,7 +26,7 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 | 固定 Node/npm 与 lockfile | PASS | `npm run ci:toolchain`；Node `24.16.0`、npm `11.13.0`、lockfile `3`、`@playwright/test 1.62.1` |
 | tracked-file secret scan | PASS | `npm run ci:secret-scan`；591 个 tracked 文件，无运行时 secret finding；4 个官方文档/密码学测试向量以 reference-only 明示保留 |
 | 故障契约门 | PASS | 17/17 `server/ci/erp03-fault-gates.test.js` |
-| 完整测试 | PASS | `npm test`：1200 pass、0 fail、0 skipped；另有 046 迁移结构回归 |
+| 完整测试 | PASS | `npm test`：1202 pass、0 fail、0 skipped；包含 046 迁移结构回归和 Outbox contract 回归 |
 | V2 build | PASS | `npm run build:v2` 与 `npm run build:web` 均成功；clean revision `b1fc965d23bfbc72f3ce03f5e18976a83720ab45` 的 source tree：`8c9004b4cbf9fe9403c79cf20f4020cdd037d13c`，asset manifest SHA-256：`fa13c9d28d80ee532fe221af59789b1a883ed65604cdb37c0aea5318bef64682` |
 | V2 artifact audit | PASS | `npm run release:audit:v2 -- --json`；`ready=true`、blockers=[]、publishingEnabled=false、authorizesPublishing=false |
 | 完整 release manifest | PASS（clean revision） | `node server/ci/release-manifest.js --json`：`passed=true`、`errors=[]`、`sourceDirty=false`、UI source revision 与完整 manifest 相同；PublishCommand 仍因 Outbox 未实现和 live-write false 被阻断 |
@@ -62,7 +62,7 @@ ERP-03 当前仍保持 `GATE_FAILED`，不能标记 `COMPLETE`，也不能开始
 
 - 启动依据：上一 Run 明确指出 Outbox Dispatcher 缺失并阻断 ERP-03；用户继续要求严格执行下一步。
 - 变更范围：新增 `server/cloud/migrations/046_publish_outbox_events.sql`；新增 `server/cloud/outbox-dispatcher.js` 及其测试；将发布 execute 的 durable handoff 写入同一 PostgreSQL 事务；Control 移除 inline publish queue；Worker 支持 contract-versioned command-scoped job；新增 staging profile、配置开关、运行时数据库能力和 release migration 登记。
-- 已验证：`npm test` 1200/1200；工具链、secret scan、staging isolation、V2 build、V2 artifact audit、046 migration audit 均通过；默认 bundled Chromium E2E 仍需在本 Run 最终构建后复跑并记录。
+- 已验证：`npm test` 1202/1202；工具链、secret scan、staging isolation、V2 build、V2 artifact audit、046 migration audit 均通过；默认 bundled Chromium E2E 2/2 通过。
 - 真实 staging：046 已应用；Dispatcher 使用真实 staging PostgreSQL 执行安全 DB 探针，返回 `0/0/0`；没有写入真实发布命令，没有调用 SHEIN。
 - 仍未闭合：真实 staging Outbox→队列→Worker 投递演练、远端 GitHub Actions runner；`SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED` 继续保持 false。
 - 当前结论：`GATE_FAILED`；不得启动 ERP-04。下一步只能围绕本 Run 剩余门禁补证，或在完整 ERP 计划明确要求的后续发布执行步骤中继续，不得把本桥接实现冒充 ERP-09 完成。
