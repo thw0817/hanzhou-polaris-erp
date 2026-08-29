@@ -2,10 +2,10 @@
 
 版本：2026-08-29-v18  
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01 已完成；ERP-02～ERP-23 尚未开始；历史修复记录另行保存  
+状态：ERP-00、ERP-01 已完成；ERP-02 执行中；ERP-03～ERP-23 尚未开始；历史修复记录另行保存  
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：无（ERP-01 已完成，ERP-02 尚未启动）  
+当前活动步骤：ERP-02 / IN_PROGRESS / RUN-20260829-ERP02-V2-ARTIFACT-01  
 
 ## 0. 台账用途
 
@@ -27,7 +27,7 @@
 | --- | --- | --- | --- | --- | --- |
 | ERP-00 | 变更冻结与真相基线 | COMPLETE | RUN-20260829-ERP00-BASELINE-01 | 无 | [ERP-00 基线报告](./ERP00_BASELINE_REPORT_2026-08-29.md)；备份与隔离恢复验证通过 |
 | ERP-01 | 源码资产救援与版本控制 | COMPLETE | RUN-20260829-ERP01-ASSET-BASELINE-01 | ERP-00 | [ERP-01 基线报告](./ERP01_BASELINE_REPORT_2026-08-29.md)；commit/tag、私有镜像、空目录 clone、1170 测试、双构建和静态审计通过 |
-| ERP-02 | 单一 V2 前端产物恢复 | NOT_STARTED | — | ERP-01 | — |
+| ERP-02 | 单一 V2 前端产物恢复 | IN_PROGRESS | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | 生产 Nginx、构建入口、产物 marker/manifest 和运行时引用图取证中 |
 | ERP-03 | CI、预发与发布门禁 | NOT_STARTED | — | ERP-02 | — |
 | ERP-04 | 商品生命周期与状态字典定稿 | NOT_STARTED | — | ERP-03 | — |
 | ERP-05 | 历史数据证据盘点 | NOT_STARTED | — | ERP-04 | — |
@@ -1281,3 +1281,18 @@
 - 成功标准：基线提交和 tag 可定位；暂存内容不含受禁资产或高置信秘密；124 个发布归档均有 bytes/mtime/SHA-256/证据映射索引；从私有镜像空目录 clone 后可安装依赖、运行测试和构建；原始工作区和完整备份可回滚。
 - 完成证据：[ERP01_BASELINE_REPORT_2026-08-29.md](./ERP01_BASELINE_REPORT_2026-08-29.md)。基线 commit、树哈希、tag、完整备份、124 包索引、私有镜像、空目录 clone、安装、1170 测试、V2/Web 构建、静态 release readiness 和差异可见性验证均已记录。
 - 当前状态：COMPLETE；ERP-02 尚未启动，不得把本步骤的本地构建物或静态审计结果当作生产切换授权。
+
+## 14. 正式 ERP-02 Run
+
+### RUN-20260829-ERP02-V2-ARTIFACT-01
+
+- 类型：ERP 实施步骤；单一 V2 前端产物恢复。
+- 启动时间：2026-08-29 12:06 +0800。
+- 启动依据：ERP-01 完成门通过；用户已明确要求继续按 ERP-00～ERP-23 顺序执行。
+- 目标：消除 legacy、V2、`dist`、`dist-web`、`dist-v2` 之间的构建/部署漂移，指定 V2 为唯一发布源；本步骤不改变当前 V2 UI 行为和视觉。
+- 允许范围：只调整构建/打包入口、静态目录映射、release marker、asset manifest、审计和引用图；只读取生产 Nginx 当前目录与线上静态事实。
+- 禁止范围：修改业务页面、导航、品牌、文案、状态逻辑；删除 legacy 源码；同时修复发布、审核或同步问题；未经用户单独批准切换生产 release。
+- 进入门结果：ERP-01 COMPLETE；源码 baseline commit/tag、工作区备份、生产数据库备份和隔离恢复证据已存在。
+- 初始未知：生产 Nginx 实际静态目录、当前入口映射、线上 legacy marker 和深层路由回退行为需本 Run 重新取证；任何无法证明项保持 `UNKNOWN`。
+- 成功标准：一次构建只产生一套前端事实；本地/候选/云端入口 hash 可对比；生成 buildId/source revision/asset manifest/UI marker；Playwright 或等价浏览器证据证明 V2 品牌、关键路由和无 legacy 标识；深层路由不循环；不执行生产切换。
+- 当前状态：IN_PROGRESS；未通过完成门前，不得开始 ERP-03。

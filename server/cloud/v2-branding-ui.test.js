@@ -29,11 +29,16 @@ test("V2 user-facing branding uses the current site name", () => {
 test("V2 build keeps the current site title as its HTML fallback", () => {
   const viteConfig = read("vite.config.js");
   assert.match(viteConfig, /replace\("SHEIN涵舟工作室", "SHEIN超级运营中心"\)/);
+  assert.match(viteConfig, /const isBuild = command === "build"/);
+  assert.match(viteConfig, /createV2ReleaseMetadataPlugin/);
   assert.match(read("index.html"), /<title>SHEIN超级运营中心<\/title>/);
+  assert.match(read("index.html"), /name="polaris-ui" content="v2"/);
 });
 
 test("the default preview serves the current web build", () => {
   const packageJson = JSON.parse(read("package.json"));
-  assert.equal(packageJson.scripts.preview, "vite preview --outDir dist-web");
+  assert.equal(packageJson.scripts.build, "npm run build:v2");
+  assert.equal(packageJson.scripts["build:web"], "npm run build:v2");
+  assert.equal(packageJson.scripts.preview, "vite preview --outDir dist-v2");
   assert.equal(packageJson.scripts["preview:v2"], "vite preview --outDir dist-v2");
 });

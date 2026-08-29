@@ -569,6 +569,107 @@ async function readText(filename) {
   }
 }
 
+async function listRelativeFiles(directory, prefix = "") {
+  let entries;
+  try {
+    entries = await fs.readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === "ENOENT") return [];
+    throw error;
+  }
+  const files = [];
+  for (const entry of entries) {
+    const relative = prefix ? path.join(prefix, entry.name) : entry.name;
+    if (entry.isDirectory()) {
+      files.push(...(await listRelativeFiles(path.join(directory, entry.name), relative)));
+    } else if (entry.isFile()) {
+      files.push(relative.split(path.sep).join("/"));
+    }
+  }
+  return files.sort();
+}
+
+async function auditV2ReleaseMetadata(webRoot) {
+  const releaseFile = await readText(path.join(webRoot, "release-manifest.json"));
+  const assetFile = await readText(path.join(webRoot, "asset-manifest.json"));
+  const errors = [];
+  let release = null;
+  let assets = null;
+
+  try {
+    release = releaseFile.exists ? JSON.parse(releaseFile.text) : null;
+  } catch {
+    errors.push("release_manifest_invalid_json");
+  }
+  try {
+    assets = assetFile.exists ? JSON.parse(assetFile.text) : null;
+  } catch {
+    errors.push("asset_manifest_invalid_json");
+  }
+
+  if (!releaseFile.exists) errors.push("release_manifest_missing");
+  if (!assetFile.exists) errors.push("asset_manifest_missing");
+  if (release) {
+    if (release.schemaVersion !== 1) errors.push("release_manifest_schema");
+    if (release.artifactKind !== "hanzhou-polaris-v2-frontend") errors.push("release_manifest_kind");
+    if (!release.buildId) errors.push("release_manifest_build_id");
+    if (!release.sourceRevision) errors.push("release_manifest_source_revision");
+    if (release.ui?.mode !== "v2") errors.push("release_manifest_ui_mode");
+    if (release.ui?.marker !== "polaris-v2") errors.push("release_manifest_ui_marker");
+    if (release.ui?.entry !== "src-v2/main.tsx") errors.push("release_manifest_ui_entry");
+    if (release.artifact?.outputDir !== "dist-v2") errors.push("release_manifest_output_dir");
+    if (release.artifact?.index !== "index.html") errors.push("release_manifest_index");
+    if (release.artifact?.assetManifest !== "asset-manifest.json") errors.push("release_manifest_asset_manifest");
+  }
+  if (assets) {
+    if (assets.schemaVersion !== 1) errors.push("asset_manifest_schema");
+    if (assets.artifactKind !== "hanzhou-polaris-v2-frontend") errors.push("asset_manifest_kind");
+    if (release && assets.buildId !== release.buildId) errors.push("asset_manifest_build_id_mismatch");
+    if (release && assets.sourceRevision !== release.sourceRevision) errors.push("asset_manifest_source_revision_mismatch");
+    if (!Array.isArray(assets.assets) || !assets.assets.some((asset) => asset?.path === "index.html")) {
+      errors.push("asset_manifest_index_missing");
+    }
+    const seen = new Set();
+    for (const asset of Array.isArray(assets.assets) ? assets.assets : []) {
+      const filename = String(asset?.path || "");
+      if (!filename || seen.has(filename) || filename.startsWith("/") || filename.includes("..")) {
+        errors.push(`asset_manifest_path:${filename || "invalid"}`);
+        continue;
+      }
+      seen.add(filename);
+      if (!Number.isInteger(asset.bytes) || asset.bytes < 0 || !/^[a-f0-9]{64}$/.test(asset.sha256 || "")) {
+        errors.push(`asset_manifest_record:${filename}`);
+        continue;
+      }
+      try {
+        const contents = await fs.readFile(path.join(webRoot, filename));
+        if (contents.byteLength !== asset.bytes) errors.push(`asset_manifest_bytes:${filename}`);
+        if (sha256(contents) !== asset.sha256) errors.push(`asset_manifest_sha256:${filename}`);
+      } catch {
+        errors.push(`asset_manifest_file_missing:${filename}`);
+      }
+    }
+    const actualFiles = (await listRelativeFiles(webRoot)).filter(
+      (filename) => filename !== "release-manifest.json" && filename !== "asset-manifest.json",
+    );
+    for (const filename of actualFiles) {
+      if (!seen.has(filename)) errors.push(`asset_manifest_unlisted_file:${filename}`);
+    }
+  }
+  if (release && assetFile.exists && release.artifact?.assetManifestSha256 !== sha256(assetFile.text)) {
+    errors.push("release_manifest_asset_manifest_sha256");
+  }
+
+  return {
+    releaseManifestExists: releaseFile.exists,
+    assetManifestExists: assetFile.exists,
+    release,
+    assets,
+    errors,
+    passed: errors.length === 0,
+  };
+}
+
 function failedChecks(rows) {
   return (rows || [])
     .filter((row) => row?.passed !== true)
@@ -668,6 +769,7 @@ async function auditRelease({ root, webRoot }) {
   const missingWebMarkers = bundleText
     ? webMarkers.filter((marker) => !bundleText.includes(marker))
     : [...webMarkers];
+  const releaseMetadata = await auditV2ReleaseMetadata(webRoot);
 
   return {
     root,
@@ -678,13 +780,14 @@ async function auditRelease({ root, webRoot }) {
       indexExists: indexFile.exists,
       bundleFilename,
       bundleFilenames: [...bundleFilenames].sort(),
-      bundleExists: bundle.exists,
+        bundleExists: bundle.exists,
       missingMarkers: missingWebMarkers,
       passed:
         indexFile.exists &&
         bundle.exists &&
         missingWebMarkers.length === 0,
     },
+    releaseMetadata,
   };
 }
 
@@ -708,6 +811,9 @@ export async function auditV2ReleaseArtifact({
   }
   if (!release.webArtifact.passed) {
     blockers.push("release_web_artifact:v2");
+  }
+  if (!release.releaseMetadata.passed) {
+    blockers.push("release_metadata:v2");
   }
 
   return {
@@ -902,6 +1008,7 @@ export function formatV2ReleaseArtifactReadiness(report) {
     "",
     `Release contracts: ${report.release.contracts.filter((item) => item.passed).length}/${report.release.contracts.length}`,
     `V2 web artifact: ${report.release.webArtifact.passed ? "passed" : "failed"}`,
+    `V2 release metadata: ${report.release.releaseMetadata.passed ? "passed" : "failed"}`,
     "",
     "Blockers:",
   );

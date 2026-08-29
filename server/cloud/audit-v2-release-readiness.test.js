@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -164,7 +165,76 @@ async function createRelease() {
     await fs.mkdir(path.dirname(absolute), { recursive: true });
     await fs.writeFile(absolute, source);
   }
+  const assetRecords = [];
+  for (const filename of ["dist-v2/index.html", "dist-v2/assets/app.js"]) {
+    const contents = await fs.readFile(path.join(root, filename));
+    assetRecords.push({
+      path: filename.replace(/^dist-v2\//, ""),
+      bytes: contents.byteLength,
+      sha256: crypto.createHash("sha256").update(contents).digest("hex"),
+    });
+  }
+  const assetManifest = {
+    schemaVersion: 1,
+    artifactKind: "hanzhou-polaris-v2-frontend",
+    buildId: "test-build",
+    sourceRevision: "test-revision",
+    assets: assetRecords,
+  };
+  const assetManifestText = `${JSON.stringify(assetManifest, null, 2)}\n`;
+  await fs.writeFile(path.join(root, "dist-v2/asset-manifest.json"), assetManifestText);
+  await fs.writeFile(
+    path.join(root, "dist-v2/release-manifest.json"),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      artifactKind: "hanzhou-polaris-v2-frontend",
+      buildId: "test-build",
+      sourceRevision: "test-revision",
+      buildTime: "2026-08-29T00:00:00.000Z",
+      sourceDirty: false,
+      ui: {
+        mode: "v2",
+        marker: "polaris-v2",
+        entry: "src-v2/main.tsx",
+        title: "SHEIN超级运营中心",
+      },
+      artifact: {
+        outputDir: "dist-v2",
+        index: "index.html",
+        assetManifest: "asset-manifest.json",
+        assetManifestSha256: crypto.createHash("sha256").update(assetManifestText).digest("hex"),
+      },
+    }, null, 2)}\n`,
+  );
   return root;
+}
+
+async function refreshAssetManifest(root) {
+  const webRoot = path.join(root, "dist-v2");
+  const assetManifestPath = path.join(webRoot, "asset-manifest.json");
+  const assetManifest = JSON.parse(await fs.readFile(assetManifestPath, "utf8"));
+  const assetPaths = [
+    "index.html",
+    ...(await fs.readdir(path.join(webRoot, "assets"))).map((filename) => `assets/${filename}`),
+  ].sort();
+  assetManifest.assets = [];
+  for (const filename of assetPaths) {
+    const contents = await fs.readFile(path.join(webRoot, filename));
+    assetManifest.assets.push({
+      path: filename,
+      bytes: contents.byteLength,
+      sha256: crypto.createHash("sha256").update(contents).digest("hex"),
+    });
+  }
+  const assetManifestText = `${JSON.stringify(assetManifest, null, 2)}\n`;
+  await fs.writeFile(assetManifestPath, assetManifestText);
+  const releaseManifestPath = path.join(webRoot, "release-manifest.json");
+  const releaseManifest = JSON.parse(await fs.readFile(releaseManifestPath, "utf8"));
+  releaseManifest.artifact.assetManifestSha256 = crypto
+    .createHash("sha256")
+    .update(assetManifestText)
+    .digest("hex");
+  await fs.writeFile(releaseManifestPath, `${JSON.stringify(releaseManifest, null, 2)}\n`);
 }
 
 test("V2 artifact readiness checks the release without a database", async () => {
@@ -177,6 +247,7 @@ test("V2 artifact readiness checks the release without a database", async () => 
     formatV2ReleaseArtifactReadiness(report),
     /V2 release artifact readiness: READY/,
   );
+  assert.equal(report.release.releaseMetadata.passed, true);
 });
 
 test("V2 artifact readiness blocks a release without the category schema gate", async () => {
@@ -189,11 +260,23 @@ test("V2 artifact readiness blocks a release without the category schema gate", 
   const report = await auditV2ReleaseArtifact({ root });
 
   assert.equal(report.ready, false);
-  assert.deepEqual(report.blockers, ["release_web_artifact:v2"]);
+  assert.deepEqual(report.blockers, ["release_web_artifact:v2", "release_metadata:v2"]);
   assert.deepEqual(
     report.release.webArtifact.missingMarkers,
     ["schema-coverage", "全类目 schema 同步", "当前类目的官方 schema 尚未完整同步"],
   );
+});
+
+test("V2 artifact readiness blocks a release with missing or tampered metadata", async () => {
+  const root = await createRelease();
+  await fs.writeFile(path.join(root, "dist-v2/assets/app.js"), "tampered");
+
+  const report = await auditV2ReleaseArtifact({ root });
+
+  assert.equal(report.ready, false);
+  assert.deepEqual(report.blockers, ["release_web_artifact:v2", "release_metadata:v2"]);
+  assert.equal(report.release.releaseMetadata.passed, false);
+  assert.ok(report.release.releaseMetadata.errors.includes("asset_manifest_sha256:assets/app.js"));
 });
 
 test("V2 artifact readiness scans route-split JavaScript assets", async () => {
@@ -206,6 +289,7 @@ test("V2 artifact readiness scans route-split JavaScript assets", async () => {
     path.join(root, "dist-v2/assets/compliance-page.js"),
     "schema-coverage 全类目 schema 同步 当前类目的官方 schema 尚未完整同步",
   );
+  await refreshAssetManifest(root);
 
   const report = await auditV2ReleaseArtifact({ root });
 

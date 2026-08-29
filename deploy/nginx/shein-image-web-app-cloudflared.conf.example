@@ -12,7 +12,7 @@ server {
         return 301 https://$host$request_uri;
     }
 
-    root /opt/shein-console/current/dist-web;
+    root /opt/shein-console/current/dist-v2;
     index index.html;
 
     # JSON草稿与模板可包含尺码、包装表和平台字段快照；图片仍直传COS。

@@ -30,11 +30,11 @@
     "webhook:cloud": "node --env-file-if-exists=.env server/cloud/webhook-server.js",
     "webhook-worker:cloud": "node --env-file-if-exists=.env server/cloud/webhook-worker-server.js",
     "db:migrate": "node --env-file-if-exists=.env server/cloud/migrate.js",
-    "build": "vite build",
-    "build:web": "vite build --mode web",
+    "build": "npm run build:v2",
+    "build:web": "npm run build:v2",
     "build:v2": "tsc -p tsconfig.v2.json --noEmit && vite build --mode v2",
     "test": "node --test",
-    "preview": "vite preview --outDir dist-web",
+    "preview": "vite preview --outDir dist-v2",
     "preview:v2": "vite preview --outDir dist-v2"
   },
   "dependencies": {
