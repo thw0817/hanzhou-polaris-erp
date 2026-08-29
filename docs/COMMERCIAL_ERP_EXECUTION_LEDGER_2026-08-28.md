@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v44
+版本：2026-08-30-v45
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结、原子发布交接、Worker 编排、结果持久化与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-PUBLISH-WORKER-ORCHESTRATION-12
+当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-SHEIN-REMOTE-BOUNDARY-13
 
 ## 0. 台账用途
 
@@ -31,7 +31,7 @@
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
-| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-PUBLISH-RESULT-PERSISTENCE-11 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、隔离 Outbox claim/lease、adapter boundary 和结果持久化均已验证；生产迁移、真实 SHEIN adapter/发布仍未完成 |
+| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-SHEIN-REMOTE-BOUNDARY-13 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、隔离 Outbox claim/lease、adapter boundary、结果持久化和 sender/readback 边界均已验证；生产迁移、真实 SHEIN adapter/发布仍未完成 |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
@@ -1804,3 +1804,19 @@
 - 环境证据：只读核对现有 staging Redis/PostgreSQL/MinIO 状态，未重启、未写入；Worker 使用 fake command/result repository 与 fake adapter，未连接生产或现有 staging，也没有真实 SHEIN 网络调用。
 - 当前状态：`COMPLETE`；本 Run 的隔离 Worker 编排边界和失败保护完成。ERP-06 整体仍为 `IN_PROGRESS`，真实 Worker/sender/凭证/官方回读、正式迁移、生产部署和 SHEIN 写入均未开始。
 - 下一执行单元：另行评审真实 Worker → sender → 官方回读接入及生产/预发授权；在 ERP-06 完成门与单独批准前，不执行外部写入。
+
+## 33. ERP-06 真实 sender → 官方回读边界隔离实现
+
+### RUN-20260830-ERP06-SHEIN-REMOTE-BOUNDARY-13
+
+- 类型：ERP-06 当前隔离实现单元；实现 Worker 到真实 SHEIN sender、官方单据状态/SPU 回读之间的严格契约，不触碰生产。
+- 启动依据：第 32 Run 已完成隔离 Worker 编排；本 Run 补齐远端边界的请求构造、显式授权、默认禁网、回读证据完整性和失败回归，但不把它接入生产 Worker。
+- 允许范围：新增隔离 remote boundary、复用现有官方 body/endpoint 和安全 projection、注入 fake request/credential resolver、失败回归、全量门禁和文档台账更新。
+- 禁止范围：生产 PostgreSQL/COS/Redis/队列/SHEIN 访问或写入；正式 migration、生产部署/重启/切换；真实凭证解析、真实签名请求、Webhook 持久化、历史回填、自动重试或真实发布。
+- 实际文件：[erp06-shein-remote-boundary.js](../server/cloud/erp06-shein-remote-boundary.js)、[erp06-shein-remote-boundary.test.js](../server/cloud/erp06-shein-remote-boundary.test.js)。未修改旧 `product-publish-worker`、生产路由或 `server/cloud/migrations/`。
+- 契约边界：发布只接受 `erp06-publish-command-v1` 与既有 `/open-api/goods/product/publishOrEdit`，要求 Attempt=`claimed` 和显式 publishing authorization；回读固定为 `/open-api/goods/query-document-state`、`/open-api/goods/spu-info`，分别使用 `version + spuList:[{spuName}]`、`languageList + spuName`。
+- 失败保护：所有身份/scope/版本指纹/path/body 漂移在凭证解析前拒绝；默认 `executionEnabled=false`、`readbackEnabled=false`；上游 status/code/traceId 保留且不自动重试；空、部分、版本不一致或 malformed 回读不解除 `result_unknown`。
+- 本地验证：新边界回归 `9/9`；组合定向回归 `40/40`；全量测试 `1275/1275`；服务端测试 `125/125`；秘密扫描 `scannedFiles=627, findings=[]`；`npm run build:v2`、release audit、`node --check`、`git diff --check` 均通过。
+- 环境证据：只读核对现有 staging Redis/PostgreSQL/MinIO 均 healthy，未重启、未写入；fake request/credential resolver 未连接生产或现有 staging，也没有真实 SHEIN 网络调用。
+- 当前状态：`COMPLETE`；本 Run 的隔离 sender/readback 边界与失败保护完成。ERP-06 整体仍为 `IN_PROGRESS`，真实 Worker/凭证/生产队列/回读持久化、正式迁移、生产部署和 SHEIN 写入均未开始。
+- 下一执行单元：另行评审预发/生产授权、真实凭证来源、网络出口、队列接入、回读持久化与回滚证据；在 ERP-06 完成门与单独批准前，不执行外部写入。
