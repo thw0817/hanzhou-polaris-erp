@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v29
+版本：2026-08-29-v30
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前官方回读不匹配交叉关联 Run 已完成但完成门仍阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前行级关系证据 Run 进行中，前序完成门仍阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06
+当前活动步骤：ERP-05 / IN_PROGRESS / RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07
 
 ## 0. 台账用途
 
@@ -30,7 +30,7 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06 | ERP-04 | 82 个目标官方回读完成；9 条 version 不匹配均无同店铺/同 SPU 交叉版本；ProductVersion/PublishAttempt/PlatformProductLink 与完整对象清单仍缺失；ERP-06 不得开始 |
+| ERP-05 | 历史数据证据盘点 | IN_PROGRESS | RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07 | ERP-04 | 正在核对 Draft/Batch/Job/Run/Receipt/Review/SPU/SKC/SKU/Media/Webhook 的行级关系和缺失字段；前序完成门仍阻断；ERP-06 不得开始 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -1484,3 +1484,11 @@
 - 凭据与边界：4 个涉及店铺凭据均在一次性内存进程内成功解密；未调用会写 Receipt/Review 的 Control 方法，未输出密钥、Token、原始身份或完整响应。
 - 零写入证据：`stores`、`publish_jobs`、`publish_receipts`、`product_review_states`、`product_drafts`、`publish_execution_runs`、`webhook_events` 精确行数前后不变；对应 PostgreSQL 插入/更新/删除统计前后不变。
 - 完成门结论：`BLOCKED`；9 条无法安全建立平台 version 映射，且现有生产模型没有 ProductVersion/PublishAttempt/PlatformProductLink 专用事实，完整对象存储清单也未闭合；ERP-06、ERP-20 修复和任何生产清理/重试不得开始。
+
+### RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07
+
+- 类型：ERP-05 生产 PostgreSQL 行级关系只读补证；输出关系分类、字段覆盖、异常计数和单向指纹。
+- 允许范围：非交互 SSH；PostgreSQL `SELECT`/系统目录/统计视图；SQL/内存计数和单向摘要。
+- 禁止范围：任何生产写入/迁移、SHEIN API、Redis payload、队列消费/重试、对象存储访问、业务路由和敏感输出。
+- 完成标准：核心历史表逐表给出关系完整性、缺失字段、重复/冲突与 `mapped/legacy_unversioned/unmatched/conflict/UNKNOWN` 分类；前后写入审计不变；缺口仍在则保持 `BLOCKED`。
+- 当前状态：`IN_PROGRESS`；生产行级关系探针尚未执行。

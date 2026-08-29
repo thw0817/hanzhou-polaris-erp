@@ -1,10 +1,10 @@
 # ERP-05 历史数据证据审计报告
 
 版本：2026-08-29-v7
-正式 Run：`RUN-20260829-ERP05-OFFICIAL-MISMATCH-CORRELATION-06`
+正式 Run：`RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07`
 步骤：ERP-05  
-状态：`BLOCKED`（本 Run 已完成 9 条 version 标识不匹配的交叉关联核验；9 条均无同店铺/同 SPU 的可用交叉版本）
-审计时间：2026-08-29 19:55:12（Asia/Shanghai；服务器 UTC `2026-08-29T11:55:12Z`）
+状态：`IN_PROGRESS`（本 Run 只核对生产数据库行级关系、缺失字段、重复/冲突和不可逆指纹）
+审计时间：2026-08-29 20:04:32（Asia/Shanghai；服务器 UTC `2026-08-29T12:04:32Z`）
 
 ## 1. 审计结论
 
@@ -412,3 +412,17 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 凭据与边界：4 个涉及店铺凭据均在一次性内存进程内成功解密；未调用会写 Receipt/Review 的 Control 方法，未输出密钥、Token、原始身份或完整响应。
 - 零写入证据：`stores`、`publish_jobs`、`publish_receipts`、`product_review_states`、`product_drafts`、`publish_execution_runs`、`webhook_events` 精确行数前后不变；对应 PostgreSQL 插入/更新/删除统计前后不变。
 - 完成门结论：`BLOCKED`；9 条无法安全建立平台 version 映射，且现有生产模型没有 ProductVersion/PublishAttempt/PlatformProductLink 专用事实，完整对象存储清单也未闭合；ERP-06、ERP-20 修复和任何生产清理/重试不得开始。
+
+## 13. 当前正式 Run：行级关系与不可逆指纹补证
+
+### RUN-20260829-ERP05-ROW-RELATION-FINGERPRINT-07
+
+- 类型：ERP-05 数据库行级关系证据补证；核对旧模型各表的关系完整性、缺失字段、重复/冲突和可审计指纹。
+- 启动依据：前一 Run 已完成官方回读与 9 条 version 不匹配的交叉核验；ProductVersion/PublishAttempt/PlatformProductLink 仍未在生产模型中形成，用户继续要求“继续”。
+- 目标：只读取得 `Draft → Batch → BatchItem → Job → ExecutionRun → Receipt → Review → SPU/SKC/SKU` 及媒体/Webhook/同步关系，按 `mapped`、`legacy_unversioned`、`unmatched`、`conflict`、`UNKNOWN` 分类，输出数量、字段覆盖、关系孤儿和集合/关系指纹，不输出原始身份或 payload。
+- 允许范围：非交互 SSH；生产 PostgreSQL `SELECT`、系统目录与统计视图；在 SQL/内存中做计数、关系判断、单向摘要；记录来源、时间和查询边界。
+- 禁止范围：任何 `INSERT/UPDATE/DELETE`、迁移、锁表、VACUUM、触发业务方法；SHEIN API、Redis payload、队列消费/重试、对象存储访问；输出 SecretId、SecretKey、Token、Cookie、签名、原始 ID、业务键、完整 JSON 或图片字节。
+- 失败关闭：表结构/外键/字段语义无法证明、查询出现写入或锁等待迹象、生产连接需要交互或结果无法脱敏时，立即停止并保持 `UNKNOWN`。
+- 完成标准：可读取的核心表逐表给出行数、缺失字段和关系分类；所有未能建立新模型映射的记录明确标为 `legacy_unversioned` 或 `UNKNOWN`；前后关键表行数与 PostgreSQL 写入统计无变化；ERP-05 仍有缺口则保持 `BLOCKED`。
+- 回滚点：本 Run 不修改生产数据；仅新增本报告/台账记录。
+- 当前状态：`IN_PROGRESS`；生产行级关系探针尚未执行。
