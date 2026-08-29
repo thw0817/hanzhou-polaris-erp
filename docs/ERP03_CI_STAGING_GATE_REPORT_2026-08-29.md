@@ -22,12 +22,13 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 | 门禁 | 结果 | 证据 |
 | --- | --- | --- |
 | 固定 Node/npm 与 lockfile | PASS | `npm run ci:toolchain`；Node `24.16.0`、npm `11.13.0`、lockfile `3`、`@playwright/test 1.62.1` |
-| tracked-file secret scan | PASS | `npm run ci:secret-scan`；574 个 tracked 文件，无运行时 secret finding；4 个官方文档/密码学测试向量以 reference-only 明示保留 |
+| tracked-file secret scan | PASS | `npm run ci:secret-scan`；591 个 tracked 文件，无运行时 secret finding；4 个官方文档/密码学测试向量以 reference-only 明示保留 |
 | 故障契约门 | PASS | 17/17 `server/ci/erp03-fault-gates.test.js` |
 | 完整测试 | PASS | `npm test`：1193 pass、0 fail、0 skipped |
-| V2 build | PASS | `npm run build:v2` 与 `npm run build:web` 均成功；V2 tree hash：`fe747067a8c45ab1f0ca511456577b2674843b26cf0005c505f5823f23eeca38` |
+| V2 build | PASS | `npm run build:v2` 与 `npm run build:web` 均成功；clean revision `d67e7815a7f8e2dd71a2b83fb99160b30d773a78` 的 V2 tree hash：`61922cfca2ca733d20f40756f0e68e83123d55174ba2e93d0dd3c3f8d480959b` |
 | V2 artifact audit | PASS | `npm run release:audit:v2 -- --json`；`ready=true`、blockers=[]、publishingEnabled=false、authorizesPublishing=false |
-| 完整 release manifest | PASS（clean revision）/当前工作区未闭合 | 完整 schema 已实现；当前工作区因新增文件尚未提交，`source_dirty` 按规则阻断；提交到 clean revision 后再跑 CI |
+| 完整 release manifest | PASS（clean revision） | `node server/ci/release-manifest.js --json`：`passed=true`、`errors=[]`、`sourceDirty=false`、UI source revision 与完整 manifest 相同；PublishCommand 仍因 Outbox 未实现和 live-write false 被阻断 |
+| staging 候选制品打包 | PASS（仅候选，不放行生产） | `POLARIS_CI_GATE=passed POLARIS_ARTIFACT_CHANNEL=staging npm run ci:release-package`；候选包 SHA-256：`8ef36894b88d1472aacbab9dfc0ac48cde12eef86388e35b87ccc9968f70b564`，权限 `0444` |
 | staging 配置隔离 | PASS（静态） | `npm run ci:staging-audit`；独立端口/volume/bucket/project，生产 API 域名排除，6 个 live-write/sync flags 全 false |
 | Playwright 配置 | PASS | `npx playwright test --list`：2 个核心测试已被发现 |
 | Playwright 实际浏览器 | UNKNOWN | 本机无可用 Chromium；安装下载在 CDN 10% 处超时；已用 in-app browser 直接验证 V2 深层商品路由最终 URL 不循环、V2 壳层和隔离演示店铺正常 |

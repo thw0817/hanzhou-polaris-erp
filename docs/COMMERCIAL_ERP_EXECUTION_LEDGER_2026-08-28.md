@@ -1312,7 +1312,7 @@
 - 初始失败/未知：当前无 CI workflow；Playwright/MSW/Storybook/Lighthouse 是否已安装需核对；Control、Worker、Outbox、schema range 和 flags 尚未由同一 manifest 串联；staging 运行环境尚未建立；12 类故障门尚未完整覆盖。
 - 成功标准：CI 失败时不得产出正式制品；clean clone 能执行固定版本检查、secret scan、定向/全量测试、V2 build、release audit；staging 的 DB/Redis/bucket/flags 明确独立且默认不写 SHEIN；manifest 能证明 Control/Publish Worker/Outbox/schema/flags 同版本；故障 fixture 对重复、超时、断线、回读、媒体异常给出确定结果；所有无法执行的项显式标记 `UNKNOWN`。
 - 实际改动：新增固定工具链声明、CI workflow、tracked-file secret scan、staging Compose/环境模板、Playwright 核心流程、完整 release manifest/audit、故障契约测试和候选制品打包脚本；将 cloud control Dockerfile 固定到 `node:24.16.0-alpine`；未修改业务 API/数据库语义。
-- 验证结果：固定工具链 PASS；secret scan PASS（574 个 tracked 文件，4 个 reference-only 文档/测试向量已明示）；故障契约 17/17 PASS；全量测试 1193/1193 PASS；V2 build/build:web PASS；V2 artifact audit PASS；staging 静态隔离 PASS；Playwright `--list` 发现 2 个测试；in-app browser 深层路由补充验证 PASS。
+- 验证结果：固定工具链 PASS；secret scan PASS（591 个 tracked 文件，4 个 reference-only 文档/测试向量已明示）；故障契约 17/17 PASS；全量测试 1193/1193 PASS；V2 build/build:web PASS；V2 artifact audit PASS；完整 release manifest 在 clean revision 上 PASS（`sourceDirty=false` 且 UI source revision 一致）；staging 静态隔离 PASS；staging 候选制品打包 PASS（候选包 SHA-256：`8ef36894b88d1472aacbab9dfc0ac48cde12eef86388e35b87ccc9968f70b564`，权限 `0444`）；Playwright `--list` 发现 2 个测试；in-app browser 深层路由补充验证 PASS。
 - 未闭合门：本机未安装 Docker，无法做 staging 实际启动/迁移/隔离验证；Playwright Chromium 下载在 CDN 10% 处超时，无法将实际浏览器执行标 PASS；当前没有 Outbox Dispatcher，manifest 固定标记 `not_implemented` 并阻断新 PublishCommand。
 - 证据报告：[ERP03_CI_STAGING_GATE_REPORT_2026-08-29.md](./ERP03_CI_STAGING_GATE_REPORT_2026-08-29.md)。
 - 外部写入：未连接生产 PostgreSQL/Redis/对象存储；未执行生产迁移、Nginx reload、current 切换、服务重启或 SHEIN 写入。
