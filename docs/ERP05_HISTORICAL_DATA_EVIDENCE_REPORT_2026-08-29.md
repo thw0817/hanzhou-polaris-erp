@@ -3,12 +3,12 @@
 版本：2026-08-29-v7
 正式 Run：`RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05`
 步骤：ERP-05  
-状态：`IN_PROGRESS`（本 Run 只验证 SHEIN 官方读接口回读证据；禁止调用会写入 Receipt/Review 的 Control 业务路由）
-审计时间：2026-08-29 19:17:29（Asia/Shanghai；服务器 UTC `2026-08-29T11:17:29Z`）
+状态：`BLOCKED`（本 Run 已完成官方只读回读验证；9 条 SPU 标识不匹配，ProductVersion/PublishAttempt/PlatformProductLink 逐条映射仍未完成）
+审计时间：2026-08-29 19:44:21（Asia/Shanghai；服务器 UTC `2026-08-29T11:44:21Z`）
 
 ## 1. 审计结论
 
-原始 Run 已完成本地静态证据盘点，并发现可逐条读取的本地业务投影和 V2 本地 Draft/Asset 状态，但没有取得完整 PostgreSQL 历史事实链而阻断。补证 Run 按用户于 2026-08-29 明确授权取得了生产 PostgreSQL、Redis、容器、Worker 日志数量和应用健康元数据；当前 Run 又取得了关系型集合/关系的单向指纹和部分媒体 HEAD 结果，但完整对象存储清单、平台官方回读/映射及新模型逐条分类仍未取得，因此当前完成门仍未通过：
+原始 Run 已完成本地静态证据盘点，并发现可逐条读取的本地业务投影和 V2 本地 Draft/Asset 状态，但没有取得完整 PostgreSQL 历史事实链而阻断。补证 Run 按用户于 2026-08-29 明确授权取得了生产 PostgreSQL、Redis、容器、Worker 日志数量和应用健康元数据；随后 Run 取得了关系型集合/关系的单向指纹、媒体 HEAD 结果和 SHEIN 官方只读回读结果，但完整对象存储清单和新模型逐条分类仍未取得，因此当前完成门仍未通过：
 
 1. 本地投影中已确认：1 个 store-scoped business record，包含 1,179 个商品投影、声明 805 个 SPU 和 6,077 个 SKU；V2 本地状态包含 4 个 Draft 和 13 个 Asset。
 2. 这些文件不是 PostgreSQL 的 Draft/Batch/Job/Run/Receipt/Review 历史表，也没有证明 ProductVersion、PublishAttempt、PlatformProductLink、Webhook、队列和 Worker 事实链；对应关系仍必须标记为 `UNKNOWN`。
@@ -18,9 +18,9 @@
 6. 当前生产没有 ProductVersion 或 PublishAttempt 专用表；`shein_authorization_attempts` 的 21 条记录属于授权流程 Attempt，不能冒充商品发布 Attempt。发布 Job 的 `attempt_count`、`shein_version` 和 `readback` 字段也不能单独证明不可变版本或官方回读。
 7. 媒体只读 `HEAD` 结果为 585 条成功、173 条 404、62 条超时；成功项大小/类型与数据库记录均无不匹配，但对象清单仍不完整，404/超时记录不得自动删除、重试或改状态。
 8. 当前 Run 的分层复核结果为 579 条成功、169 条 404、72 条超时；404 集中在 `deleted` 状态（167/185），`referenced` 与 `ready` 均无 404，但仍有 54 条超时，完整对象证据仍未闭合。
-9. 当前 `publish_receipts` 没有独立 `readback` 类型，只有 `audited/document_state/received/submitted`；Job 的 219 条 `readback` JSON 只是本地字段，生产中没有可验证的官方回读来源索引，完成门继续阻断。
+9. 当前 `publish_receipts` 没有独立 `readback` 类型，只有 `audited/document_state/received/submitted`；Job 的 219 条 `readback` JSON 只是本地字段。官方只读 Run 已对 82 个去重目标取得回读：73 条版本+SPU 完全匹配，9 条仅版本匹配；官方来源已证明，但 9 条不能安全建立平台身份映射，完成门继续阻断。
 
-补证 Run 只执行了非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；未执行生产写入、队列副作用、部署、重启、切换、SHEIN API 或任何密钥输出。
+此前补证 Run 只执行了非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；本正式 Run 另行执行了官方只读查询，未执行生产写入、队列副作用、部署、重启、切换或任何密钥输出。
 
 ## 2. 证据边界
 
@@ -369,13 +369,13 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 规则、模板和 schema 快照 ID/hash；
 - 导出时间、来源环境、导出工具版本和完整性 hash。
 
-后续补证仍不得执行 SHEIN API 回读、队列消费、revalidate 或任何状态写入；若要补对象存储或平台证据，必须另建明确的只读证据边界，并继续禁止把结果直接写回生产。
+本 Run 已在明确边界内执行 SHEIN 官方只读回读，但仍不得消费队列、revalidate 或把结果直接写回生产；9 条 SPU 标识不匹配和未建立的新模型版本/Attempt/平台链接仍必须保持 `UNKNOWN`，后续如需人工核对必须另建明确 Run。
 
 ## 10. 安全与回滚
 
 - 本报告未记录 SecretId、SecretKey、Token、Cookie、签名、完整请求 payload、图片字节或个人敏感信息。
 - 本 Run 只有 Markdown 文档变更；生产检查全部是只读查询和元数据摘要；回滚仅需恢复本 Run 对应的文档提交，不触碰业务数据。
-- 原始 Run 和生产聚合 Run 状态保持 `BLOCKED`；当前逐条补证 Run 结论为 `BLOCKED`，不是 `COMPLETE`。虽然生产真实规模、不可逆指纹和部分媒体存在性已补证，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、完整对象存储清单和 SHEIN 官方回读仍缺失，ERP-06 不得开始。
+- 原始 Run、生产聚合 Run、逐条对象 Run 和当前官方回读 Run 结论均为 `BLOCKED`，不是 `COMPLETE`。官方只读已覆盖 82 个目标，72 条失败、7 条待审核、3 条通过；3 条通过目标的 `spu-info` 均规范化成功，共 3 个 SKC、18 个 SKU；9 条仅版本匹配的 SPU 关系不能强行归并。ProductVersion/PublishAttempt/PlatformProductLink 逐条映射和完整对象存储清单仍缺失，ERP-06 不得开始。
 
 ## 11. 当前正式 Run：官方只读回读证据补证
 
@@ -389,4 +389,4 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 失败关闭：生产配置、凭据作用域、目标版本/SPU、官方读路径或只读边界无法证明；需要交互认证；API 返回鉴权/参数/限流/网络不确定错误；发现任何写入迹象时立即停止，相关证据保持 `UNKNOWN`，不猜测、不重试业务命令。
 - 完成标准：每个实际请求均能归属到生产目标样本并记录脱敏结果；报告官方返回成功/失败/未知、业务码和结构覆盖；前后数据库关键表行数与审计证据无变化；若官方回读或映射仍不完整，ERP-05 仍为 `BLOCKED`，不得开始 ERP-06。
 - 回滚点：本 Run 不修改业务数据；仅新增本报告/台账记录，回滚为恢复本 Run 文档提交。
-- 当前状态：`IN_PROGRESS`；生产调用尚未开始，等待配置/源码接线审计完成后执行一次性读探针。
+- 当前状态：`BLOCKED`；本 Run 已完成 82 个官方 `query-document-state` 目标及 3 个通过目标的 `spu-info` 回读；数据库关键表行数与 PostgreSQL 写入统计前后无变化，但 9 条 SPU 标识不匹配，ProductVersion/PublishAttempt/PlatformProductLink 逐条映射和完整对象清单仍缺失。

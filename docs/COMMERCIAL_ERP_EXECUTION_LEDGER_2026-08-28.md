@@ -2,10 +2,10 @@
 
 版本：2026-08-29-v27
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前官方只读回读 Run 进行中，前序完成门仍阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04 已完成；ERP-05 当前官方只读回读 Run 已完成但完成门仍阻断；ERP-06～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-05 / IN_PROGRESS / RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05
+当前活动步骤：ERP-05 / BLOCKED / RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05
 
 ## 0. 台账用途
 
@@ -30,7 +30,7 @@
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
-| ERP-05 | 历史数据证据盘点 | IN_PROGRESS | RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05 | ERP-04 | 正在执行官方只读回读证据补证；禁止调用会写 Receipt/Review 的业务回读路由；前序阻断记录保留；ERP-06 仍不得开始 |
+| ERP-05 | 历史数据证据盘点 | BLOCKED | RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05 | ERP-04 | 82 个目标官方回读已完成；3 个通过目标的 SPU/SKC/SKU 回读成功；9 条仅版本匹配，ProductVersion/PublishAttempt/PlatformProductLink 与完整对象清单仍缺失；ERP-06 不得开始 |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
@@ -1456,4 +1456,15 @@
 - 禁止范围：调用会持久化结果的 Control 业务方法；SHEIN 写接口；数据库写入/迁移；Receipt/Review 写入；Redis payload、队列消费/重试/claim；对象存储变更；部署、重启、切换；输出任何密钥、Token、签名、原始业务身份或完整 payload。
 - 失败关闭：只读边界、生产凭据作用域、目标映射或官方接口参数无法证明，或出现鉴权/网络/副作用迹象，立即停止并保持 `UNKNOWN`。
 - 完成标准：官方请求、返回码、trace、结构与目标覆盖有脱敏证据；数据库关键行数及写入审计前后无变化；缺口仍存在则保持 `BLOCKED`，不得开始 ERP-06。
-- 当前状态：`IN_PROGRESS`；生产官方读探针尚未执行。
+- 合同初始状态：`IN_PROGRESS`；生产官方读探针尚未执行。
+
+### RUN-20260829-ERP05-OFFICIAL-READBACK-EVIDENCE-05 结果
+
+- 生产边界：目标主机 `VM-0-5-ubuntu`；Control 当前 release 为 `shein-cloud-deploy-20260829-frontend-restore-v1`；凭据仅在 Control 容器一次性进程内解密，未输出任何密钥或原始身份。
+- 官方 `query-document-state`：82/82 目标完成请求、HTTP/业务传输成功、规范化成功；返回状态为 failed 72、pending 7、passed 3；无传输错误、无规范化错误、无 API 鉴权/限流错误。
+- 目标映射：82 条返回记录均有 version 和 SPU 标识；73 条 version+SPU 完全匹配，9 条仅 version 匹配，不能强行建立 SPU 平台身份映射。
+- 官方 `spu-info`：仅对 3 个官方审核通过目标调用；3/3 传输成功且规范化成功，共 3 个 SKC、18 个 SKU；79 个未通过/待审核目标按规则跳过，未提前调用。
+- 零写入证据：`stores`、`publish_jobs`、`publish_receipts`、`product_review_states`、`product_drafts`、`publish_execution_runs`、`webhook_events` 精确行数前后不变；PostgreSQL 对应写入/更新/删除统计前后不变。
+- 禁止事项已满足：未调用会写 Receipt/Review 的 Control 回读方法；未写数据库、Redis、队列、对象存储或 SHEIN；未部署、重启、切换或输出敏感数据。
+- 完成门结论：`BLOCKED`；官方来源已取得，但 9 条 SPU 标识不匹配、现有模型没有 ProductVersion/PublishAttempt/PlatformProductLink 专用事实、完整对象存储清单仍缺失；ERP-06、ERP-20 修复和任何生产清理/重试不得开始。
+- 当前状态：`BLOCKED`；报告见 `docs/ERP05_HISTORICAL_DATA_EVIDENCE_REPORT_2026-08-29.md`。
