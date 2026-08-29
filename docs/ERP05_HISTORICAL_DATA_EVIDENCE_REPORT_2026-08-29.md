@@ -3,19 +3,19 @@
 版本：2026-08-29-v2
 正式 Run：`RUN-20260829-ERP05-HISTORICAL-EVIDENCE-01`  
 步骤：ERP-05  
-状态：`IN_PROGRESS`（原始本地审计 Run 曾因证据缺口阻断；现按用户授权执行限定生产只读补证，不允许用猜测补齐）
+状态：`BLOCKED`（原始本地审计 Run 已补取生产只读证据，但仍未达到逐条历史分类完成门，不允许用猜测补齐）
 审计时间：2026-08-29（Asia/Shanghai）
 
 ## 1. 审计结论
 
-原始 Run 已完成本地静态证据盘点，并发现可逐条读取的本地业务投影和 V2 本地 Draft/Asset 状态，但没有取得完整 PostgreSQL 历史事实链而阻断。现 Run 按用户于 2026-08-29 明确授权重新进入限定生产只读补证；在补证完成前：
+原始 Run 已完成本地静态证据盘点，并发现可逐条读取的本地业务投影和 V2 本地 Draft/Asset 状态，但没有取得完整 PostgreSQL 历史事实链而阻断。补证 Run 按用户于 2026-08-29 明确授权取得了生产 PostgreSQL、Redis、容器、Worker 日志数量和应用健康元数据；但对象存储真实清单、平台官方回读/映射及逐条非敏感 ID 指纹仍未取得，因此当前完成门仍未通过：
 
 1. 本地投影中已确认：1 个 store-scoped business record，包含 1,179 个商品投影、声明 805 个 SPU 和 6,077 个 SKU；V2 本地状态包含 4 个 Draft 和 13 个 Asset。
 2. 这些文件不是 PostgreSQL 的 Draft/Batch/Job/Run/Receipt/Review 历史表，也没有证明 ProductVersion、PublishAttempt、PlatformProductLink、Webhook、队列和 Worker 事实链；对应关系仍必须标记为 `UNKNOWN`。
 3. 源码和迁移已经证明若干结构性风险：发布 Job 直接绑定可变 Draft、当前迁移没有 ProductVersion 边界、媒体引用没有 ProductVersion 类型、页面存在多路查询和二次归并、草稿列表使用“是否存在任意 Job”排除并受 `LIMIT 100` 影响。
 4. ERP-20 的修复范围目前可精确到“本地投影核验 + 结构性风险清单”，仍不能精确到历史记录 ID、租户、店铺、SKC、版本和 Attempt；因此 ERP-05 完成门未通过，ERP-06 不得开始。
 
-当前补证 Run 只允许非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；禁止生产写入、队列副作用、部署、重启、切换、SHEIN API 和任何密钥输出。
+补证 Run 只执行了非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；未执行生产写入、队列副作用、部署、重启、切换、SHEIN API 或任何密钥输出。
 
 ## 2. 证据边界
 
@@ -33,9 +33,9 @@
 | `.data/shein-schema-cache.v1.json` | 本地 schema cache；不是历史事实表；SHA-256：`ba623b3c1a0ec6daa965a12782ed9ae1a8dc4f3133c2fcf479901bbc5eb2a8ad` |
 | 本地容器状态 | 审计时 `docker ps -a` 无运行或已停止容器可供读取 |
 
-### 2.2 未取得的证据
+### 2.2 原始 Run 未取得的证据
 
-以下项目仍没有完整快照或可安全读取的非生产证据，全部不能从本地投影或历史文档推断：
+以下项目在原始本地 Run 中没有完整快照；原始结论不能从本地投影或历史文档推断。当前生产补证已取得其中的关系型聚合，但没有改变原始 Run 的历史结论：
 
 - `product_drafts`、`publish_batches`、`publish_batch_items`、`publish_jobs`、`publish_execution_runs`、`publish_receipts` 的 PostgreSQL 实际数据行；
 - `product_review_states`、Webhook 原始事件、document-state、SPU/SKC/SKU 回读结果；
@@ -55,6 +55,21 @@
 | `v2-real-local-state.json` / Asset | 13 个 Asset，覆盖 3 个 store scope；状态全部为 `ready`；用途全部为 `compliance_evidence`；引用计数全部为 0；合计 `sizeBytes` 为 39,882,429 |
 
 这些投影可以作为本地读取层和测试 fixture 的证据，但没有包含 PostgreSQL 发布表中的 Batch/Job/Run/Receipt，也没有形成 ProductVersion、PublishAttempt 或 PlatformProductLink 的可审计链，所以不能据此完成历史关系修复。
+
+### 2.4 当前 Run 的生产只读补证
+
+审计时间：`2026-08-29T10:35:40Z`（服务器 UTC）。本节只记录非敏感聚合和运行元数据，不记录 SecretId、SecretKey、Token、Cookie、签名、完整 payload、图片字节或个人信息。
+
+| 证据面 | 只读结果 |
+|---|---|
+| SSH/运行边界 | 目标主机 `VM-0-5-ubuntu`；用户 `ubuntu`；使用非交互密钥登录；直接 Docker socket 拒绝，`sudo -n` 只读 Docker 查询可用 |
+| 应用版本/健康 | `/opt/shein-console/current` 指向 `shein-cloud-deploy-20260829-frontend-restore-v1`；Control `/ready` 返回 HTTP 200 |
+| 容器 | Control、发布/规则/经营/合规/Webhook/媒体 Worker、Webhook、PostgreSQL、Redis、Cloudflared 均为 running；Control/Webhook/PostgreSQL/Redis 报告 healthy |
+| PostgreSQL | `shein_console`；schema migration 记录 46 条；关键历史表均可只读查询 |
+| Redis | `PONG`；DB0 `1,623` keys，`5` keys 有过期时间；未读取 key 名称和 payload |
+| Worker 日志摘要 | 最近 24 小时仅输出行数：发布 7、规则 1,576、经营 8、合规 0、Webhook 372、媒体清理 1,439；未输出日志原文 |
+
+生产补证因此足以确认真实数据规模和结构性风险，但不足以证明平台回读、对象存储对象归属或新模型 Version/Attempt 的逐条映射。
 
 ## 3. 当前结构关系图（静态证据）
 
@@ -155,12 +170,14 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 | V2 本地 Asset 投影 | 13 | 0 | 暂无精确映射 | 13 条历史版本所有权为 `UNKNOWN` |
 | business-data 商品投影 | 1,179 | 0 | 暂无精确映射 | 1,179 条对应 DB/Attempt/平台回读为 `UNKNOWN` |
 | business-data SPU/SKU 声明 | 805 / 6,077 | 0 | 暂无精确映射 | 平台身份和历史时间线为 `UNKNOWN` |
-| Batch / BatchItem 实际行 | 未取得 | 0 | 未取得 | 全部实际行 |
-| Job / Run / Receipt 实际行 | 未取得 | 0 | 未取得 | 全部实际行 |
-| Review / Webhook / 回读实际行 | 未取得 | 0 | 未取得 | 全部实际行 |
-| Redis / Worker / 页面历史现场 | 未取得 | 0 | 未取得 | 全部实际现场 |
+| Batch / BatchItem 实际行 | 32 / 250 | 0 | 32 / 250 条 `legacy_unversioned`（外键孤儿均为 0） | ProductVersion/Attempt 关系为 `UNKNOWN` |
+| Job / Run / Receipt 实际行 | 219 / 28 / 157 | 0 | 219 / 28 / 157 条均不能映射到新 Version/Attempt；按 `legacy_unversioned` 结构证据登记 | 61 个 Draft 被多个 Job 复用；12 个 Run stale；2 个 claim 已过期；82 个 submitted 缺 completed_at |
+| Review / Webhook / 回读实际行 | 156 / 2,978 / 外部回读未取得 | 0 | DB 投影/事件均保留为旧模型证据 | 39 条审核投影缺 audit/document/version；13 个 Webhook queued；外部官方回读 `UNKNOWN` |
+| SPU / SKC / SKU 实际行 | 518 / 547 / 0 | 0 | SPU/SKC 为平台投影型旧表，SKU 无行 | PlatformProductLink 和 SKU 回读映射 `UNKNOWN` |
+| MediaAsset / Reference 实际行 | 820 / 542 | 0 | 820 / 542 条均无 ProductVersion 类型引用，按旧模型证据登记 | 280 个引用计数不一致；24 个 ready Asset 实际引用数为 0；对象存储清单 `UNKNOWN` |
+| Redis / Worker / 页面历史现场 | 1,623 keys / 6 个 Worker 日志摘要 / 页面现场未取 | 0 | 运行元数据已取得，业务消息不读取 | claim/submission payload、队列消息和页面逐条历史 `UNKNOWN` |
 
-这里的“已完成 ERP 历史分类”为零，表示没有足够的 Version/Attempt/平台回执证据完成 `mapped`、`legacy_unversioned`、`unmatched` 或 `conflict` 分类；不是说本地投影没有记录。
+这里的“已完成 ERP 历史分类”为零，表示还没有把生产行级记录建立到新 `ProductVersion/PublishAttempt/PlatformProductLink` 的可审计映射；“legacy_unversioned”是结构性旧模型分类，不等同于已完成新模型映射。生产聚合已证明实际风险数量，但不能把聚合数量冒充逐条 `mapped/unmatched/conflict` 完成结果。
 
 ## 7. ERP-05 必查项闭合情况
 
@@ -186,6 +203,27 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 | 页面 fan-out/二次归并/LIMIT 100 | `STRUCTURAL EVIDENCE + UNKNOWN` | 读取路径已确认，实际漏项/重复数未知 |
 | Version 媒体所有权证明 | `STRUCTURAL GAP + UNKNOWN` | 当前 migration 没有 ProductVersion 引用类型 |
 
+### 7.1 当前生产只读补证结果
+
+| 检查项 | 生产只读结果 | 当前解释 |
+|---|---:|---|
+| 作用域 | 11 个 Store（9 active、2 disabled）；Draft 5 个 store scope；Job 4 个；Asset 7 个；SKC 7 个 | 作用域已可计数，跨域逐条映射仍未建立 |
+| 外键孤儿 | BatchItem→Draft、Job→Draft/Batch/BatchItem/Run、Receipt→Job/Webhook、SKC→SPU、SyncItem→SyncJob 均为 0 | 结构外键完整不代表业务版本关系完整 |
+| Draft 状态 | archived 44、blocked 1、ready 48；没有规范 `editing/handed_off` 投影 | 旧状态与 ERP-04 六维状态不能直接等价 |
+| Batch/BatchItem 状态 | Batch failed 12、ready 20；Item failed 68、ready 182 | 批次状态与新 Command/Attempt 仍未分离 |
+| Job 状态 | claimed 2、failed_terminal 135、submitted 82 | 2 个 claimed 均 claim 已过期；82 个 submitted 均无 completed_at |
+| ExecutionRun | failed 16、running 12；12 个 running 均超过 1 小时；execution_enabled 2、authorizes_publishing 2 | 必须按 stale running 进入 ERP-20 受控修复计划，禁止现场重试/清理 |
+| Receipt 状态 | accepted 84、failed 50、passed 2、pending 21 | 139 条无 webhook_event_id；82 条无 document_sn；75 条无 trace_id |
+| Draft 复用/重复键 | 61 个 Draft 被多个 Job 复用，单 Draft 最多 6 个 Job；重复 request_key 0；重复 receipt dedupe_key 0 | 直接确认 mutable Draft 复用风险，不能自动重发或批量拆分 |
+| 审核投影 | 156 条 workflow_stage 全为空；audit_state 为空 39；document/version 为空各 39 | 审核投影无法直接作为六维官方审核状态 |
+| SPU/SKC/SKU | SPU 518、SKC 547、SKU 0；SKC→SPU 孤儿 0 | SKU 层历史证据缺失，不能把 SKC 数量推导为 SKU 完整事实 |
+| 媒体 | Asset 820；Reference 542；280 条 `reference_count` 不一致；deleted 且仍有引用 0；ready 且零引用 24 | 引用账本与资产状态不一致；引用类型没有 ProductVersion |
+| Webhook | processed 2,965、queued 13；queued 且 processed_at 已设置 13；attempt_count>1 为 99 | 事件队列仍有待处理项；禁止本 Run 消费/重试 |
+| 同步 | SyncJob succeeded 399、failed 165、queued 3、running 1；SyncItem 339 且非 succeeded 为 0 | 失败/排队同步必须保留原证据，不能用网页刷新代替重跑结论 |
+| 运行时 | Redis 1,623 keys；6 个 Worker 最近 24h 日志行数已摘要；Control `/ready` 200 | 只能证明运行态可观测，不能证明 SHEIN 已回读或提交成功 |
+
+以上结果已写入当前 Run 的 ERP-20 修复范围，但没有执行任何修复动作。
+
 ## 8. 对 ERP-20 的当前精确范围
 
 目前本地投影可用于验证读取层和 fixture，但在取得逐条数据库事实前，ERP-20 仍只能登记以下“待证实修复族”，不能生成具体 UPDATE/DELETE 计划：
@@ -202,20 +240,20 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 
 ## 9. 补证要求
 
-要使 ERP-05 重新进入可完成状态，现有本地投影之外，还需要一份脱敏、只读、可校验的历史事实证据包，至少包含：
+原始 Run 的本地证据缺口已由本 Run 补充了生产关系型聚合和运行元数据，但要使当前 ERP-05 进入可完成状态，还需要一份脱敏、只读、可校验的逐条历史事实证据包，至少包含：
 
-- 相关表的 schema、行级非敏感 ID、tenant/store、时间、状态、外键和必要的 hash；
-- Job/Run/Receipt 的 request key、指纹、平台 document/version、SPU/SKC/SKU 关联及状态时间线；
-- Review/Webhook/document-state/readback 的非敏感事件索引；
-- Redis/Worker 的队列名、消息 ID hash、claim/submission 状态和时间，不含 payload、Token 或 Cookie；
-- MediaAsset/Reference 的 asset ID、sha256、用途、引用类型、创建/释放时间，不含图片字节；
+- 相关表的逐条非敏感 ID 指纹、tenant/store、时间、状态、外键和必要的 hash；
+- Job/Run/Receipt 的逐条 request key 指纹、候选指纹、平台 document/version、SPU/SKC/SKU 关联及状态时间线；
+- Review/Webhook/document-state/readback 的逐条非敏感事件索引，尤其是平台官方回读与本地 Receipt 的对应关系；
+- Redis/Worker 的队列名、消息 ID hash、claim/submission 状态和时间，不含 payload、Token 或 Cookie；当前仅取得数量和日志行数摘要；
+- MediaAsset/Reference 的逐条 asset ID 指纹、sha256、用途、引用类型、创建/释放时间及对象存储存在性，不含图片字节；
 - 规则、模板和 schema 快照 ID/hash；
 - 导出时间、来源环境、导出工具版本和完整性 hash。
 
-补证前不得连接生产服务，不得为了“盘点”执行任何会触发 revalidate、队列消费、回读或状态写入的操作。
+后续补证仍不得执行 SHEIN API 回读、队列消费、revalidate 或任何状态写入；若要补对象存储或平台证据，必须另建明确的只读证据边界，并继续禁止把结果直接写回生产。
 
 ## 10. 安全与回滚
 
 - 本报告未记录 SecretId、SecretKey、Token、Cookie、签名、完整请求 payload、图片字节或个人敏感信息。
-- 本 Run 只有 Markdown 文档变更；回滚仅需恢复本 Run 对应的文档提交，不触碰业务数据。
-- 原始 Run 状态保持 `BLOCKED`；当前补证 Run 为 `IN_PROGRESS`，不是 `COMPLETE`。只有历史证据逐项分类并通过完成门后，才能开始 ERP-06。
+- 本 Run 只有 Markdown 文档变更；生产检查全部是只读查询和元数据摘要；回滚仅需恢复本 Run 对应的文档提交，不触碰业务数据。
+- 原始 Run 状态保持 `BLOCKED`；当前补证 Run 结论为 `BLOCKED`，不是 `COMPLETE`。虽然生产真实规模和风险已补证，但逐条 Version/Attempt/平台映射、对象存储清单和官方回读仍缺失，ERP-06 不得开始。
