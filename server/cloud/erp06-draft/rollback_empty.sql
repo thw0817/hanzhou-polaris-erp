@@ -49,6 +49,12 @@ BEGIN
 END
 $$;
 
+-- Remove the additive foreign keys before dropping the new tables they
+-- reference. This keeps the rollback dependency-safe in PostgreSQL.
+ALTER TABLE product_drafts
+  DROP CONSTRAINT product_drafts_base_version_fk,
+  DROP CONSTRAINT product_drafts_catalog_product_fk;
+
 DROP TRIGGER IF EXISTS product_events_immutable_guard ON product_events;
 DROP TRIGGER IF EXISTS product_version_media_immutable_guard ON product_version_media;
 DROP TRIGGER IF EXISTS product_version_skus_immutable_guard ON product_version_skus;
@@ -74,8 +80,6 @@ DROP TABLE catalog_skus;
 DROP TABLE catalog_products;
 
 ALTER TABLE product_drafts
-  DROP CONSTRAINT product_drafts_base_version_fk,
-  DROP CONSTRAINT product_drafts_catalog_product_fk,
   DROP CONSTRAINT product_drafts_editing_status_chk,
   DROP CONSTRAINT product_drafts_lock_version_chk,
   DROP CONSTRAINT product_drafts_revision_no_chk;

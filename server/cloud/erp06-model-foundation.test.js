@@ -103,6 +103,14 @@ test("ERP-06 draft encodes the required failure protections", async () => {
   assert.match(verify, /legacy_history_not_backfilled/);
   assert.match(rollback, /current_database\(\) !~\* '\(\^\|\[-_\]\)\(test\|rehearsal\|scratch\)\(\[-_\]\|\$\)'/);
   assert.match(rollback, /requires empty table/);
+  assert.ok(
+    rollback.indexOf("DROP CONSTRAINT product_drafts_base_version_fk") <
+      rollback.indexOf("DROP TABLE product_versions"),
+  );
+  assert.ok(
+    rollback.indexOf("DROP CONSTRAINT product_drafts_catalog_product_fk") <
+      rollback.indexOf("DROP TABLE catalog_products"),
+  );
   assert.match(readme, /不连接生产 PostgreSQL、COS、Redis、队列或 SHEIN/);
 });
 

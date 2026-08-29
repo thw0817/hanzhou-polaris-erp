@@ -1686,5 +1686,6 @@
 - 模型范围：CatalogProduct/CatalogSku、DraftRevision、ProductVersion/ProductVersionSku/ProductVersionMedia、PublishAttempt/PublishCommand/PublishReceipt、PlatformProductLink、ProductEvent、OfficialEventInbox、ProductPublishOutbox；只向旧 `product_drafts`/`media_assets` 添加兼容字段，不回填旧事实。
 - 失败保护：COS 资产未完成存在性/完整性核验、hash/大小不一致、跨租户/跨店铺引用、重复版本媒体、不可变版本/事件 UPDATE/DELETE、`result_unknown` 重发和无官方证据的平台 Link 均 fail closed；修正并重发必须使用新的 Draft/Revision/Version/Attempt 并记录 `supersedes_attempt_id/reason`。
 - 本地静态验证：ERP-06 草案测试 `6/6`；ERP-06 与迁移器定向回归 `32/32`；秘密扫描 `passed` 且无新发现；全量测试 `1209/1209`。
-- 数据库 rehearsal：`NOT RUN / BLOCKED`。本机无 Docker、`psql` 或 PostgreSQL；没有使用任何云端数据库替代，也没有伪造数据库通过结果。可运行入口已加入 `db:rehearse:erp06-foundation`，只接受本机且数据库名含 `test`/`rehearsal`/`scratch`，并要求精确确认值。
-- 当前状态：`IN_PROGRESS`；草案与失败回归完成，等待具备本机/隔离 PostgreSQL 后执行真实 schema rehearsal，再评审是否进入 ERP-06 实现代码阶段。生产迁移和生产切换仍需单独批准。
+- 数据库 rehearsal：`PASS`。在全新本机 Docker `postgres:16-alpine` 临时容器（`127.0.0.1:55433/erp06_rehearsal`）中依次完成现有 001–046、preflight、ERP-06 additive 草案、失败回归、verify、空库 rollback、重新应用和二次 verify；临时容器已停止并删除，现有 staging 容器未触碰。
+- 首轮 rehearsal 暴露 PostgreSQL 回滚依赖顺序问题：`product_drafts.base_version_id` 外键仍依赖 `product_versions`，修正为先解除新增外键再删除新表；新空库重跑全流程通过。可运行入口已加入 `db:rehearse:erp06-foundation`，只接受本机且数据库名含 `test`/`rehearsal`/`scratch`，并要求精确确认值。
+- 当前状态：`COMPLETE`；草案、失败回归和真实隔离 schema rehearsal 完成，下一阶段再评审 ERP-06 实现代码。生产迁移和生产切换仍需单独批准。
