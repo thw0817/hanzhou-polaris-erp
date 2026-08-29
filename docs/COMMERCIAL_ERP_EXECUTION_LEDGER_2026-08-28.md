@@ -1673,3 +1673,18 @@
 - 结论：COS 对象上传、服务端存在性校验、下载和清理权限均已生效；无需再次部署代码，无需重启 PostgreSQL/Redis。
 - 未改变范围：未修改历史 `media_assets` 行、未修复或重试此前失败上传、未删除任何历史对象；此前遗留的 `uploading` 记录保持原状，等待用户业务层重新上传产生新 Asset。
 - 当前状态：`COMPLETE`；用户可刷新网页后重新选择图片上传并预览，作为最终业务验收。
+
+## 25. ERP-06 隔离 additive model foundation 草案与失败回归
+
+### RUN-20260829-ERP06-MODEL-FOUNDATION-ISOLATED-05
+
+- 类型：ERP-06 第一阶段隔离数据库草案、preflight/verify/rollback 契约和失败回归测试。
+- 启动依据：ERP-06 数据模型设计文件明确要求的下一执行单元；用户要求“编写隔离环境 additive migration 草案和失败回归测试，不触碰生产”。
+- 允许范围：只读现有迁移/代码/测试；新增隔离草案、回滚说明和本地测试；未来仅在本机一次性 PostgreSQL 数据库 rehearsal。
+- 禁止范围：生产 PostgreSQL/COS/Redis/队列/SHEIN 访问或写入；生产部署/重启/切换；历史 187 条缺失媒体恢复、删除、回填或重试；修改已执行旧 migration 文件。
+- 实际文件：[047_erp06_model_foundation.sql](../server/cloud/erp06-draft/047_erp06_model_foundation.sql)、[preflight.sql](../server/cloud/erp06-draft/preflight.sql)、[verify.sql](../server/cloud/erp06-draft/verify.sql)、[rollback_empty.sql](../server/cloud/erp06-draft/rollback_empty.sql)、[rehearse-erp06-model-foundation.js](../server/cloud/rehearse-erp06-model-foundation.js)、[erp06-model-foundation.test.js](../server/cloud/erp06-model-foundation.test.js)。草案故意位于活动迁移目录之外，未登记为生产 047。
+- 模型范围：CatalogProduct/CatalogSku、DraftRevision、ProductVersion/ProductVersionSku/ProductVersionMedia、PublishAttempt/PublishCommand/PublishReceipt、PlatformProductLink、ProductEvent、OfficialEventInbox、ProductPublishOutbox；只向旧 `product_drafts`/`media_assets` 添加兼容字段，不回填旧事实。
+- 失败保护：COS 资产未完成存在性/完整性核验、hash/大小不一致、跨租户/跨店铺引用、重复版本媒体、不可变版本/事件 UPDATE/DELETE、`result_unknown` 重发和无官方证据的平台 Link 均 fail closed；修正并重发必须使用新的 Draft/Revision/Version/Attempt 并记录 `supersedes_attempt_id/reason`。
+- 本地静态验证：ERP-06 草案测试 `6/6`；ERP-06 与迁移器定向回归 `32/32`；秘密扫描 `passed` 且无新发现；全量测试 `1209/1209`。
+- 数据库 rehearsal：`NOT RUN / BLOCKED`。本机无 Docker、`psql` 或 PostgreSQL；没有使用任何云端数据库替代，也没有伪造数据库通过结果。可运行入口已加入 `db:rehearse:erp06-foundation`，只接受本机且数据库名含 `test`/`rehearsal`/`scratch`，并要求精确确认值。
+- 当前状态：`IN_PROGRESS`；草案与失败回归完成，等待具备本机/隔离 PostgreSQL 后执行真实 schema rehearsal，再评审是否进入 ERP-06 实现代码阶段。生产迁移和生产切换仍需单独批准。
