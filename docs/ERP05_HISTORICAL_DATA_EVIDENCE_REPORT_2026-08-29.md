@@ -1,10 +1,10 @@
 # ERP-05 历史数据证据审计报告
 
-版本：2026-08-29-v14
-正式 Run：`RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-11`
+版本：2026-08-29-v15
+正式 Run：`RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-14`
 步骤：ERP-05  
-状态：`BLOCKED`（Run 11 已执行；对象列表请求仍被 HTTP 403 拒绝）
-审计时间：2026-08-29 21:21:04（Asia/Shanghai）
+状态：`BLOCKED`（Run 14 原生 COS 列表与媒体归属对账已完成；其余 ERP-05 完成门仍未通过）
+审计时间：2026-08-29（Asia/Shanghai）
 
 ## 1. 审计结论
 
@@ -22,10 +22,12 @@
 10. Run 07 关系基线的目标业务表精确行数为 Draft 93、Batch 33、BatchItem 266、Run 28、Job 219、Receipt 173、Review 156、SPU 518、SKC 547、MediaAsset 820、Reference 542、Webhook 2,985、SyncJob 578、SyncItem 339；Run 08 快照中的 SyncJob 为 580、SyncItem 339，Run 08 内目标表行数稳定；后台并发使 PostgreSQL 更新统计变化，不能声称跨 Run 统计完全不变。
 11. 当前数据库系统目录确认目标关系上有 50 个声明外键；BatchItem→Batch/Draft、Job→Run/Batch/BatchItem/Draft、Receipt→Job/Webhook、SKC→SPU、SyncItem→SyncJob 的实际孤儿计数均为 0。外键完整只证明结构关系，不等于新 ProductVersion/PublishAttempt 映射完成。
 12. `public.skus` 是普通表且经数据库所有者只读核验为 0 行，但应用角色 `shein_runtime` 没有 SELECT 权限；因此本 Run 将 SKU 行级事实标为 `UNKNOWN`，不能用权限不可见替代业务数据结论。
-13. Run 08 对对象存储发起只读 `ListObjectsV2` 得到 HTTP 403；此前 820 条 HEAD 结果仍只能代表逐对象部分证据，无法证明 provider-level 清单完整性。对象清单、媒体所有权连续性和完整 hash 证据继续标为 `UNKNOWN`，不执行任何清理或状态修复。
+13. Run 08 对对象存储发起只读 `ListObjectsV2` 得到 HTTP 403；此前 820 条 HEAD 结果仍只能代表逐对象部分证据，无法证明 provider-level 清单完整性。该历史结果不代表 COS 原生签名列表权限结论。
 14. Run 09 已在用户完成最小 `cos:GetBucket` 授权后执行，但第 0 页仍返回 HTTP 403；这不能证明策略已绑定到服务器实际使用的密钥主体或资源匹配，对象证据继续为 `UNKNOWN`，不再自动重试。
 15. Run 10 在用户确认修正子用户后使用服务器当前运行时身份重新执行，`ListObjectsV2` 第 0 页仍返回 HTTP 403；这表明当前运行时密钥仍未获得匹配的 COS List 权限，或策略的主体/资源/action 仍不匹配。数据库行数和 MediaAsset 指标稳定，但 PostgreSQL 统计在后台并发下增加 inserts 10、updates 7，因此只记录为受并发影响，不能声称本 Run 零统计变化。
-16. Run 11 在用户确认 `wow-rug-cos-service` 为目标子用户并完成策略调整后再次执行，`ListObjectsV2` 第 0 页仍返回 HTTP 403；服务器运行时身份与 CAM 策略的有效关联尚未被证明，对象清单继续为 `UNKNOWN`，停止继续重试。
+16. Run 11 在用户确认 `wow-rug-cos-service` 为目标子用户并完成策略调整后再次执行，S3/AWS4 兼容 `ListObjectsV2` 第 0 页仍返回 HTTP 403；Run 13 修正 AWS4 canonical query 后结果仍为 403。该结果不代表 COS 原生 HMAC-SHA1 请求失败。
+17. Run 14 使用同一生产运行时凭据执行 COS 原生 HMAC-SHA1 `GET Bucket`，列表成功且分页完整：633 个唯一对象、总大小 949039963 bytes、桶内孤儿 0、重复 0；数据库 820 条唯一 `object_key` 中 633 条匹配，187 条无远端对象。缺失记录全部为无引用的 `deleted`（185）或 `failed`（2）；不执行删除、恢复或状态改写。
+18. Run 14 证明当前 CAM 策略、子用户密钥和 COS 原生只读列表权限已生效；前序 403 的直接范围是当前 AWS4/S3 兼容列表探针，不再作为“权限未配置”的证据。ERP-05 仍因 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配的解释和 SKU 应用角色可读证据缺失而 `BLOCKED`。
 
 此前补证 Run 只执行了非交互 SSH、容器健康与版本元数据、PostgreSQL 聚合 `SELECT`/系统目录、Redis 数量/元信息、Worker 日志数量摘要和媒体元数据摘要；本正式 Run 另行执行了官方只读查询，未执行生产写入、队列副作用、部署、重启、切换或任何密钥输出。
 
@@ -531,3 +533,29 @@ ERP-20 方向：拆分纯读校验和显式写入 Operation，补充 SQL 写入�
 - 数据库：13 张关键表行数前后完全相同；MediaAsset 仍为 820 行、820 行有唯一 `object_key`、771 行有 `sha256`。本 Run 内 PostgreSQL 统计 inserts 增加 4、updates 增加 4、deletes 不变，属于后台并发活动，不能归因于本探针。
 - 官方 version mismatch：沿用 `total=9/crossUnique=0/crossNone=9/crossAmbiguous=0`，分类仍为 `UNKNOWN`；不发起业务回读或重发。
 - 完成门结论：`BLOCKED`。用户提供的服务器掩码前缀/后缀与 `wow-rug-cos-service` API 密钥截图一致，且权限页已显示 `polaris-media-list-readonly` 为直接关联；但 `ListObjectsV2` 仍 HTTP 403，仍需核对该策略最终 JSON 已保存生效；在闭合前不得继续重试、清理媒体或进入 ERP-06/ERP-20。
+### RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-13 结果（回顾性补证）
+
+- Run 13 在修正 AWS4 canonical query 后仍为 HTTP 403；`pages=0`、`objects=0`、`bytes=0`、`complete=false`，未发生对象或数据库写入。
+- 13 张关键表行数前后完全相同；MediaAsset 820/820 有唯一 `object_key`，sha256 771；PostgreSQL 统计变化来自后台并发活动，不能归因于探针。
+- 结论：`BLOCKED/UNKNOWN`。更正了前序签名构造缺陷，但 AWS4 兼容列表请求仍未成功；不据此推断 CAM 错误或对象缺失。
+
+### RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-14
+
+- 类型：ERP-05 对象存储列表鉴权协议分流的只读复核；在不改变生产配置和 CAM 策略的前提下，用 COS 原生 HMAC-SHA1 请求区分 CAM 拒绝与 S3/AWS4 兼容签名问题。
+- 启动依据：Run 11 在目标子用户、AccessKey 掩码和策略直接关联均已对齐后仍 HTTP 403；Run 13 已修正 AWS4 canonical query 但仍 HTTP 403。
+- 目标：使用生产容器运行时现有凭据，对实际 bucket endpoint 发起 COS XML API 原生签名 `GET Bucket` 列表请求；若成功再完成只读分页对账，若失败仅记录脱敏 HTTP/业务错误代码，不推断对象缺失。
+- 允许范围：非交互 SSH；生产容器内存中读取现有环境变量；对象存储只读 `GET Bucket`；PostgreSQL `SELECT`/系统统计；内存计数和脱敏错误分类。
+- 禁止范围：任何对象上传/下载/删除/复制/改名；数据库写入/迁移；SHEIN API、Redis/队列、部署、重启、切换、策略修改和任何敏感值/原始 object key 输出。
+- 失败关闭：签名、endpoint、分页或响应语义无法证明；返回鉴权/协议错误；或出现任何副作用时立即停止，保持 `UNKNOWN/BLOCKED`。
+- 完成标准：请求协议和签名字段可审计；成功时列表分页到未截断并取得总数/总大小；失败时区分 `AccessDenied`、`SignatureDoesNotMatch`、网络或其他脱敏错误；数据库关键表行数与本 Run 内统计单独记录并考虑后台并发。
+- 回滚点：本 Run 不修改生产数据、配置、策略或对象；仅新增证据文档记录。
+- 当前状态：`BLOCKED`；COS 原生列表与媒体归属对账已完成，但 ERP-05 总完成门仍未通过。
+
+### RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-14 结果
+
+- 执行时间：2026-08-29（Asia/Shanghai）；生产环境只读。
+- COS 原生列表：使用生产容器运行时现有凭据，通过 COS XML API 原生 HMAC-SHA1 `GET Bucket` 成功；1 页、633 个对象、总大小 `949039963` bytes、`IsTruncated=false`；唯一对象 633、桶内孤儿 0、重复对象 0。
+- 数据库对账：`media_assets` 820 行、820 个唯一 `object_key`；其中 633 条与 COS 对象精确匹配，187 条无远端对象；数据库没有重复 object key。缺失记录按状态为 `deleted=185`、`failed=2`，按用途为 `selected_unpublished=153`、`reusable_source=26`、`generated_unselected=3`、`temporary_upload=3`、`compliance_evidence=2`；缺失记录实际引用数为 0，`reference_count>0` 为 0。
+- 缺失对象累计数据库记录大小 `228526673` bytes；其中 185 条在探针时已过期，缺失记录均有 store 归属。该统计只用于证据分类，不代表允许清理或恢复。
+- 数据库零写入：关键表行数前后相同；本次探针未写数据库、Redis、队列、SHEIN 或对象存储。`media_assets` 统计在本次观察后为 inserts 820、updates 5284、deletes 0；未将后台并发统计解释为探针写入。
+- 结论：Run 14 的对象清单与归属证据已取得，但 ERP-05 总完成门仍为 `BLOCKED`。187 条缺失记录保持历史事实，禁止自动删除、补对象、改状态或重试；ERP-06、ERP-20、生产清理和发布重试均不得开始。

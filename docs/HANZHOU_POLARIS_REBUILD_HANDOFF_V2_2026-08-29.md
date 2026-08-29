@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-29-v16
+版本：2026-08-29-v18
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：ERP-05 Run 11 对象清单权限复核仍被 HTTP 403 阻断；ERP-06～ERP-23 不得开始。
+当前执行：ERP-05 Run 14 已完成 COS 原生列表与媒体归属只读对账，但 ERP-05 总完成门仍被历史证据缺口阻断；ERP-06～ERP-23 不得开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -19,7 +19,7 @@
 | --- | --- | --- | --- | --- |
 | A | 历史修复与部署记录 | 旧“第 1～20 步”、NEXUS/EVO/SRF、发布/同步/审核中心/复选框等历次修复和 release | 历史上确实执行过许多步骤并有部署记录；当前效果仍需现场核验 | `REBUILD_HANDOFF_MASTER_2026-08-28.md`、`REBUILD_HANDOFF_2026-08-03.md` 等历史交接 |
 | B | 17 个板块最新详细方案 | 账号权限、店铺、商品、建档、发布、回读、素材、AI、合规、经营、履约、售后、财务、价格、增长、协同、BI | **最新产品与架构目标，已讨论并完整记录；尚未作为整体实施完成** | `COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md` |
-| C | ERP-00～ERP-23 | 为落实 17 个板块而新编制的分阶段工程治理与实施路线 | **当前路线：ERP-00～ERP-04 已完成，ERP-05 Run 11 在确认目标子用户并调整策略后仍因第 0 页 HTTP 403 阻断，ERP-06～ERP-23 尚未开始；前序阻断 Run 保留** | `COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md`、执行台账 |
+| C | ERP-00～ERP-23 | 为落实 17 个板块而新编制的分阶段工程治理与实施路线 | **当前路线：ERP-00～ERP-04 已完成，ERP-05 Run 14 已用 COS 原生 HMAC-SHA1 完成列表与媒体归属只读对账，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射等证据仍阻断，ERP-06～ERP-23 尚未开始；前序阻断 Run 保留** | `COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md`、执行台账 |
 
 必须牢记：
 
@@ -48,7 +48,7 @@
 5. docs/REBUILD_HANDOFF_MASTER_2026-08-28.md
 6. docs/REBUILD_HANDOFF_2026-08-03.md
 
-ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并完成 ERP-00～ERP-04，ERP-05 的原始只读历史证据审计和前序生产补证均因逐条证据缺口阻断，行级关系 Run 已完成允许范围内检查，Run 08、Run 09、Run 10 和 Run 11 均因 provider 返回 HTTP 403 阻断；Run 11 已核对服务器掩码密钥与 `wow-rug-cos-service` API 密钥前缀/后缀一致，且权限页显示 `polaris-media-list-readonly` 为直接关联，但仍需确认最终 action/resource JSON 已保存生效，仍因完整对象证据、9 条官方 version 不匹配、新模型逐条映射和 SKU 应用角色可读证据缺失而未通过。后续步骤仍只有在前一步完成且用户明确要求后，才读取执行计划和台账并创建 Run。
+ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并完成 ERP-00～ERP-04，ERP-05 的原始只读历史证据审计和前序生产补证均因逐条证据缺口阻断，行级关系 Run 已完成允许范围内检查。Run 08、Run 09、Run 10、Run 11 和 Run 13 的 S3/AWS4 兼容列表请求返回 HTTP 403；Run 14 改用 COS 原生 HMAC-SHA1 成功取得 633 个对象并完成媒体归属对账，发现 187 条无远端对象且均无引用。当前仍因 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配和 SKU 应用角色可读证据缺失而未通过。后续步骤仍只有在前一步完成且用户明确要求后，才读取执行计划和台账并创建 Run。
 
 先只读理解并向我汇报：
 - 17 个板块的整体目标和相互依赖；
@@ -118,9 +118,9 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 
 - ERP 步骤总数：24。
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
-- `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11 的对象清单请求均返回 HTTP 403，Run 11 已核对服务器掩码密钥与 `wow-rug-cos-service` API 密钥前缀/后缀一致，权限页已显示 `polaris-media-list-readonly` 直接关联，但最终 JSON 生效仍未闭合；目标关系孤儿为 0，但完整对象证据、9 条官方 version 不匹配、新模型逐条映射和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
+- `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11、Run 13 的 S3/AWS4 兼容列表请求返回 HTTP 403，但 Run 14 的 COS 原生 HMAC-SHA1 列表成功并完成归属对账：633 个对象匹配，187 条历史媒体记录无远端对象且均无引用；目标关系孤儿为 0，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
 - `NOT_STARTED`：ERP-06～ERP-23。
-- 当前正式 ERP Run：`RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-11`；前序 Run 作为阻断历史保留。当前 Run 已在确认目标子用户并调整策略后执行对象存储只读清单复核但第 0 页仍 HTTP 403，未完成前不得进入 ERP-06。
+- 当前正式 ERP Run：`RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-14`；前序 Run 作为阻断历史保留。Run 14 已完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账，但 ERP-05 总完成门仍未通过，未完成前不得进入 ERP-06。
 
 使用规则：
 
