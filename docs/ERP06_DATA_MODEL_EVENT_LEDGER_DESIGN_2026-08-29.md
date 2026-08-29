@@ -1,6 +1,6 @@
 # ERP-06 数据模型与事件账本设计
 
-版本：2026-08-30-v9
+版本：2026-08-30-v10
 状态：`IN_PROGRESS`（非生产设计、版本冻结、原子交接、Outbox claim/lease、Worker dry-run、SHEIN adapter boundary、结果持久化与 Worker 编排隔离验证）
 适用边界：COS-first；历史数据冻结只读；不执行生产迁移、不修改历史记录、不调用 SHEIN 写接口
 
@@ -253,7 +253,7 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 
 ## 10. 当前状态与下一 Run
 
-- 当前 Run：`RUN-20260830-ERP06-SHEIN-REMOTE-BOUNDARY-13`
+- 当前 Run：`RUN-20260830-ERP06-OFFICIAL-READBACK-PERSISTENCE-14`
 - 当前状态：`COMPLETE`（本 Run 隔离结果持久化边界与全量门禁已完成；ERP-06 整体仍为 `IN_PROGRESS`）
 - 已完成：COS-first 决策登记、ERP-05 历史映射冻结豁免登记、目标模型 additive migration 草案、preflight/verify/rollback、真实本机 PostgreSQL 隔离 rehearsal、DraftRevision/ProductVersion 版本冻结、ProductVersion → PublishAttempt → PublishCommand → ProductPublishOutbox 原子交接、PublishBatch/BatchItem 显式关联和 legacy read-only adapter 最小实现。
 - 本 Run 实现边界：PublishBatch 服务按租户/店铺和 selection fingerprint 幂等创建 BatchItem；handoff 在同一事务内锁定 Batch/BatchItem，验证 Draft/Version 来源关系，建立 Attempt=`created`、Command=`queued`、Outbox=`pending`、current pointers、Draft=`handed_off`/lockVersion+1、BatchItem=`handed_off` 和 4 类 ProductEvent；不修改旧历史行，不调用远端。
@@ -277,5 +277,10 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 - 本 Run 实际文件：[erp06-shein-remote-boundary.js](../server/cloud/erp06-shein-remote-boundary.js)、[erp06-shein-remote-boundary.test.js](../server/cloud/erp06-shein-remote-boundary.test.js)；新隔离回归 `9/9`，包含默认禁网、显式授权、精确 endpoint/body、上游错误透传、空/不完整回读和 SPU 关系投影。
 - 本 Run 已验证：边界定向组合 `40/40`；全量测试 `1275/1275`；服务端测试 `125/125`；秘密扫描 `scannedFiles=627, findings=[]`；V2 构建、release audit、`node --check`、`git diff --check` 均通过；现有 staging Redis/PostgreSQL/MinIO 仅只读核对且未触碰。
 - 本 Run 状态：`COMPLETE`。本边界仍未接入生产 Worker、真实凭证解析、生产队列或任何真实 SHEIN HTTP；ERP-06 整体仍为 `IN_PROGRESS`。
-- 尚未完成：结果 repository 尚未接入生产 Worker；真实 SHEIN sender/签名凭证、官方 Webhook/单据状态回读与 SPU 关系回读、生产切换评估、正式生产迁移、历史数据迁移和 SHEIN 写入均未执行；旧历史继续只读，不因本 Run 自动映射。
-- 下一执行单元：单独评审该边界接入预发/生产的凭证、网络、队列、回读持久化和回滚方案；在 ERP-06 完成门通过且另行批准前，不接入生产 Worker、不执行生产迁移、不进入 ERP-07。
+- 本 Run 新增隔离官方回读事实落账：复用 047 草案已有 `official_event_inbox`、`product_publish_receipts`、`product_events`，在同一事务内保存安全 projection、dedupe/fingerprint、trace 和官方证据来源；不保存 raw response、图片地址或凭证，不建立 `PlatformProductLink`。
+- 回读落账状态固定为：完整且可对应的官方证据 → Inbox=`accepted`、Receipt=`readback/accepted`；空、部分或不可解除未知的官方响应 → Inbox=`unknown`、Receipt=`readback/unknown`；`result_unknown` 只有 `resolvesResultUnknown=true` 时转为 `resolved_by_official_readback`，`submitted` 不被改成 `completed`。
+- 本 Run 实际文件：[erp06-official-readback-repository.js](../server/cloud/erp06-official-readback-repository.js)、[erp06-official-readback-repository.test.js](../server/cloud/erp06-official-readback-repository.test.js)；新回归 `8/8`，覆盖原子三事实、幂等、空回读、SPU 回读、scope/版本漂移、敏感字段和无破坏性 SQL。
+- 本 Run 已验证：组合定向回归 `60/60`；全量测试 `1283/1283`；服务端测试 `125/125`；秘密扫描 `scannedFiles=629, findings=[]`；V2 构建、release audit、`node --check`、`git diff --check` 均通过；现有 staging Redis/PostgreSQL/MinIO 仅只读核对且未触碰。
+- 本 Run 状态：`COMPLETE`。回读 repository 仍未接入生产 Worker、真实凭证、生产队列或真实 SHEIN HTTP；ERP-06 整体仍为 `IN_PROGRESS`。
+- 尚未完成：真实 SHEIN sender/签名凭证、生产 Worker/队列、官方 Webhook、回读生产持久化接入、生产切换评估、正式生产迁移、历史数据迁移和 SHEIN 写入均未执行；旧历史继续只读，不因本 Run 自动映射。
+- 下一执行单元：单独评审预发/生产的真实凭证来源、网络出口、Worker/队列接入、回读持久化接线、监控和回滚证据；在 ERP-06 完成门通过且另行批准前，不接入生产、不执行生产迁移、不进入 ERP-07。
