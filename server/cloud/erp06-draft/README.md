@@ -9,6 +9,7 @@
 - `CatalogProduct` / `CatalogSku`：稳定的租户/店铺内本地身份。
 - `DraftRevision`：可变 `product_drafts` 的不可变快照。
 - `ProductVersion` / `ProductVersionSku` / `ProductVersionMedia`：handoff 后可独立还原的不可变版本事实。
+- `PublishBatch` / `PublishBatchItem`：批次 UI 聚合与每个 ProductVersion 的显式绑定；旧批次行保持 legacy，不回填。
 - `PublishAttempt` / `PublishCommand` / `PublishReceipt`：版本级尝试、幂等键、平台事实和 `result_unknown` 禁止重发保护。
 - `CatalogProduct.current_version_id/current_attempt_id`：同一事务内维护的当前版本/尝试读投影，不替代不可变事实。
 - `PlatformProductLink`：必须带官方证据，不能凭本地成功字段建立。
@@ -22,7 +23,9 @@
 2. 不连接生产 PostgreSQL、COS、Redis、队列或 SHEIN；不执行上传、删除、发布、重发或历史回填。
 3. 不修改 `server/cloud/migrations/` 中任何已执行文件；重复编号 `014` 保持原样。
 4. 失败回归必须失败：未验证 COS 资产不能建立 `ProductVersionMedia`；跨租户/跨店铺外键失败；旧版本/修订/媒体/事件不能 UPDATE/DELETE；`result_unknown` Attempt 不能创建可投递 Command，也不能回到 `dispatched`。
-5. 回滚脚本只允许空的新事实表，并且只允许隔离数据库；生产清理不在本 Run 授权范围内。
+5. 新交接必须携带并校验 `PublishBatch`、`PublishBatchItem`、`ProductVersion` 三者的租户/店铺和来源草稿关系；批次项成功交接后才绑定 `PublishAttempt`。
+6. 旧 `publish_jobs`/`publish_receipts` 只能经 legacy read-only adapter 读取；不生成 ProductVersion/Attempt，不写回旧表，不把 `result_unknown` 自动重发。
+7. 回滚脚本只允许空的新事实表，并且只允许隔离数据库；生产清理不在本 Run 授权范围内。
 
 ## 文件角色
 
@@ -33,6 +36,12 @@
 | `verify.sql` | 检查表、约束、媒体核验字段和历史未回填 |
 | `rollback_empty.sql` | 只在空隔离库中演练可逆清理 |
 | `README.md` | 人工审查边界与执行说明 |
+
+## 本 Run 新增实现
+
+- `server/cloud/erp06-publish-batch-service.js`：创建带选择指纹的 PublishBatch/BatchItem；同一租户/店铺内幂等，选择冲突或关联不完整时 fail closed。
+- `server/cloud/erp06-legacy-readonly-adapter.js`：只读投影旧 publish_jobs/publish_receipts；输出明确的 `legacy_readonly`/`legacy_unknown`，不泄露旧 JSON 中的凭证字段。
+- 以上服务及 handoff 的失败回归只使用 fake pool 和本地一次性数据库；没有接入生产路由、Dispatcher、Worker 或 SHEIN 写接口。
 
 ## 未在本 Run 做的事
 

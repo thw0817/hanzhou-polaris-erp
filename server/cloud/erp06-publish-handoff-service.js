@@ -127,6 +127,72 @@ async function loadVersionCatalogProductId(client, scope, productVersionId) {
   return result.rows[0]?.catalog_product_id || null;
 }
 
+async function loadBatchForUpdate(client, scope) {
+  const result = await client.query({
+    text: `SELECT *
+           FROM publish_batches
+           WHERE tenant_id=$1 AND store_id=$2 AND id=$3
+           FOR UPDATE`,
+    values: [scope.tenantId, scope.storeId, scope.publishBatchId],
+  });
+  const batch = result.rows[0] || null;
+  if (!batch) {
+    throw new Erp06PublishHandoffError(
+      "BATCH_NOT_FOUND",
+      "PublishBatch 不存在或不属于当前租户/店铺",
+      409,
+    );
+  }
+  return batch;
+}
+
+async function loadBatchItemForUpdate(client, scope, version, { requirePending = false } = {}) {
+  await loadBatchForUpdate(client, scope);
+  const result = await client.query({
+    text: `SELECT *
+           FROM publish_batch_items
+           WHERE tenant_id=$1 AND store_id=$2 AND id=$3 AND batch_id=$4
+           FOR UPDATE`,
+    values: [
+      scope.tenantId,
+      scope.storeId,
+      scope.publishBatchItemId,
+      scope.publishBatchId,
+    ],
+  });
+  const item = result.rows[0] || null;
+  if (!item) {
+    throw new Erp06PublishHandoffError(
+      "BATCH_ITEM_NOT_FOUND",
+      "PublishBatchItem 不存在、未挂在指定批次或不属于当前租户/店铺",
+      409,
+    );
+  }
+  if (
+    item.product_version_id !== version.id
+    || item.catalog_product_id !== version.catalog_product_id
+    || item.product_draft_id !== version.source_product_draft_id
+  ) {
+    throw new Erp06PublishHandoffError(
+      "BATCH_ITEM_VERSION_MISMATCH",
+      "PublishBatchItem 与 ProductVersion/来源草稿不一致，已阻断交接",
+      409,
+    );
+  }
+  if (requirePending) assertBatchItemPending(item);
+  return item;
+}
+
+function assertBatchItemPending(item) {
+  if (item.handoff_state !== "pending" || item.publish_attempt_id) {
+    throw new Erp06PublishHandoffError(
+      "BATCH_ITEM_NOT_HANDOFFABLE",
+      "PublishBatchItem 已交接或状态不是 pending，拒绝重复创建交接事实",
+      409,
+    );
+  }
+}
+
 async function assertVersionSourceDraftMatchesRequest(
   client,
   scope,
@@ -159,11 +225,18 @@ async function assertVersionSourceDraftMatchesRequest(
   }
 }
 
-function assertCompleteExistingHandoff({ attempt, command, outbox, projection }) {
-  if (!command || !outbox || !projection) {
+function assertCompleteExistingHandoff({ attempt, command, outbox, projection, batchItem }) {
+  if (
+    !command
+    || !outbox
+    || !projection
+    || !batchItem
+    || batchItem.publish_attempt_id !== attempt.id
+    || batchItem.handoff_state !== "handed_off"
+  ) {
     throw new Erp06PublishHandoffError(
       "INCOMPLETE_HANDOFF",
-      "发现已有发布尝试但缺少 Command、Outbox 或当前投影，拒绝猜测性修复",
+      "发现已有发布尝试但缺少批次项、Command、Outbox 或当前投影，拒绝猜测性修复",
       500,
     );
   }
@@ -322,6 +395,9 @@ function publicHandoffResult({
   idempotent,
   draftId,
   productVersionId,
+  publishBatchId,
+  publishBatchItemId,
+  batchItem,
   attempt,
   command,
   outbox,
@@ -333,6 +409,9 @@ function publicHandoffResult({
     stage: "queued_for_dispatch",
     draftId,
     productVersionId,
+    publishBatchId,
+    publishBatchItemId,
+    batchItemHandoffState: batchItem?.handoff_state || "handed_off",
     publishAttemptId: attempt.id,
     publishCommandId: command.id,
     publishOutboxId: outbox.id,
@@ -363,6 +442,8 @@ export class PostgresErp06PublishHandoffRepository {
     storeId,
     draftId,
     productVersionId,
+    publishBatchId,
+    publishBatchItemId,
     expectedLockVersion,
     requestKey,
     reason = "initial_publish",
@@ -374,6 +455,8 @@ export class PostgresErp06PublishHandoffRepository {
       storeId: ensureUuid(storeId, "storeId"),
       draftId: ensureUuid(draftId, "draftId"),
       productVersionId: ensureUuid(productVersionId, "productVersionId"),
+      publishBatchId: ensureUuid(publishBatchId, "publishBatchId"),
+      publishBatchItemId: ensureUuid(publishBatchItemId, "publishBatchItemId"),
       requestKey: ensureRequestKey(requestKey),
       reason: text(reason) || "initial_publish",
       capability: text(capability) || "product.publish",
@@ -401,10 +484,34 @@ export class PostgresErp06PublishHandoffRepository {
             { existingProductVersionId: existingAttempt.product_version_id },
           );
         }
+        if (
+          existingAttempt.publish_batch_id !== scope.publishBatchId
+          || existingAttempt.publish_batch_item_id !== scope.publishBatchItemId
+        ) {
+          throw new Erp06PublishHandoffError(
+            "ATTEMPT_BATCH_ASSOCIATION_MISMATCH",
+            "requestKey 对应的 PublishAttempt 未关联到本次指定批次/批次项，拒绝猜测性返回",
+            409,
+          );
+        }
+        const existingVersion = {
+          id: existingAttempt.product_version_id,
+          catalog_product_id: await loadVersionCatalogProductId(
+            client,
+            scope,
+            existingAttempt.product_version_id,
+          ),
+          source_product_draft_id: scope.draftId,
+        };
         await assertVersionSourceDraftMatchesRequest(
           client,
           scope,
           existingAttempt.product_version_id,
+        );
+        const existingBatchItem = await loadBatchItemForUpdate(
+          client,
+          scope,
+          existingVersion,
         );
         const command = await loadCommandForAttempt(client, scope, existingAttempt.id);
         const outbox = command
@@ -423,11 +530,15 @@ export class PostgresErp06PublishHandoffRepository {
           command,
           outbox,
           projection,
+          batchItem: existingBatchItem,
         });
         return publicHandoffResult({
           idempotent: true,
           draftId: scope.draftId,
           productVersionId: scope.productVersionId,
+          publishBatchId: scope.publishBatchId,
+          publishBatchItemId: scope.publishBatchItemId,
+          batchItem: existingBatchItem,
           attempt: existingAttempt,
           command,
           outbox,
@@ -458,6 +569,7 @@ export class PostgresErp06PublishHandoffRepository {
       }
 
       const version = await loadVersionForDraft(client, scope, draft);
+      const batchItem = await loadBatchItemForUpdate(client, scope, version);
       const catalogProduct = await loadCatalogProductForUpdate(
         client,
         scope,
@@ -475,6 +587,7 @@ export class PostgresErp06PublishHandoffRepository {
           },
         );
       }
+      assertBatchItemPending(batchItem);
 
       if (!["editing", "blocked", "ready"].includes(text(draft.editing_status))) {
         throw new Erp06PublishHandoffError(
@@ -496,6 +609,8 @@ export class PostgresErp06PublishHandoffRepository {
       );
       const commandKey = `${scope.requestKey}:command`;
       const payloadSummary = {
+        publishBatchId: scope.publishBatchId,
+        publishBatchItemId: scope.publishBatchItemId,
         productVersionId: version.id,
         sourceDraftRevisionId: version.source_draft_revision_id,
         versionFingerprint: version.version_fingerprint,
@@ -511,13 +626,16 @@ export class PostgresErp06PublishHandoffRepository {
       const attempt = (
         await client.query({
           text: `INSERT INTO publish_attempts
-                   (tenant_id, store_id, product_version_id, attempt_no,
+                   (tenant_id, store_id, publish_batch_id, publish_batch_item_id,
+                    product_version_id, attempt_no,
                     request_key, reason, state, created_by)
-                 VALUES ($1,$2,$3,$4,$5,$6,'created',$7)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'created',$9)
                  RETURNING *`,
           values: [
             scope.tenantId,
             scope.storeId,
+            scope.publishBatchId,
+            scope.publishBatchItemId,
             version.id,
             attemptNo,
             scope.requestKey,
@@ -638,6 +756,32 @@ export class PostgresErp06PublishHandoffRepository {
         );
       }
 
+      const handedOffBatchItem = (
+        await client.query({
+          text: `UPDATE publish_batch_items
+                 SET publish_attempt_id=$1, handoff_state='handed_off', updated_at=now()
+                 WHERE tenant_id=$2 AND store_id=$3 AND id=$4
+                   AND batch_id=$5 AND product_version_id=$6
+                   AND handoff_state='pending' AND publish_attempt_id IS NULL
+                 RETURNING id, handoff_state`,
+          values: [
+            attempt.id,
+            scope.tenantId,
+            scope.storeId,
+            scope.publishBatchItemId,
+            scope.publishBatchId,
+            version.id,
+          ],
+        })
+      ).rows[0];
+      if (!handedOffBatchItem) {
+        throw new Erp06PublishHandoffError(
+          "BATCH_ITEM_VERSION_CONFLICT",
+          "PublishBatchItem 在交接时已被其他操作占用，事务已回滚",
+          409,
+        );
+      }
+
       const projection = { product: projectionRow, draft: handedOffDraft };
 
       await insertEvent(client, {
@@ -648,6 +792,8 @@ export class PostgresErp06PublishHandoffRepository {
         eventVersion: 1,
         dedupeKey: `erp06:publish-attempt-created:${attempt.id}`,
         payload: {
+          publishBatchId: scope.publishBatchId,
+          publishBatchItemId: scope.publishBatchItemId,
           productVersionId: version.id,
           attemptNo,
           reason: scope.reason,
@@ -663,6 +809,8 @@ export class PostgresErp06PublishHandoffRepository {
         eventVersion: 1,
         dedupeKey: `erp06:publish-command-requested:${command.id}`,
         payload: {
+          publishBatchId: scope.publishBatchId,
+          publishBatchItemId: scope.publishBatchItemId,
           publishAttemptId: attempt.id,
           productVersionId: version.id,
           commandFingerprint,
@@ -682,6 +830,8 @@ export class PostgresErp06PublishHandoffRepository {
         }),
         dedupeKey: `erp06:draft-handoff-completed:${draft.id}:${attempt.id}`,
         payload: {
+          publishBatchId: scope.publishBatchId,
+          publishBatchItemId: scope.publishBatchItemId,
           productVersionId: version.id,
           publishAttemptId: attempt.id,
           publishCommandId: command.id,
@@ -704,6 +854,8 @@ export class PostgresErp06PublishHandoffRepository {
         }),
         dedupeKey: `erp06:current-product-projection-updated:${catalogProduct.id}:${attempt.id}`,
         payload: {
+          publishBatchId: scope.publishBatchId,
+          publishBatchItemId: scope.publishBatchItemId,
           productVersionId: version.id,
           publishAttemptId: attempt.id,
         },
@@ -714,6 +866,9 @@ export class PostgresErp06PublishHandoffRepository {
         idempotent: false,
         draftId: scope.draftId,
         productVersionId: version.id,
+        publishBatchId: scope.publishBatchId,
+        publishBatchItemId: scope.publishBatchItemId,
+        batchItem: handedOffBatchItem,
         attempt,
         command,
         outbox,

@@ -17,6 +17,8 @@ const attemptId = "99999999-9999-4999-8999-999999999999";
 const commandId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const outboxId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const otherDraftId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const batchId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const batchItemId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 
 function draft(overrides = {}) {
   return {
@@ -54,6 +56,8 @@ function attempt(overrides = {}) {
     tenant_id: tenantId,
     store_id: storeId,
     product_version_id: versionId,
+    publish_batch_id: batchId,
+    publish_batch_item_id: batchItemId,
     attempt_no: 1,
     request_key: "publish-request-1",
     reason: "initial_publish",
@@ -107,6 +111,24 @@ class FakeClient {
     this.commands = existingAttempt ? [command()] : [];
     this.outboxes = existingAttempt ? [outbox()] : [];
     this.events = [];
+    this.batchRow = {
+      id: batchId,
+      tenant_id: tenantId,
+      store_id: storeId,
+      selection_fingerprint: "selection-fingerprint",
+      source: "drafts",
+    };
+    this.batchItemRow = {
+      id: batchItemId,
+      tenant_id: tenantId,
+      store_id: storeId,
+      batch_id: batchId,
+      product_draft_id: draftId,
+      catalog_product_id: catalogProductId,
+      product_version_id: versionId,
+      handoff_state: "pending",
+      publish_attempt_id: null,
+    };
   }
 
   async query(input) {
@@ -127,6 +149,12 @@ class FakeClient {
         rows: this.attempts.filter((row) => row.request_key === requestKey),
         rowCount: this.attempts.filter((row) => row.request_key === requestKey).length,
       };
+    }
+    if (sql.includes("FROM publish_batches") && sql.includes("id=$3")) {
+      return { rows: [this.batchRow], rowCount: 1 };
+    }
+    if (sql.includes("FROM publish_batch_items") && sql.includes("batch_id=$4")) {
+      return { rows: [this.batchItemRow], rowCount: 1 };
     }
     if (sql.includes("FROM publish_commands") && sql.includes("publish_attempt_id=$3")) {
       const row = this.commands.find((item) => item.publish_attempt_id === input.values[2]);
@@ -167,10 +195,12 @@ class FakeClient {
     if (sql.includes("INSERT INTO publish_attempts")) {
       const row = attempt({
         id: attemptId,
-        request_key: input.values[4],
-        product_version_id: input.values[2],
-        attempt_no: input.values[3],
-        reason: input.values[5],
+        publish_batch_id: input.values[2],
+        publish_batch_item_id: input.values[3],
+        product_version_id: input.values[4],
+        attempt_no: input.values[5],
+        request_key: input.values[6],
+        reason: input.values[7],
       });
       this.attempts.push(row);
       return { rows: [row], rowCount: 1 };
@@ -211,6 +241,14 @@ class FakeClient {
         rowCount: 1,
       };
     }
+    if (sql.includes("UPDATE publish_batch_items")) {
+      this.batchItemRow.publish_attempt_id = input.values[0];
+      this.batchItemRow.handoff_state = "handed_off";
+      return {
+        rows: [{ id: this.batchItemRow.id, handoff_state: this.batchItemRow.handoff_state }],
+        rowCount: 1,
+      };
+    }
     if (sql.includes("MAX(event_version)")) {
       return { rows: [{ event_version: 1 }], rowCount: 1 };
     }
@@ -241,6 +279,8 @@ async function handoff(pool, overrides = {}) {
     storeId,
     draftId,
     productVersionId: versionId,
+    publishBatchId: batchId,
+    publishBatchItemId: batchItemId,
     expectedLockVersion: 0,
     requestKey: "publish-request-1",
     userId,
@@ -255,6 +295,9 @@ test("creates one durable attempt, command, outbox, projection, and handoff even
   assert.equal(result.idempotent, false);
   assert.equal(result.stage, "queued_for_dispatch");
   assert.equal(result.publishAttemptId, attemptId);
+  assert.equal(result.publishBatchId, batchId);
+  assert.equal(result.publishBatchItemId, batchItemId);
+  assert.equal(result.batchItemHandoffState, "handed_off");
   assert.equal(result.publishCommandId, commandId);
   assert.equal(result.publishOutboxId, outboxId);
   assert.equal(result.attemptState, "created");
@@ -279,6 +322,8 @@ test("same requestKey returns the completed handoff idempotently even after lock
   assert.equal(repeat.publishAttemptId, first.publishAttemptId);
   assert.equal(repeat.publishCommandId, first.publishCommandId);
   assert.equal(repeat.publishOutboxId, first.publishOutboxId);
+  assert.equal(repeat.publishBatchId, batchId);
+  assert.equal(repeat.publishBatchItemId, batchItemId);
   assert.equal(repeat.draftLockVersion, 1);
   assert.equal(pool.client.attempts.length, 1);
   assert.equal(pool.client.commands.length, 1);
@@ -306,6 +351,37 @@ test("requestKey cannot be reused for another ProductVersion", async () => {
   );
   assert.equal(pool.client.committed, false);
   assert.equal(pool.client.rolledBack, true);
+});
+
+test("requestKey cannot idempotently return an attempt from another batch", async () => {
+  const pool = new FakePool({
+    existingAttempt: attempt({ publish_batch_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }),
+  });
+  await assert.rejects(
+    () => handoff(pool),
+    (error) => {
+      assert(error instanceof Erp06PublishHandoffError);
+      assert.equal(error.code, "ATTEMPT_BATCH_ASSOCIATION_MISMATCH");
+      assert.equal(error.status, 409);
+      return true;
+    },
+  );
+  assert.equal(pool.client.rolledBack, true);
+});
+
+test("handoff rejects a batch item that is not bound to the requested version", async () => {
+  const pool = new FakePool();
+  pool.client.batchItemRow.product_version_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  await assert.rejects(
+    () => handoff(pool),
+    (error) => {
+      assert(error instanceof Erp06PublishHandoffError);
+      assert.equal(error.code, "BATCH_ITEM_VERSION_MISMATCH");
+      assert.equal(error.status, 409);
+      return true;
+    },
+  );
+  assert.equal(pool.client.attempts.length, 0);
 });
 
 test("same requestKey cannot idempotently cross into another source draft", async () => {

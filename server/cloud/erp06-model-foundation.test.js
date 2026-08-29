@@ -84,6 +84,12 @@ test("ERP-06 apply draft is additive and has no cleanup statements", async () =>
   assert.match(sql, /current_attempt_id uuid/);
   assert.match(sql, /catalog_products_current_version_fk/);
   assert.match(sql, /catalog_products_current_attempt_fk/);
+  assert.match(sql, /ALTER TABLE publish_batches\s+ADD COLUMN selection_fingerprint/i);
+  assert.match(sql, /ALTER TABLE publish_batch_items\s+ADD COLUMN tenant_id/i);
+  assert.match(sql, /publish_batch_items_product_version_fk/);
+  assert.match(sql, /publish_batch_items_publish_attempt_fk/);
+  assert.match(sql, /publish_batch_id uuid/);
+  assert.match(sql, /publish_batch_item_id uuid/);
   assert.match(sql, /ERP06_RESULT_UNKNOWN_COMMAND_BLOCKED/);
   assert.match(sql, /ERP06_IMMUTABLE_FACT_UPDATE_BLOCKED/);
 });
@@ -106,6 +112,9 @@ test("ERP-06 draft encodes the required failure protections", async () => {
   assert.match(sql, /CREATE TRIGGER product_events_immutable_guard/);
   assert.match(verify, /catalog_product_current_projection_columns/);
   assert.match(verify, /catalog_product_current_projection_foreign_keys/);
+  assert.match(verify, /publish_batch_additive_columns/);
+  assert.match(verify, /publish_batch_association_constraints/);
+  assert.match(verify, /publish_attempt_batch_association_columns/);
   assert.match(verify, /legacy_history_not_backfilled/);
   assert.match(rollback, /current_database\(\) !~\* '\(\^\|\[-_\]\)\(test\|rehearsal\|scratch\)\(\[-_\]\|\$\)'/);
   assert.match(rollback, /requires empty table/);
@@ -124,6 +133,10 @@ test("ERP-06 draft encodes the required failure protections", async () => {
   assert.ok(
     rollback.indexOf("DROP CONSTRAINT catalog_products_current_version_fk") <
       rollback.indexOf("DROP TABLE product_versions"),
+  );
+  assert.ok(
+    rollback.indexOf("DROP CONSTRAINT publish_batch_items_publish_attempt_fk") <
+      rollback.indexOf("DROP TABLE publish_attempts"),
   );
   assert.match(readme, /不连接生产 PostgreSQL、COS、Redis、队列或 SHEIN/);
 });

@@ -1,6 +1,6 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v21
+版本：2026-08-30-v22
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
 当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结与原子发布交接的隔离验证，ERP-07～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
@@ -119,7 +119,7 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - ERP 步骤总数：24。
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
 - `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11、Run 13 的 S3/AWS4 兼容列表请求返回 HTTP 403，但 Run 14 的 COS 原生 HMAC-SHA1 列表成功并完成归属对账：633 个对象匹配，187 条历史媒体记录无远端对象且均无引用；目标关系孤儿为 0，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
-- `IN_PROGRESS`：ERP-06（当前 Run：`RUN-20260830-ERP06-PUBLISH-HANDOFF-IMPLEMENTATION-07`）。
+- `IN_PROGRESS`：ERP-06（当前 Run：`RUN-20260830-ERP06-BATCH-LEGACY-IMPLEMENTATION-08`）。
 - `NOT_STARTED`：ERP-07～ERP-23。
 - ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口；Run 14 的历史证据缺口继续保留为只读 legacy，不阻断 ERP-06 新链路，但不允许历史自动回填。
 
@@ -141,6 +141,13 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 4. 新上传顺序固定为：COS 直传 → 服务端完整性/存在性核验 → 数据库登记元数据和引用。
 6. ERP-06 当前设计契约见 [ERP06_DATA_MODEL_EVENT_LEDGER_DESIGN_2026-08-29.md](./ERP06_DATA_MODEL_EVENT_LEDGER_DESIGN_2026-08-29.md)；该文档完成门通过前，不执行生产迁移或生产写入。
 5. ERP-06 只做新模型、版本冻结实现和隔离环境验证；任何生产迁移、历史修复、媒体清理和 SHEIN 写入仍需独立 Run 与批准。
+
+### 4.2 ERP-06 当前 Run 事实
+
+- PublishBatch/BatchItem 已在隔离 additive 草案中通过 nullable 扩展接入新链路；新 BatchItem 显式绑定 ProductVersion、来源 Draft、CatalogProduct 和租户/店铺范围，历史批次行不回填。
+- PublishAttempt/Command/Outbox 原子交接现在必须携带 Batch/BatchItem，幂等返回会复核完整批次项关联；`result_unknown` 仍禁止新 requestKey 重发。
+- 旧 `publish_jobs`/`publish_receipts` 仅由 `legacy_readonly` adapter 读取和分类，不生成新版本/尝试，不写回旧表，不泄露 raw JSON 凭证。
+- 本 Run 仍只在本地 fake pool 与一次性 PostgreSQL rehearsal 验证；未接入生产路由、Dispatcher/Worker、生产迁移或 SHEIN 写接口。
 
 ## 5. 历史已执行工作如何使用
 

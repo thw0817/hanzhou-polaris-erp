@@ -46,6 +46,30 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'ERP06 rollback found populated additive media fields';
   END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM publish_batches
+    WHERE selection_fingerprint IS NOT NULL
+       OR source IS NOT NULL
+       OR policy_snapshot IS NOT NULL
+       OR confirmed_by IS NOT NULL
+       OR confirmed_at IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'ERP06 rollback found populated additive publish_batches fields';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM publish_batch_items
+    WHERE tenant_id IS NOT NULL
+       OR store_id IS NOT NULL
+       OR catalog_product_id IS NOT NULL
+       OR product_version_id IS NOT NULL
+       OR publish_attempt_id IS NOT NULL
+       OR item_key IS NOT NULL
+       OR handoff_state IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'ERP06 rollback found populated additive publish_batch_items fields';
+  END IF;
 END
 $$;
 
@@ -58,6 +82,16 @@ ALTER TABLE product_drafts
 ALTER TABLE catalog_products
   DROP CONSTRAINT catalog_products_current_version_fk,
   DROP CONSTRAINT catalog_products_current_attempt_fk;
+
+ALTER TABLE publish_batch_items
+  DROP CONSTRAINT publish_batch_items_publish_attempt_fk,
+  DROP CONSTRAINT publish_batch_items_product_version_fk,
+  DROP CONSTRAINT publish_batch_items_catalog_product_fk,
+  DROP CONSTRAINT publish_batch_items_scope_batch_fk;
+
+ALTER TABLE publish_attempts
+  DROP CONSTRAINT publish_attempts_publish_batch_item_fk,
+  DROP CONSTRAINT publish_attempts_publish_batch_fk;
 
 DROP TRIGGER IF EXISTS product_events_immutable_guard ON product_events;
 DROP TRIGGER IF EXISTS product_version_media_immutable_guard ON product_version_media;
@@ -82,6 +116,32 @@ DROP TABLE product_versions;
 DROP TABLE draft_revisions;
 DROP TABLE catalog_skus;
 DROP TABLE catalog_products;
+
+ALTER TABLE publish_batches
+  DROP CONSTRAINT publish_batches_selection_fingerprint_chk,
+  DROP CONSTRAINT publish_batches_source_chk,
+  DROP CONSTRAINT publish_batches_scope_id_key;
+
+ALTER TABLE publish_batch_items
+  DROP CONSTRAINT publish_batch_items_handoff_state_chk,
+  DROP CONSTRAINT publish_batch_items_version_key,
+  DROP CONSTRAINT publish_batch_items_scope_id_key;
+
+ALTER TABLE publish_batches
+  DROP COLUMN selection_fingerprint,
+  DROP COLUMN source,
+  DROP COLUMN policy_snapshot,
+  DROP COLUMN confirmed_by,
+  DROP COLUMN confirmed_at;
+
+ALTER TABLE publish_batch_items
+  DROP COLUMN tenant_id,
+  DROP COLUMN store_id,
+  DROP COLUMN catalog_product_id,
+  DROP COLUMN product_version_id,
+  DROP COLUMN publish_attempt_id,
+  DROP COLUMN item_key,
+  DROP COLUMN handoff_state;
 
 ALTER TABLE product_drafts
   DROP CONSTRAINT product_drafts_editing_status_chk,

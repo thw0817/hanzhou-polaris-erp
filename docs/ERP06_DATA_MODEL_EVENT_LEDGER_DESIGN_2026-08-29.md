@@ -1,6 +1,6 @@
 # ERP-06 数据模型与事件账本设计
 
-版本：2026-08-30-v3
+版本：2026-08-30-v4
 状态：`IN_PROGRESS`（非生产设计、版本冻结、原子交接实现与验证）
 适用边界：COS-first；历史数据冻结只读；不执行生产迁移、不修改历史记录、不调用 SHEIN 写接口
 
@@ -88,6 +88,8 @@ UploadSession
 
 | 实体 | 事实含义 | 关键规则 |
 |---|---|---|
+| `PublishBatch` | 一次用户选择/批准的发布候选集合与策略快照 | `(tenant_id, store_id, idempotency_key)` 幂等；选择指纹冲突拒绝复用；批次只是 UI/审计聚合，不等于一次 SHEIN 请求 |
+| `PublishBatchItem` | 批次中一个 ProductVersion 的显式关联项 | 必须同时绑定 tenant/store、CatalogProduct、来源 Draft 和 ProductVersion；handoff 前 `pending`，成功后绑定唯一 Attempt |
 | `PublishAttempt` | 对一个 ProductVersion 的一次提交尝试 | 每次首次提交、用户批准的修正重发、合规阻断后的新尝试都生成新 ID |
 | `PublishCommand` | 某个 Attempt 的冻结发送意图 | 包含不可变请求摘要/指纹、能力和幂等键；不保存原始密钥或不必要的完整请求体 |
 | `PlatformProductLink` | 本地版本与 SHEIN 平台身份的可审计映射 | 只有官方回执/回读/Webhook 等证据才能建立或更新 |
@@ -96,10 +98,13 @@ UploadSession
 以下关系必须成立：
 
 ```text
-ProductDraft -> DraftRevision -> ProductVersion -> PublishAttempt -> PublishCommand
+PublishBatch -> PublishBatchItem -> ProductVersion -> PublishAttempt -> PublishCommand
+ProductDraft -> DraftRevision -> ProductVersion
                                                    -> PlatformProductLink（仅官方证据）
                                                    -> PublishReceipt/Event
 ```
+
+旧 `publish_batches` / `publish_batch_items` 表通过 nullable additive 字段接入新链路；历史行不补填新身份。旧 `publish_jobs` / `publish_receipts` 只通过 `legacy_readonly` adapter 展示，永远不反向生成 ProductVersion、PublishAttempt 或新批次项。
 
 `PublishAttempt` 的 `result_unknown` 是终态保护状态而不是普通失败：在得到官方回读或人工确认前，系统不得自动创建重发 Command。若用户确实要修正并重发，必须先创建新的 Draft、DraftRevision、ProductVersion 和 PublishAttempt，并记录 `supersedes_attempt_id` / `reason`，不能复用旧 Attempt。
 
@@ -140,10 +145,12 @@ ProductDraft -> DraftRevision -> ProductVersion -> PublishAttempt -> PublishComm
 
 1. 所有新表必须带 `tenant_id`；店铺范围事实必须带 `store_id`，跨店操作必须显式列出授权范围。
 2. `ProductVersion` 的唯一性至少由 `(tenant_id, store_id, catalog_product_id, version_no)` 和不可变 `version_fingerprint` 共同保护。
-3. `PublishAttempt` 的幂等键必须限定在 `(tenant_id, store_id, product_version_id, attempt_no/request_key)` 内；重发不能覆盖旧尝试。
-4. `ProductVersionMedia` 在同一版本内对 `(asset_id, role, slot, sort_order)` 做明确约束；删除引用采用事件，不物理删除发布事实。
-5. `PlatformProductLink` 不能只凭 SKU/SPU 文本相等建立；必须绑定店铺、平台 identity、平台 version（如果平台提供）和证据来源。
-6. 所有查询、事件消费、缓存键和 outbox lease 都必须验证租户/店铺边界；跨租户 ID 碰撞必须 fail closed。
+3. `PublishBatch` 的幂等键必须限定在 `(tenant_id, store_id, idempotency_key)` 内；同 key 的 selection fingerprint 不一致必须拒绝。
+4. `PublishBatchItem` 必须在同一 scope 内绑定 Batch、Draft、CatalogProduct、ProductVersion；handoff 后只能绑定一个 Attempt。
+5. `PublishAttempt` 的幂等键必须限定在 `(tenant_id, store_id, product_version_id, attempt_no/request_key)` 内；重发不能覆盖旧尝试。
+6. `ProductVersionMedia` 在同一版本内对 `(asset_id, role, slot, sort_order)` 做明确约束；删除引用采用事件，不物理删除发布事实。
+7. `PlatformProductLink` 不能只凭 SKU/SPU 文本相等建立；必须绑定店铺、平台 identity、平台 version（如果平台提供）和证据来源。
+8. 所有查询、事件消费、缓存键和 outbox lease 都必须验证租户/店铺边界；跨租户 ID 碰撞必须 fail closed。
 
 ## 5. 状态语义与禁止转换
 
@@ -218,6 +225,8 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 | 同 key hash 冲突 | 拒绝复用，产生冲突审计事件 |
 | Draft 修改后读取旧 ProductVersion | 旧版本字段和媒体仍完全可还原 |
 | 同一版本重复点击发布 | 只产生一个幂等 Command/Attempt，重复请求可审计 |
+| 同一批次 idempotencyKey 但选择指纹不同 | 拒绝复用，不新增 BatchItem |
+| Handoff 指定的 BatchItem 不属于 Batch/Version/Draft | fail closed，不写 Attempt/Command/Outbox |
 | `result_unknown` 后队列再次投递 | 必须拒绝，不得自动生成重发 |
 | 用户确认修正并重发 | 必须新建 Draft、Revision、ProductVersion、Attempt，并记录 supersedes/reason |
 | 无官方证据的本地“成功”回执 | 只能是本地 receipt，不能建立 PlatformProductLink 或 completed |
@@ -240,11 +249,12 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 
 ## 10. 当前状态与下一 Run
 
-- 当前 Run：`RUN-20260830-ERP06-PUBLISH-HANDOFF-IMPLEMENTATION-07`
+- 当前 Run：`RUN-20260830-ERP06-BATCH-LEGACY-IMPLEMENTATION-08`
 - 当前状态：`IN_PROGRESS`
-- 已完成：COS-first 决策登记、ERP-05 历史映射冻结豁免登记、目标模型 additive migration 草案、preflight/verify/rollback、真实本机 PostgreSQL 隔离 rehearsal、DraftRevision/ProductVersion 版本冻结，以及本 Run 的 ProductVersion → PublishAttempt → PublishCommand → ProductPublishOutbox 原子交接。
-- 原子交接实现边界：在同一事务内建立 Attempt=`created`、Command=`queued`、Outbox=`pending`、CatalogProduct current version/current attempt 投影、Draft=`handed_off`/lockVersion+1 和 4 类 ProductEvent；requestKey 幂等检查先于草稿锁定；不修改生产、不调用 COS/SHEIN、队列或远端 Dispatcher。
-- 失败保护：同一 ProductVersion 已存在任意 Attempt 时阻断新 requestKey；已有 requestKey 只返回完整同一套事实；缺少 Command/Outbox/current projection 时拒绝猜测性补写；stale lock、跨 scope 和 requestKey 跨版本复用均 fail closed；`result_unknown` 仅允许原请求幂等回读，不自动重发。
-- 已验证：handoff 定向测试 8/8；ERP-06 基础草案测试 6/6；全量测试 1222/1222；秘密扫描通过且无新发现；V2 构建通过；`git diff --check` 通过；独立本机 PostgreSQL `postgres:16-alpine` handoff 演练和 foundation 重跑均通过，临时容器已移除，staging 容器未触碰。
-- 尚未完成：PublishBatch/BatchItem 关联（若按完整架构启用）、legacy 只读 adapter 接入、实际 Dispatcher/Worker 接入、生产切换评估和生产迁移。
-- 下一执行单元：继续在隔离环境补齐 PublishBatch/BatchItem 关联及 legacy 只读 adapter 的最小实现和失败回归；ERP-06 完成门通过前不得进入 ERP-07。
+- 已完成：COS-first 决策登记、ERP-05 历史映射冻结豁免登记、目标模型 additive migration 草案、preflight/verify/rollback、真实本机 PostgreSQL 隔离 rehearsal、DraftRevision/ProductVersion 版本冻结、ProductVersion → PublishAttempt → PublishCommand → ProductPublishOutbox 原子交接、PublishBatch/BatchItem 显式关联和 legacy read-only adapter 最小实现。
+- 本 Run 实现边界：PublishBatch 服务按租户/店铺和 selection fingerprint 幂等创建 BatchItem；handoff 在同一事务内锁定 Batch/BatchItem，验证 Draft/Version 来源关系，建立 Attempt=`created`、Command=`queued`、Outbox=`pending`、current pointers、Draft=`handed_off`/lockVersion+1、BatchItem=`handed_off` 和 4 类 ProductEvent；不修改旧历史行，不调用远端。
+- 失败保护：同一批次 idempotencyKey 选择指纹冲突拒绝；BatchItem 越界/错版本/已交接拒绝；同一 ProductVersion 已存在任意 Attempt 时阻断新 requestKey；已有 requestKey 只有在 BatchItem、Command、Outbox、current projection 和 Draft 状态完整时才幂等返回；`result_unknown` 仅允许原请求幂等回读，不自动重发。
+- Legacy 边界：adapter 只读 `publish_jobs`/`publish_receipts`，输出 `legacy_readonly` 与 `legacy_unknown` 等明确分类，ProductVersion/PublishAttempt 恒为 null，禁止读取 raw JSON 凭证和任何旧表写入。
+- 已验证：批次/adapter/handoff/foundation 定向测试 `23/23`；全量测试 `1231/1231`；`npm run ci:secret-scan` 通过且 `findings=[]`；`npm run build:v2` 通过；`git diff --check` 通过；独立本机 PostgreSQL `postgres:16-alpine` 的 handoff 批次演练和 foundation rollback 重跑均通过，临时容器已移除，staging 容器未触碰。
+- 尚未完成：实际 Dispatcher/Worker 接入、生产切换评估、正式生产迁移、历史数据迁移和 SHEIN 写入；旧历史继续只读，不因本 Run 自动映射。
+- 下一执行单元：在隔离环境实现并验证 Outbox Dispatcher/Worker 的本地 claim/lease 与零远端写入演练；ERP-06 完成门通过前不得进入 ERP-07。

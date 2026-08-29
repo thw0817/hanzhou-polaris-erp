@@ -1719,3 +1719,20 @@
 - 本地静态验证：handoff 定向测试 `8/8`；foundation static/contract `6/6`；全量测试 `1222/1222`；`npm run ci:secret-scan` 通过、`findings=[]`；`npm run build:v2` 通过；`git diff --check` 通过。
 - 数据库 rehearsal：`PASS`。全新本机 Docker `postgres:16-alpine` 临时数据库 `127.0.0.1:55434/erp06_handoff_rehearsal` 真实应用 001–046+047 草案，验证版本冻结、handoff 4 事实写入、current projection、draft handoff、幂等、same-version resend block、result_unknown no-resend；另在 `127.0.0.1:55435/erp06_foundation_rehearsal` 重跑 foundation 的失败回归、verify、空库 rollback、重应用验证；临时容器均已停止删除，staging 容器未触碰。
 - 当前状态：`COMPLETE`；本 Run handoff 实现和隔离验证完成。ERP-06 整体仍为 `IN_PROGRESS`，PublishBatch/BatchItem 关联、legacy 只读 adapter、实际 dispatcher/worker 接入、生产迁移/部署和 SHEIN 写入仍未开始，ERP-07 不得进入。
+
+## 28. ERP-06 PublishBatch/BatchItem 关联与 legacy read-only adapter
+
+### RUN-20260830-ERP06-BATCH-LEGACY-IMPLEMENTATION-08
+
+- 类型：ERP-06 当前隔离实现单元；只在本地 fake pool 和一次性 PostgreSQL rehearsal 中执行，不触碰生产。
+- 启动依据：第 27 Run 已完成 ProductVersion 到 Attempt/Command/Outbox 的原子交接；本 Run 补齐用户选择批次的显式身份、BatchItem 到 ProductVersion 的关联，以及历史发布表的只读边界。
+- 允许范围：PublishBatch/PublishBatchItem 服务、nullable additive schema 扩展、handoff 批次关联、legacy read-only adapter、失败回归、verify/rollback 契约和本机隔离演练。
+- 禁止范围：生产 PostgreSQL/COS/Redis/队列/SHEIN 访问或写入；生产部署/重启/切换；旧 publish_jobs/publish_receipts 写入；历史回填、删除、恢复或自动重发。
+- 实际文件：[erp06-publish-batch-service.js](../server/cloud/erp06-publish-batch-service.js)、[erp06-publish-batch-service.test.js](../server/cloud/erp06-publish-batch-service.test.js)、[erp06-legacy-readonly-adapter.js](../server/cloud/erp06-legacy-readonly-adapter.js)、[erp06-legacy-readonly-adapter.test.js](../server/cloud/erp06-legacy-readonly-adapter.test.js)、更新 handoff service/test、handoff rehearsal、047 隔离草案、verify/rollback/README 和 foundation contract test。
+- 实现边界：Batch 在 `(tenant_id, store_id, idempotency_key)` 内幂等，并以 selection fingerprint 拒绝同 key 不同选择；BatchItem 显式绑定同 scope 的 CatalogProduct、来源 DraftRevision/Draft 和 ProductVersion。handoff 在同一事务内锁定 Batch/BatchItem，生成 Attempt=`created`、Command=`queued`、Outbox=`pending`，并将 BatchItem 原子标记为 `handed_off`。
+- Legacy 边界：adapter 只读 `publish_jobs`/`publish_receipts`，输出 `legacy_readonly`/`legacy_unknown` 等分类；ProductVersion/PublishAttempt 恒为 null，不读取或返回 raw JSON 凭证，不写回旧表，也不把 `result_unknown` 自动重发。
+- 失败保护：选择指纹冲突、重复 ProductVersion、跨租户/跨店/错版本 BatchItem、已交接批次项、缺少批次关联的幂等 Attempt 和不完整当前投影均 fail closed；`result_unknown` 仍只能原请求幂等回读，新 requestKey 不得重发。
+- 本地静态验证：Batch/adapter/handoff/foundation 定向回归 `23/23`；全量测试 `1231/1231`；`npm run ci:secret-scan` 通过且 `findings=[]`；`npm run build:v2` 通过；`git diff --check` 通过；新增/修改 JS `node --check` 通过。
+- 数据库 rehearsal：已通过全新本机 Docker `postgres:16-alpine` 的 handoff 批次关联演练（`127.0.0.1:55434/erp06_handoff_rehearsal`）及 foundation verify/空库 rollback/重应用演练（`127.0.0.1:55435/erp06_foundation_rehearsal`）；临时容器已移除，现有 staging 容器未触碰。legacy adapter 当前完成 fake-pool 契约回归，尚未接入生产读取路径。
+- 当前状态：`COMPLETE`；本 Run 的 Batch/BatchItem、legacy 只读边界和 handoff 关联完成。ERP-06 整体仍为 `IN_PROGRESS`，实际 Dispatcher/Worker、生产迁移/部署和 SHEIN 写入仍未开始，ERP-07 不得进入。
+- 下一执行单元：隔离实现 Outbox Dispatcher/Worker 的本地 claim/lease 与零远端写入演练；生产事项必须另行评审和批准。

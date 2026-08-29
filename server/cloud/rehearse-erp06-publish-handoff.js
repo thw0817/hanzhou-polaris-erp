@@ -17,6 +17,9 @@ import {
   Erp06PublishHandoffError,
   PostgresErp06PublishHandoffRepository,
 } from "./erp06-publish-handoff-service.js";
+import {
+  PostgresErp06PublishBatchRepository,
+} from "./erp06-publish-batch-service.js";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const activeMigrationDirectory = path.join(currentDirectory, "migrations");
@@ -164,12 +167,28 @@ async function runHandoffChecks(pool) {
   assert.equal(frozen.stage, "frozen_not_handed_off");
   assert.equal(frozen.mediaCount, 1);
 
+  const batchRepository = new PostgresErp06PublishBatchRepository({ pool });
+  const batch = await batchRepository.createPublishBatch({
+    tenantId: ids.tenant,
+    storeId: ids.store,
+    name: "ERP-06 隔离发布批次",
+    idempotencyKey: "erp06-handoff-batch-1",
+    productVersionIds: [frozen.productVersionId],
+    source: "drafts",
+    policySnapshot: { eligibleOnly: true, rehearsal: true },
+    userId: ids.userId,
+  });
+  assert.equal(batch.idempotent, false);
+  assert.equal(batch.itemCount, 1);
+
   const handoffRepository = new PostgresErp06PublishHandoffRepository({ pool });
   const input = {
     tenantId: ids.tenant,
     storeId: ids.store,
     draftId: ids.draft,
     productVersionId: frozen.productVersionId,
+    publishBatchId: batch.batchId,
+    publishBatchItemId: batch.itemIds[0],
     expectedLockVersion: 0,
     requestKey: "erp06-handoff-request-1",
     reason: "用户批准进入发布交接",
@@ -182,6 +201,8 @@ async function runHandoffChecks(pool) {
   assert.equal(first.commandState, "queued");
   assert.equal(first.outboxState, "pending");
   assert.equal(first.currentVersionId, frozen.productVersionId);
+  assert.equal(first.publishBatchId, batch.batchId);
+  assert.equal(first.publishBatchItemId, batch.itemIds[0]);
   assert.equal(first.currentAttemptId, first.publishAttemptId);
   assert.equal(first.draftEditingStatus, "handed_off");
   assert.equal(first.draftLockVersion, 1);
@@ -192,6 +213,8 @@ async function runHandoffChecks(pool) {
     const facts = await client.query(
       `SELECT
          (SELECT count(*) FROM publish_attempts WHERE tenant_id=$1) AS attempts,
+         (SELECT count(*) FROM publish_batches WHERE tenant_id=$1) AS batches,
+         (SELECT count(*) FROM publish_batch_items WHERE tenant_id=$1) AS batch_items,
          (SELECT count(*) FROM publish_commands WHERE tenant_id=$1) AS commands,
          (SELECT count(*) FROM product_publish_outbox WHERE tenant_id=$1) AS outbox,
          (SELECT count(*) FROM product_events WHERE tenant_id=$1) AS events`,
@@ -199,6 +222,8 @@ async function runHandoffChecks(pool) {
     );
     assert.deepEqual(facts.rows[0], {
       attempts: "1",
+      batches: "1",
+      batch_items: "1",
       commands: "1",
       outbox: "1",
       events: "8",
@@ -206,6 +231,8 @@ async function runHandoffChecks(pool) {
     const state = await client.query(
       `SELECT d.editing_status, d.lock_version,
               cp.current_version_id, cp.current_attempt_id,
+              pbi.batch_id, pbi.product_version_id AS batch_product_version_id,
+              pbi.publish_attempt_id AS batch_attempt_id,
               pc.state AS command_state, po.state AS outbox_state,
               pc.payload_summary AS command_summary,
               po.payload_summary AS outbox_summary
@@ -216,6 +243,9 @@ async function runHandoffChecks(pool) {
        JOIN publish_attempts pa
          ON pa.tenant_id=d.tenant_id AND pa.store_id=d.store_id
         AND pa.id=$2
+       JOIN publish_batch_items pbi
+         ON pbi.tenant_id=pa.tenant_id AND pbi.store_id=pa.store_id
+        AND pbi.publish_attempt_id=pa.id
        JOIN publish_commands pc
          ON pc.tenant_id=pa.tenant_id AND pc.store_id=pa.store_id
         AND pc.publish_attempt_id=pa.id
@@ -229,6 +259,9 @@ async function runHandoffChecks(pool) {
     assert.equal(state.rows[0].lock_version, "1");
     assert.equal(state.rows[0].current_version_id, frozen.productVersionId);
     assert.equal(state.rows[0].current_attempt_id, first.publishAttemptId);
+    assert.equal(state.rows[0].batch_id, batch.batchId);
+    assert.equal(state.rows[0].batch_product_version_id, frozen.productVersionId);
+    assert.equal(state.rows[0].batch_attempt_id, first.publishAttemptId);
     assert.equal(state.rows[0].command_state, "queued");
     assert.equal(state.rows[0].outbox_state, "pending");
     assert.equal(state.rows[0].command_summary.versionFingerprint, frozen.versionFingerprint);
@@ -286,6 +319,8 @@ async function runHandoffChecks(pool) {
   const finalFacts = await pool.query({
     text: `SELECT
              (SELECT count(*) FROM publish_attempts WHERE tenant_id=$1) AS attempts,
+             (SELECT count(*) FROM publish_batches WHERE tenant_id=$1) AS batches,
+             (SELECT count(*) FROM publish_batch_items WHERE tenant_id=$1) AS batch_items,
              (SELECT count(*) FROM publish_commands WHERE tenant_id=$1) AS commands,
              (SELECT count(*) FROM product_publish_outbox WHERE tenant_id=$1) AS outbox,
              (SELECT count(*) FROM product_events WHERE tenant_id=$1) AS events`,
@@ -293,6 +328,8 @@ async function runHandoffChecks(pool) {
   });
   assert.deepEqual(finalFacts.rows[0], {
     attempts: "1",
+    batches: "1",
+    batch_items: "1",
     commands: "1",
     outbox: "1",
     events: "8",
@@ -300,12 +337,14 @@ async function runHandoffChecks(pool) {
   return {
     versionFrozenBeforeHandoff: true,
     atomicAttemptCommandOutbox: true,
+    publishBatchVersionAttemptAssociation: true,
     currentProjectionUpdated: true,
     draftHandedOffAndLocked: true,
     requestKeyIdempotentAfterLockBump: true,
     sameVersionResendBlocked: true,
     resultUnknownNoResend: true,
     noRemoteCallOrQueueConsumer: true,
+    legacyRowsUntouched: true,
   };
 }
 
@@ -354,4 +393,3 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exitCode = 1;
   });
 }
-

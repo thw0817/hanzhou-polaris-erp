@@ -93,6 +93,39 @@ SELECT
   ) AS passed;
 
 SELECT
+  'publish_batch_additive_columns' AS check_name,
+  (SELECT count(*) FROM information_schema.columns
+   WHERE table_schema='public' AND table_name='publish_batches'
+     AND column_name IN (
+       'selection_fingerprint', 'source', 'policy_snapshot',
+       'confirmed_by', 'confirmed_at'
+     )) = 5
+  AND (SELECT count(*) FROM information_schema.columns
+   WHERE table_schema='public' AND table_name='publish_batch_items'
+     AND column_name IN (
+       'tenant_id', 'store_id', 'catalog_product_id', 'product_version_id',
+       'publish_attempt_id', 'item_key', 'handoff_state'
+     )) = 7 AS passed;
+
+SELECT
+  'publish_batch_association_constraints' AS check_name,
+  EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'publish_batches_scope_id_key')
+  AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'publish_batch_items_scope_id_key')
+  AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'publish_batch_items_version_key')
+  AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'publish_batch_items_scope_batch_fk')
+  AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'publish_batch_items_catalog_product_fk')
+  AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'publish_batch_items_product_version_fk')
+  AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'publish_batch_items_publish_attempt_fk') AS passed;
+
+SELECT
+  'publish_attempt_batch_association_columns' AS check_name,
+  (SELECT count(*) FROM information_schema.columns
+   WHERE table_schema='public' AND table_name='publish_attempts'
+     AND column_name IN ('publish_batch_id', 'publish_batch_item_id')) = 2
+  AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'publish_attempts_publish_batch_fk')
+  AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'publish_attempts_publish_batch_item_fk') AS passed;
+
+SELECT
   'legacy_history_not_backfilled' AS check_name,
   (SELECT count(*) FROM product_versions) = 0
   AND (SELECT count(*) FROM publish_attempts) = 0

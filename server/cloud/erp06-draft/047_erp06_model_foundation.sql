@@ -63,6 +63,46 @@ ALTER TABLE media_assets
     )
   );
 
+-- PublishBatch/BatchItem already exist in the legacy schema. These columns are
+-- additive and remain nullable so historical rows stay distinguishable and
+-- are never backfilled into the ERP-06 model.
+ALTER TABLE publish_batches
+  ADD COLUMN selection_fingerprint text,
+  ADD COLUMN source text,
+  ADD COLUMN policy_snapshot jsonb,
+  ADD COLUMN confirmed_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  ADD COLUMN confirmed_at timestamptz,
+  ADD CONSTRAINT publish_batches_scope_id_key UNIQUE (tenant_id, store_id, id),
+  ADD CONSTRAINT publish_batches_source_chk CHECK (
+    source IS NULL OR source IN ('drafts', 'relaunch', 'mixed')
+  ),
+  ADD CONSTRAINT publish_batches_selection_fingerprint_chk CHECK (
+    selection_fingerprint IS NULL OR selection_fingerprint <> ''
+  );
+
+ALTER TABLE publish_batch_items
+  ADD COLUMN tenant_id uuid,
+  ADD COLUMN store_id uuid,
+  ADD COLUMN catalog_product_id uuid,
+  ADD COLUMN product_version_id uuid,
+  ADD COLUMN publish_attempt_id uuid,
+  ADD COLUMN item_key text,
+  ADD COLUMN handoff_state text,
+  ADD CONSTRAINT publish_batch_items_scope_id_key UNIQUE (tenant_id, store_id, id),
+  ADD CONSTRAINT publish_batch_items_version_key UNIQUE (
+    tenant_id, store_id, batch_id, product_version_id
+  ),
+  ADD CONSTRAINT publish_batch_items_handoff_state_chk CHECK (
+    handoff_state IS NULL OR handoff_state IN (
+      'pending', 'handed_off', 'result_unknown', 'completed'
+    )
+  );
+
+ALTER TABLE publish_batch_items
+  ADD CONSTRAINT publish_batch_items_scope_batch_fk
+    FOREIGN KEY (tenant_id, store_id, batch_id)
+    REFERENCES publish_batches (tenant_id, store_id, id) ON DELETE CASCADE;
+
 CREATE TABLE catalog_products (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL,
@@ -253,6 +293,8 @@ CREATE TABLE publish_attempts (
   tenant_id uuid NOT NULL,
   store_id uuid NOT NULL,
   product_version_id uuid NOT NULL,
+  publish_batch_id uuid,
+  publish_batch_item_id uuid,
   attempt_no integer NOT NULL CHECK (attempt_no > 0),
   request_key text NOT NULL,
   reason text NOT NULL DEFAULT '',
@@ -284,6 +326,12 @@ CREATE TABLE publish_attempts (
     REFERENCES stores (tenant_id, id) ON DELETE RESTRICT,
   FOREIGN KEY (tenant_id, store_id, product_version_id)
     REFERENCES product_versions (tenant_id, store_id, id) ON DELETE RESTRICT,
+  CONSTRAINT publish_attempts_publish_batch_fk
+    FOREIGN KEY (tenant_id, store_id, publish_batch_id)
+    REFERENCES publish_batches (tenant_id, store_id, id) ON DELETE RESTRICT,
+  CONSTRAINT publish_attempts_publish_batch_item_fk
+    FOREIGN KEY (tenant_id, store_id, publish_batch_item_id)
+    REFERENCES publish_batch_items (tenant_id, store_id, id) ON DELETE RESTRICT,
   FOREIGN KEY (tenant_id, store_id, supersedes_attempt_id)
     REFERENCES publish_attempts (tenant_id, store_id, id) ON DELETE RESTRICT,
   CHECK (
@@ -295,8 +343,22 @@ CREATE TABLE publish_attempts (
   ),
   CHECK (
     supersedes_attempt_id IS NULL OR reason <> ''
+  ),
+  CHECK (
+    (publish_batch_id IS NULL) = (publish_batch_item_id IS NULL)
   )
 );
+
+ALTER TABLE publish_batch_items
+  ADD CONSTRAINT publish_batch_items_catalog_product_fk
+    FOREIGN KEY (tenant_id, store_id, catalog_product_id)
+    REFERENCES catalog_products (tenant_id, store_id, id) ON DELETE RESTRICT,
+  ADD CONSTRAINT publish_batch_items_product_version_fk
+    FOREIGN KEY (tenant_id, store_id, product_version_id)
+    REFERENCES product_versions (tenant_id, store_id, id) ON DELETE RESTRICT,
+  ADD CONSTRAINT publish_batch_items_publish_attempt_fk
+    FOREIGN KEY (tenant_id, store_id, publish_attempt_id)
+    REFERENCES publish_attempts (tenant_id, store_id, id) ON DELETE RESTRICT;
 
 ALTER TABLE catalog_products
   ADD CONSTRAINT catalog_products_current_version_fk
@@ -544,6 +606,12 @@ CREATE INDEX draft_revisions_draft_idx
   ON draft_revisions (tenant_id, store_id, product_draft_id, revision_no DESC);
 CREATE INDEX product_versions_product_idx
   ON product_versions (tenant_id, store_id, catalog_product_id, version_no DESC);
+CREATE INDEX publish_batch_items_version_idx
+  ON publish_batch_items (tenant_id, store_id, product_version_id, updated_at DESC)
+  WHERE product_version_id IS NOT NULL;
+CREATE INDEX publish_batch_items_handoff_idx
+  ON publish_batch_items (tenant_id, store_id, handoff_state, updated_at DESC)
+  WHERE handoff_state IS NOT NULL;
 CREATE INDEX product_version_media_version_idx
   ON product_version_media (tenant_id, store_id, product_version_id, sort_order);
 CREATE INDEX publish_attempts_claimable_idx
