@@ -32,7 +32,7 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 | staging 候选制品打包 | PASS（仅候选，不放行生产） | `POLARIS_CI_GATE=passed POLARIS_ARTIFACT_CHANNEL=staging npm run ci:release-package`；候选包 `artifacts/polaris-staging-b1fc965d23bfbc72f3ce03f5e18976a83720ab45.tar.gz`，SHA-256：`b91d2be68b7af497351b2ddbeacb4caddf3d4e2edcc85aba8a43108c730188e0`，权限 `0444` |
 | staging 配置隔离 | PASS（静态） | `npm run ci:staging-audit`；独立端口/volume/bucket/project，生产 API 域名排除，6 个 live-write/sync flags 全 false |
 | Playwright 配置 | PASS | `npx playwright test --list`：2 个核心测试已被发现 |
-| Playwright 实际浏览器 | PASS | `POLARIS_USE_SYSTEM_CHROME=1 npx playwright test tests/e2e/v2-core-flow.spec.ts --project=chromium`；系统 Chrome `152.0.7977.64`，2/2 通过；无 live SHEIN |
+| Playwright 实际浏览器 | PASS（本机 CI-equivalent） | 默认 bundled Chromium `151.0.7922.34` 与对应 headless shell 已安装并校验；`npx playwright test tests/e2e/v2-core-flow.spec.ts --project=chromium`，2/2 通过；无 live SHEIN。系统 Chrome `152.0.7977.64` 的历史 fallback 结果仍保留；本机未将该结果冒充远端 GitHub Actions 运行结果 |
 | staging 实际运行 | PASS | Docker Desktop `4.88.1`；Compose project `hanzhou-polaris-staging`；PostgreSQL、Redis、MinIO、Control 均 healthy；数据库 `schema_migrations=46`、范围 `001_initial.sql`–`045_publish_lifecycle_indexes.sql`、public tables=51；Redis `PONG`；Control `/health` 返回 `200 {"ok":true}`，`/ready` 返回 `200` 且 PostgreSQL/Redis=up；MinIO bucket 初始化及隔离对象写入/读取/删除闭环通过；未启动 Publish Worker |
 
 ## 3. 未闭合项与严格阻断理由
@@ -50,4 +50,4 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 
 ## 5. 放行结论
 
-ERP-03 当前仍保持 `GATE_FAILED`，不能标记 `COMPLETE`，也不能开始 ERP-04。Playwright 实际流程已在系统 Chrome 下通过；staging 的 DB/Redis/MinIO/Control、迁移和 fail-closed flags 已完成真实运行态验证。完整 manifest 仍将 Outbox Dispatcher 标记为 `not_implemented`，因此不能接受新的 PublishCommand；Outbox Dispatcher 仍须在 ERP-09/相关步骤实现并经过独立验证后，才可能解除发布命令阻断。CI 默认 bundled Chromium 路径仍需 CI runner 的实际执行证据，不能用本机系统 Chrome 结果替代。
+ERP-03 当前仍保持 `GATE_FAILED`，不能标记 `COMPLETE`，也不能开始 ERP-04。Playwright 核心流程已在本机默认 bundled Chromium 下 2/2 通过；staging 的 DB/Redis/MinIO/Control、迁移和 fail-closed flags 已完成真实运行态验证。完整 manifest 仍将 Outbox Dispatcher 标记为 `not_implemented`，因此不能接受新的 PublishCommand；Outbox Dispatcher 仍须在 ERP-09/相关步骤实现并经过独立验证后，才可能解除发布命令阻断。远端 GitHub Actions runner 本身尚未执行，本机证据不被写成远端 CI 已通过。
