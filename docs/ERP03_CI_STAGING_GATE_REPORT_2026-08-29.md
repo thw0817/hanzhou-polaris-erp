@@ -3,7 +3,7 @@
 日期：2026-08-29  
 Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`  
 步骤：ERP-03  
-结论：**以第 6 节补证为当前状态：GATE_FAILED（Outbox Dispatcher 已实现并纳入审计，但 staging 实际投递闭环与远端 CI runner 证据仍未闭合，仍不得进入 ERP-04）**
+结论：**以第 7 节补证为当前状态：GATE_FAILED（staging 实际 Outbox 投递闭环已通过；仅远端 GitHub Actions runner 证据仍为 UNKNOWN，仍不得进入 ERP-04）**
 
 ## 1. 本次实施范围
 
@@ -37,11 +37,12 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 | staging 实际运行 | PASS（安全探针） | Docker Desktop `4.88.1`；Compose project `hanzhou-polaris-staging`；PostgreSQL、Redis、MinIO、Control 均 healthy；数据库已应用 `046_publish_outbox_events.sql`；Redis `PONG`；Control `/health`/`/ready` 通过；未启动 Publish Worker 与 Outbox Dispatcher，真实发布写入仍关闭 |
 | Outbox Dispatcher 单元/静态门 | PASS | `server/cloud/outbox-dispatcher.test.js`；claim/lease、幂等 jobId、队列失败可重试、事务内事件写入均通过；运行时 capability 和 release audit 已登记 046 |
 | staging Dispatcher DB 探针 | PASS（无待处理行） | 独立 staging PostgreSQL 上真实 `dispatchOutboxOnce` 返回 `claimed=0, dispatched=0, failed=0`；无真实 PublishCommand，因此未伪造“已投递”证据 |
+| staging Outbox 全链路探针 | PASS（可重复、安全探针） | `npm run ci:staging-outbox-chain`；真实 staging PostgreSQL Outbox → BullMQ/Redis → command-scoped Worker：`claimed=1, dispatched=1, failed=0`、`submittedCount=1`、确定性 `jobId` 一致、`realSHEINCalls=0`；演练后 `syntheticTenants=0, outboxRows=0` |
 
 ## 3. 未闭合项与严格阻断理由
 
 1. staging 实际运行阻断已解除。用户明确授权后，已从 Docker 官方稳定 DMG 地址安装 Docker Desktop `4.88.1`；DMG SHA-256 为 `94102d4fe056bf3a4fde375d693aae96a429157dad0345af9853d7157d6bd5bd`，`hdiutil verify` CRC 通过，Gatekeeper `spctl --assess --type execute` 通过。Compose、迁移、依赖健康、Control health/ready 和 MinIO 对象闭环均已在独立 staging 中完成；未触碰生产。
-2. Outbox Dispatcher 已实现，但本次没有在 staging 生成真实 PublishCommand 进行“Outbox row → BullMQ → command-scoped Worker”端到端投递；原因是 `SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED=false`，且不应伪造业务发布数据。当前只证明了真实 DB schema/claim 探针和隔离环境。
+2. Outbox Dispatcher 已实现，并已在 staging 使用隔离 synthetic command 完成“Outbox row → BullMQ → command-scoped Worker”端到端投递；Worker 使用仓库内明确的本地 no-write executor stub，未调用 SHEIN，演练数据和 Redis probe key 均已清理。`SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED=false` 继续保持。
 3. 远端 GitHub Actions runner 尚未实际执行；本机 CI-equivalent 不能写成远端 CI 通过。
 4. `npm audit` 当前报告 5 个 high、0 个 critical，均无自动修复方案（涉及 Vite/Tailwind/Vite React/nanoid/PostCSS 依赖链）。本 Run 没有擅自升级依赖；该项作为安全审查警告保留，需在后续依赖治理中单独处理。
 
@@ -54,7 +55,7 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 
 ## 5. 放行结论
 
-ERP-03 当前仍保持 `GATE_FAILED`，不能标记 `COMPLETE`，也不能开始 ERP-04。Outbox Dispatcher 的代码、迁移、运行时 capability、release manifest、单元测试和 staging DB 探针已补齐；但 staging 尚未执行真实 PublishCommand 投递闭环，远端 GitHub Actions runner 也尚未执行，且 live-write 仍关闭。因此本次只解除“Dispatcher 缺失”这一具体实现阻断，不把 ERP-09 或可靠发布全链路提前标记完成。
+ERP-03 当前仍保持 `GATE_FAILED`，不能标记 `COMPLETE`，也不能开始 ERP-04。Outbox Dispatcher 的代码、迁移、运行时 capability、release manifest、单元测试、staging DB 探针和隔离 synthetic 全链路探针均已补齐；远端 GitHub Actions runner 尚未实际执行，因此仍不能把本机 CI-equivalent 写成远端 CI 通过。live-write 继续关闭是本步骤的安全边界，不是允许伪造 SHEIN 成功的理由。本次不把 ERP-09 或可靠发布全链路提前标记完成。
 
 ## 6. ERP-03 Outbox 补证（当前事实）
 
@@ -64,5 +65,17 @@ ERP-03 当前仍保持 `GATE_FAILED`，不能标记 `COMPLETE`，也不能开始
 - 变更范围：新增 `server/cloud/migrations/046_publish_outbox_events.sql`；新增 `server/cloud/outbox-dispatcher.js` 及其测试；将发布 execute 的 durable handoff 写入同一 PostgreSQL 事务；Control 移除 inline publish queue；Worker 支持 contract-versioned command-scoped job；新增 staging profile、配置开关、运行时数据库能力和 release migration 登记。
 - 已验证：`npm test` 1202/1202；工具链、secret scan、staging isolation、V2 build、V2 artifact audit、046 migration audit 均通过；默认 bundled Chromium E2E 2/2 通过。
 - 真实 staging：046 已应用；Dispatcher 使用真实 staging PostgreSQL 执行安全 DB 探针，返回 `0/0/0`；没有写入真实发布命令，没有调用 SHEIN。
-- 仍未闭合：真实 staging Outbox→队列→Worker 投递演练、远端 GitHub Actions runner；`SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED` 继续保持 false。
+- 仍未闭合：远端 GitHub Actions runner；`SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED` 继续保持 false。真实 staging 全链路探针在后续补证 Run 完成。
 - 当前结论：`GATE_FAILED`；不得启动 ERP-04。下一步只能围绕本 Run 剩余门禁补证，或在完整 ERP 计划明确要求的后续发布执行步骤中继续，不得把本桥接实现冒充 ERP-09 完成。
+
+## 7. ERP-03 staging 全链路补证（当前事实）
+
+### RUN-20260829-ERP03-STAGING-CHAIN-02
+
+- 启动依据：第 6 节确认 Outbox DB 空队列探针通过，但真实 staging 投递闭环仍未验证；严格补齐可重复、无 SHEIN 写入的 synthetic command 演练。
+- 固化命令：`npm run ci:staging-outbox-chain`。命令强制要求 `SHEIN_ENVIRONMENT=staging`、`SHEIN_RUNTIME_MODE=cloud`、`SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED=false`，且 `DATABASE_URL`/`REDIS_URL` 必须指向本机 `55432/56379`；命令文件为 `server/ci/staging-outbox-chain.js`。
+- 首次真实 staging 复验发现并修复：PostgreSQL 报 `42P18 could not determine data type of parameter $5`；根因是 `jsonb_build_object` 中 contract version 参数未显式类型化，修复为 `$5::text`，并加入 Outbox 回归断言。该次事务已回滚，无残留。
+- 第二次复验结果：真实 staging PostgreSQL 创建 1 个隔离 synthetic publish command；真实 `dispatchOutboxOnce` 返回 `claimed=1, dispatched=1, failed=0`；真实 Redis/BullMQ 接收确定性 `jobId`；真实 command-scoped Worker 完成 `submittedCount=1`；contract 为 `publish-command-v1`；`realSHEINCalls=0`。
+- 安全清理结果：演练后 `syntheticTenants=0`、`outboxRows=0`；队列使用随机 queue/prefix，清理仅匹配该 prefix；未连接生产服务、未启用 Publish Worker/Outbox Dispatcher 生产配置、未调用 SHEIN。
+- 本 Run 验证：定向 10/10；全量 `npm test` 1202/1202；staging isolation PASS；fault gates 17/17。
+- 当前结论：staging Outbox 全链路门已 PASS；ERP-03 仍为 `GATE_FAILED`，唯一未取得的当前门证据是远端 GitHub Actions runner 实际结果。不得开始 ERP-04。

@@ -45,6 +45,7 @@
     "ci:toolchain": "node server/ci/verify-toolchain.js",
     "ci:secret-scan": "node server/ci/secret-scan.js",
     "ci:staging-audit": "node server/ci/staging-isolation.js",
+    "ci:staging-outbox-chain": "node --env-file=.env.staging.example server/ci/staging-outbox-chain.js",
     "ci:release-manifest": "node server/ci/release-manifest.js --check",
     "ci:release-package": "node server/ci/create-release-package.js",
     "ci:fault-gates": "node --test server/ci/erp03-fault-gates.test.js",

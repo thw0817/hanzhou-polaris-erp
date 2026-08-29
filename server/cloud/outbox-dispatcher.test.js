@@ -227,6 +227,7 @@ test("creates one minimal publish outbox event per durable command", async () =>
   assert.match(calls[0].text, /ON CONFLICT.*DO NOTHING/s);
   assert.match(calls[0].text, /job\.state IN \('authorized', 'failed_retryable'\)/);
   assert.match(calls[0].text, /jsonb_build_object/);
+  assert.match(calls[0].text, /'contractVersion', \$5::text/);
   assert.doesNotMatch(calls[0].text, /request_body|image_url|secret|signature/i);
   assert.deepEqual(calls[0].values.slice(0, 3), [
     "tenant-1",

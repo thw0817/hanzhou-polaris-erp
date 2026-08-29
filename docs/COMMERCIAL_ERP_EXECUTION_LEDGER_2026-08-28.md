@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v18  
+版本：2026-08-29-v19
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02 已完成；ERP-03 staging 与本机 bundled Chromium 运行态已补证但仍因 Outbox/远端 CI runner 门禁保持失败；ERP-04～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02 已完成；ERP-03 staging Outbox 全链路与本机 bundled Chromium 已补证，但远端 CI runner 门禁仍为 UNKNOWN，保持 GATE_FAILED；ERP-04～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-03 / GATE_FAILED / RUN-20260829-ERP03-CI-STAGING-GATE-01
+当前活动步骤：ERP-03 / GATE_FAILED / RUN-20260829-ERP03-STAGING-CHAIN-02
 
 ## 0. 台账用途
 
@@ -28,7 +28,7 @@
 | ERP-00 | 变更冻结与真相基线 | COMPLETE | RUN-20260829-ERP00-BASELINE-01 | 无 | [ERP-00 基线报告](./ERP00_BASELINE_REPORT_2026-08-29.md)；备份与隔离恢复验证通过 |
 | ERP-01 | 源码资产救援与版本控制 | COMPLETE | RUN-20260829-ERP01-ASSET-BASELINE-01 | ERP-00 | [ERP-01 基线报告](./ERP01_BASELINE_REPORT_2026-08-29.md)；commit/tag、私有镜像、空目录 clone、1170 测试、双构建和静态审计通过 |
 | ERP-02 | 单一 V2 前端产物恢复 | COMPLETE | RUN-20260829-ERP02-V2-ARTIFACT-01 | ERP-01 | [ERP-02 报告](./ERP02_BASELINE_REPORT_2026-08-29.md)；V2 单一构建、manifest、审计、浏览器关键路由和线上只读核验通过 |
-| ERP-03 | CI、预发与发布门禁 | GATE_FAILED | RUN-20260829-ERP03-CI-STAGING-GATE-01 | ERP-02 | staging DB/Redis/MinIO/Control、迁移和隔离已实测通过；本机 bundled Chromium 2/2 通过；Outbox Dispatcher 未实现，远端 CI runner 尚未执行 |
+| ERP-03 | CI、预发与发布门禁 | GATE_FAILED | RUN-20260829-ERP03-STAGING-CHAIN-02 | ERP-02 | staging DB/Redis/MinIO/Control、迁移、隔离和 Outbox→BullMQ→Worker synthetic 全链路已实测通过；本机 bundled Chromium 2/2 通过；远端 CI runner 尚未执行 |
 | ERP-04 | 商品生命周期与状态字典定稿 | NOT_STARTED | — | ERP-03 | — |
 | ERP-05 | 历史数据证据盘点 | NOT_STARTED | — | ERP-04 | — |
 | ERP-06 | 规范数据模型与事件账本 | NOT_STARTED | — | ERP-05 | — |
@@ -1331,3 +1331,17 @@
 - 已验证：全量 `npm test` 1202/1202；Outbox/Worker/Repository 定向测试通过；工具链、secret scan、staging isolation、V2 build、release audit、runtime capability audit 通过；默认 bundled Chromium E2E 2/2 通过；046 已应用到独立 staging PostgreSQL；真实 DB Dispatcher 探针 `claimed=0, dispatched=0, failed=0`；无生产写入、无 SHEIN 调用。
 - 关键边界：`0/0/0` 只证明 staging 空队列安全探针，不证明真实命令已完成队列投递；真实 PublishCommand 投递仍因 live-write false 未执行；远端 GitHub Actions runner 尚未执行。
 - 当前结论：`GATE_FAILED`；Outbox 缺失这一具体实现阻断已解除，但 ERP-03 完成门仍未闭合；不得启动 ERP-04，不得把该 Run 标记为 ERP-09 完成。
+
+## 17. ERP-03 staging 全链路补证 Run
+
+### RUN-20260829-ERP03-STAGING-CHAIN-02
+
+- 类型：ERP-03 补证；真实 staging 基础设施上的 Outbox → BullMQ → command-scoped Worker 安全演练。
+- 启动依据：上一 Run 只完成真实 staging PostgreSQL 空队列探针，未完成真实投递闭环；本 Run 将 synthetic command 演练固化为仓库命令，不触碰 SHEIN。
+- 固化实现：新增 `server/ci/staging-outbox-chain.js` 与 `ci:staging-outbox-chain`；命令强制 staging/cloud、live-write=false、本机 staging PostgreSQL/Redis 端口，并使用随机 queue/prefix 与 finally 清理。
+- 首次 staging 复验：发现 PostgreSQL `42P18` 参数类型错误（`jsonb_build_object` contract version 使用未类型化参数）；事务已回滚。修复为 `$5::text`，并纳入回归测试。
+- 第二次 staging 复验：真实 PostgreSQL Outbox `claimed=1, dispatched=1, failed=0`；真实 Redis/BullMQ 确定性 `jobId`；真实 command-scoped Worker `submittedCount=1`；`realSHEINCalls=0`；`contractVersion=publish-command-v1`。
+- 清理核验：`syntheticTenants=0`、`outboxRows=0`；随机 Redis prefix 无残留；无生产连接、无 SHEIN 写入。
+- 本 Run 验证：Outbox/Worker 定向 10/10；全量 `npm test` 1202/1202；staging isolation PASS；fault gates 17/17。
+- 未闭合门：远端 GitHub Actions runner 尚未实际执行；本机结果不能冒充远端 CI 通过。
+- 当前状态：`GATE_FAILED`；staging 全链路具体阻断已解除，但 ERP-03 完成门仍未闭合；不得启动 ERP-04，不得把本 Run 标记为 ERP-09 完成。

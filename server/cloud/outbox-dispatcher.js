@@ -109,7 +109,7 @@ export async function createPublishOutboxEvents({
           'commandId', job.id::text,
           'tenantId', job.tenant_id::text,
           'storeId', job.store_id::text,
-          'contractVersion', $5
+          'contractVersion', $5::text
         ),
         $6::timestamptz
       FROM publish_jobs AS job
