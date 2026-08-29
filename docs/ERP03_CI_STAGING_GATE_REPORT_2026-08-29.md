@@ -36,7 +36,7 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 
 ## 3. 未闭合项与严格阻断理由
 
-1. 本机 Docker 不存在，因此不能证明 PostgreSQL、Redis、MinIO 和 Control 在真实 staging 网络中成功启动、迁移和互相隔离。用户已明确授权安装 Docker Desktop；已通过 Homebrew 尝试两次（第二次关闭自动更新），Docker 官方 DMG 下载均因 `curl: (35) Recv failure: Connection reset by peer` 失败，`Docker.app` 与 daemon 仍不存在。
+1. 本机 Docker 不存在，因此不能证明 PostgreSQL、Redis、MinIO 和 Control 在真实 staging 网络中成功启动、迁移和互相隔离。用户已明确授权安装 Docker Desktop；已通过 Homebrew 尝试两次（第二次关闭自动更新），Docker 官方 DMG 下载均因 `curl: (35) Recv failure: Connection reset by peer` 失败；随后尝试同一官方 DMG 的浏览器下载路径，30 秒内未完成，检查下载目录也未发现 DMG。`Docker.app` 与 daemon 仍不存在。
 2. 当前代码仍没有 `server/cloud/outbox-dispatcher.js`。完整 release manifest 会声明它为 `not_implemented`，并固定输出 `outboxDispatcher_not_implemented`；同时默认 `product_publish_live_write_disabled`。因此新 PublishCommand 不能被授权，不能提前声称可靠发布管线完成。
 3. `npm audit` 当前报告 5 个 high、0 个 critical，均无自动修复方案（涉及 Vite/Tailwind/Vite React/nanoid/PostCSS 依赖链）。本 Run 没有擅自升级依赖；该项作为安全审查警告保留，需在后续依赖治理中单独处理。
 
