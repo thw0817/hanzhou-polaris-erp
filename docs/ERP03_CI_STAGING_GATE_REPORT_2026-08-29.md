@@ -76,6 +76,7 @@ ERP-03 当前仍保持 `GATE_FAILED`，不能标记 `COMPLETE`，也不能开始
 - 固化命令：`npm run ci:staging-outbox-chain`。命令强制要求 `SHEIN_ENVIRONMENT=staging`、`SHEIN_RUNTIME_MODE=cloud`、`SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED=false`，且 `DATABASE_URL`/`REDIS_URL` 必须指向本机 `55432/56379`；命令文件为 `server/ci/staging-outbox-chain.js`。
 - CI 接入：GitHub Actions 在该命令前启动隔离 PostgreSQL/Redis/MinIO、初始化 bucket、执行 migration 并启动 staging Control；命令完成后无条件 `docker compose down -v --remove-orphans` 清理 CI staging 项目。
 - 首次真实 staging 复验发现并修复：PostgreSQL 报 `42P18 could not determine data type of parameter $5`；根因是 `jsonb_build_object` 中 contract version 参数未显式类型化，修复为 `$5::text`，并加入 Outbox 回归断言。该次事务已回滚，无残留。
+- 固化探针首次运行发现并修复：PostgreSQL 报 `42601 cannot insert multiple commands into a prepared statement`；根因是演练脚本把多条 INSERT/DELETE 放在一个 extended-protocol prepared statement 中，修复为同一事务内逐条参数化 SQL；该次事务已回滚，无残留。
 - 第二次复验结果：真实 staging PostgreSQL 创建 1 个隔离 synthetic publish command；真实 `dispatchOutboxOnce` 返回 `claimed=1, dispatched=1, failed=0`；真实 Redis/BullMQ 接收确定性 `jobId`；真实 command-scoped Worker 完成 `submittedCount=1`；contract 为 `publish-command-v1`；`realSHEINCalls=0`。
 - 安全清理结果：演练后 `syntheticTenants=0`、`outboxRows=0`；队列使用随机 queue/prefix，清理仅匹配该 prefix；未连接生产服务、未启用 Publish Worker/Outbox Dispatcher 生产配置、未调用 SHEIN。
 - 本 Run 验证：定向 10/10；全量 `npm test` 1202/1202；staging isolation PASS；fault gates 17/17。
