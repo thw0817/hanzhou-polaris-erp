@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-29-v39
+版本：2026-08-30-v40
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型与事件账本的非生产设计；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结实现与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260829-ERP06-MODEL-EVENT-FOUNDATION-01
+当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-VERSION-FREEZE-IMPLEMENTATION-06
 
 ## 0. 台账用途
 
@@ -31,7 +31,7 @@
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
-| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260829-ERP06-MODEL-EVENT-FOUNDATION-01 | ERP-05 | 非生产范围启动：设计 COS-first 媒体边界、ProductVersion/PublishAttempt/PlatformProductLink、事件/Outbox 与 additive migration；生产迁移仍未执行 |
+| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-VERSION-FREEZE-IMPLEMENTATION-06 | ERP-05 | additive model foundation 草案与真实隔离 rehearsal 已通过；DraftRevision/ProductVersion 版本冻结服务、SKU/媒体版本引用、事件账本和失败回归已通过；完整原子 handoff、legacy adapter、生产迁移仍未完成 |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
@@ -1689,3 +1689,18 @@
 - 数据库 rehearsal：`PASS`。在全新本机 Docker `postgres:16-alpine` 临时容器（`127.0.0.1:55433/erp06_rehearsal`）中依次完成现有 001–046、preflight、ERP-06 additive 草案、失败回归、verify、空库 rollback、重新应用和二次 verify；临时容器已停止并删除，现有 staging 容器未触碰。
 - 首轮 rehearsal 暴露 PostgreSQL 回滚依赖顺序问题：`product_drafts.base_version_id` 外键仍依赖 `product_versions`，修正为先解除新增外键再删除新表；新空库重跑全流程通过。可运行入口已加入 `db:rehearse:erp06-foundation`，只接受本机且数据库名含 `test`/`rehearsal`/`scratch`，并要求精确确认值。
 - 当前状态：`COMPLETE`；草案、失败回归和真实隔离 schema rehearsal 完成，下一阶段再评审 ERP-06 实现代码。生产迁移和生产切换仍需单独批准。
+
+## 26. ERP-06 ProductVersion 版本冻结实现与隔离回归
+
+### RUN-20260830-ERP06-VERSION-FREEZE-IMPLEMENTATION-06
+
+- 类型：ERP-06 新模型的最小实现单元；只在本地/隔离环境实现和验证，不触碰生产。
+- 启动依据：第 25 Run 已完成 additive model foundation 草案、失败回归和真实隔离 schema rehearsal；本 Run 继续实现 DraftRevision → ProductVersion 的不可变版本冻结边界。
+- 允许范围：新增版本冻结服务、SKU/媒体版本引用、追加式 ProductEvent、失败回归测试、独立本机 PostgreSQL 演练入口和非敏感执行记录。
+- 禁止范围：生产 PostgreSQL/COS/Redis/队列/SHEIN 访问或写入；生产部署/重启/切换；旧历史回填、删除、恢复或重试；创建生产发布 Attempt/Command/Outbox。
+- 实际文件：[erp06-product-version-service.js](../server/cloud/erp06-product-version-service.js)、[erp06-product-version-service.test.js](../server/cloud/erp06-product-version-service.test.js)、[rehearse-erp06-product-version.js](../server/cloud/rehearse-erp06-product-version.js)、`package.json` 的 `db:rehearse:erp06-version` 入口。
+- 实现边界：所有读取均带 tenant/store/draft scope；必须携带 expected lockVersion；只接受已有 scoped CatalogProduct；DraftRevision 和 ProductVersion 采用稳定 JSONB 快照及 SHA-256 指纹；COS 媒体必须已完成 verified 完整性核验；版本事实、SKU/媒体引用和事件在同一 PostgreSQL 事务内生成；不改变旧 Draft 状态，不创建发布命令。
+- 失败保护：旧 lockVersion 返回 409 并回滚；跨租户/跨店草稿不可见；未核验媒体阻断且不留下 Revision；SKU 稳定键冲突不自动合并；事务中途失败全部回滚；快照递归脱敏，不保存 token/secret/password 等凭证字段；重复同一 DraftRevision 返回同一 ProductVersion，不生成第二版本。
+- 本地静态验证：版本冻结定向测试 `5/5`；ERP-06 基础草案与回归测试 `6/6`；全量测试 `1214/1214`；`npm run ci:secret-scan` 通过且无新发现；`npm run build:v2` 通过；`git diff --check` 通过。
+- 数据库 rehearsal：在全新本机 Docker `postgres:16-alpine` 临时容器（`127.0.0.1:55433/erp06_version_rehearsal`）中真实应用 001–046 与 047 草案，并验证成功冻结、版本快照不受 Draft 后续修改影响、重复请求幂等、verified 媒体引用、stale lock、未核验媒体、跨店隔离和无 PublishAttempt/Command/Outbox 副作用；临时容器已停止并删除，现有 staging 容器未触碰。
+- 当前状态：`COMPLETE`；本 Run 的版本冻结实现和隔离验证完成。ERP-06 整体仍为 `IN_PROGRESS`，下一 Run 实现 ProductVersion → PublishAttempt/PublishCommand/PublishOutbox 的完整原子 handoff；生产迁移、生产部署和 SHEIN 写入仍需单独批准。

@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-29-v19
+版本：2026-08-30-v20
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型与事件账本的非生产设计，ERP-07～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结实现与隔离验证，ERP-07～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -19,7 +19,7 @@
 | --- | --- | --- | --- | --- |
 | A | 历史修复与部署记录 | 旧“第 1～20 步”、NEXUS/EVO/SRF、发布/同步/审核中心/复选框等历次修复和 release | 历史上确实执行过许多步骤并有部署记录；当前效果仍需现场核验 | `REBUILD_HANDOFF_MASTER_2026-08-28.md`、`REBUILD_HANDOFF_2026-08-03.md` 等历史交接 |
 | B | 17 个板块最新详细方案 | 账号权限、店铺、商品、建档、发布、回读、素材、AI、合规、经营、履约、售后、财务、价格、增长、协同、BI | **最新产品与架构目标，已讨论并完整记录；尚未作为整体实施完成** | `COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md` |
-| C | ERP-00～ERP-23 | 为落实 17 个板块而新编制的分阶段工程治理与实施路线 | **当前路线：ERP-00～ERP-04 已完成，ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口，ERP-06 正在进行非生产模型设计与验证，ERP-07～ERP-23 尚未开始；前序阻断 Run 保留** | `COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md`、执行台账 |
+| C | ERP-00～ERP-23 | 为落实 17 个板块而新编制的分阶段工程治理与实施路线 | **当前路线：ERP-00～ERP-04 已完成，ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口，ERP-06 正在进行非生产模型、版本冻结实现与验证，ERP-07～ERP-23 尚未开始；前序阻断 Run 保留** | `COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md`、执行台账 |
 
 必须牢记：
 
@@ -48,7 +48,7 @@
 5. docs/REBUILD_HANDOFF_MASTER_2026-08-28.md
 6. docs/REBUILD_HANDOFF_2026-08-03.md
 
-ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并完成 ERP-00～ERP-04。ERP-05 已完成只读证据盘点和 COS 原生对象对账；用户已批准 COS-first，并批准历史 ProductVersion/PublishAttempt/PlatformProductLink 映射冻结为只读 legacy，不迁移、不恢复、不删除，不作为新链路进入 ERP-06 的前置条件。ERP-06 当前只进行规范模型、事件账本和 additive migration 的非生产设计/验证；生产迁移仍需单独批准。后续 ERP-07 及生产写入仍须以前一步完成门和单独批准为前提。
+ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并完成 ERP-00～ERP-04。ERP-05 已完成只读证据盘点和 COS 原生对象对账；用户已批准 COS-first，并批准历史 ProductVersion/PublishAttempt/PlatformProductLink 映射冻结为只读 legacy，不迁移、不恢复、不删除，不作为新链路进入 ERP-06 的前置条件。ERP-06 当前执行规范模型、事件账本、版本冻结实现和隔离验证；已通过 additive model foundation rehearsal 与 ProductVersion 版本冻结演练，但完整原子 handoff、legacy adapter 和生产切换尚未完成；生产迁移仍需单独批准。后续 ERP-07 及生产写入仍须以前一步完成门和单独批准为前提。
 
 先只读理解并向我汇报：
 - 17 个板块的整体目标和相互依赖；
@@ -119,8 +119,9 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - ERP 步骤总数：24。
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
 - `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11、Run 13 的 S3/AWS4 兼容列表请求返回 HTTP 403，但 Run 14 的 COS 原生 HMAC-SHA1 列表成功并完成归属对账：633 个对象匹配，187 条历史媒体记录无远端对象且均无引用；目标关系孤儿为 0，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
-- `NOT_STARTED`：ERP-06～ERP-23。
-- 当前正式 ERP Run：`RUN-20260829-ERP05-OBJECT-INVENTORY-RECHECK-14`；前序 Run 作为阻断历史保留。Run 14 已完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账，但 ERP-05 总完成门仍未通过，未完成前不得进入 ERP-06。
+- `IN_PROGRESS`：ERP-06（当前 Run：`RUN-20260830-ERP06-VERSION-FREEZE-IMPLEMENTATION-06`）。
+- `NOT_STARTED`：ERP-07～ERP-23。
+- ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口；Run 14 的历史证据缺口继续保留为只读 legacy，不阻断 ERP-06 新链路，但不允许历史自动回填。
 
 使用规则：
 
@@ -139,7 +140,7 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 3. 不自动删除、恢复、重试、改写历史媒体状态，不因历史映射缺口伪造 ProductVersion、PublishAttempt 或平台 Link。
 4. 新上传顺序固定为：COS 直传 → 服务端完整性/存在性核验 → 数据库登记元数据和引用。
 6. ERP-06 当前设计契约见 [ERP06_DATA_MODEL_EVENT_LEDGER_DESIGN_2026-08-29.md](./ERP06_DATA_MODEL_EVENT_LEDGER_DESIGN_2026-08-29.md)；该文档完成门通过前，不执行生产迁移或生产写入。
-5. ERP-06 只做新模型和隔离环境验证；任何生产迁移、历史修复、媒体清理和 SHEIN 写入仍需独立 Run 与批准。
+5. ERP-06 只做新模型、版本冻结实现和隔离环境验证；任何生产迁移、历史修复、媒体清理和 SHEIN 写入仍需独立 Run 与批准。
 
 ## 5. 历史已执行工作如何使用
 

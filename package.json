@@ -30,6 +30,7 @@
     "db:rehearse:028": "node --env-file-if-exists=.env server/cloud/rehearse-compliance-review-migration.js",
     "db:rehearse:029": "node --env-file-if-exists=.env server/cloud/rehearse-compliance-audit-immutability-migration.js",
     "db:rehearse:erp06-foundation": "node server/cloud/rehearse-erp06-model-foundation.js",
+    "db:rehearse:erp06-version": "node server/cloud/rehearse-erp06-product-version.js",
     "db:audit:runtime-role": "node --env-file-if-exists=.env server/cloud/audit-runtime-database-role.js",
     "db:audit:v2-readiness": "node --env-file-if-exists=.env server/cloud/audit-v2-release-readiness.js",
     "release:audit:v2": "node server/cloud/audit-v2-release-readiness.js --static-only",
