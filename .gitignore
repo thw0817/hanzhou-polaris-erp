@@ -2,6 +2,7 @@
 node_modules/
 .vite/
 coverage/
+test-results/
 
 # Generated front-end output
 dist/

@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const useSystemChrome = process.env.POLARIS_USE_SYSTEM_CHROME === "1";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
@@ -19,5 +21,13 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(useSystemChrome ? { channel: "chrome" } : {}),
+      },
+    },
+  ],
 });

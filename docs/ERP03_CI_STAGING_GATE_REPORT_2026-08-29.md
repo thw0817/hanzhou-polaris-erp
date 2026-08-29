@@ -14,7 +14,7 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 - `server/ci/release-manifest.js` 生成 source、UI、Control、Publish Worker、Outbox Dispatcher、其他 Worker、迁移全量 hash、schema range、flags、build time 和 PublishCommand 阻断结论。
 - `server/ci/erp03-fault-gates.js` 与测试覆盖提交崩溃、Outbox 重投、重复 jobId、Worker 发送前/后崩溃、SHEIN 超时、SSE 断线、回读重复/乱序、同义回读、Attempt 歧义、投影事务失败、来源失败保留 LKG 以及媒体故障。
 - `deploy/docker-compose.staging.yml` 与 `.env.staging.example` 建立独立 staging PostgreSQL、Redis、MinIO bucket、端口、Compose project 和默认关闭的 live-write flags。
-- `playwright.config.ts` 与 `tests/e2e/v2-core-flow.spec.ts` 建立无 live SHEIN 的登录、切换核心路由、退出、V2 marker、旧壳层排除和窄屏流程。
+- `playwright.config.ts` 与 `tests/e2e/v2-core-flow.spec.ts` 建立无 live SHEIN 的登录、切换核心路由、退出、V2 marker、旧壳层排除和窄屏流程；增加显式的本机系统 Chrome 选择开关，CI 默认仍使用 Playwright Chromium。
 - `deploy/Dockerfile.cloud-control` 与固定工具链一致，改为 `node:24.16.0-alpine`；这是构建运行时一致性修复，不是生产部署。
 
 ## 2. 验证证据
@@ -31,15 +31,14 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 | staging 候选制品打包 | PASS（仅候选，不放行生产） | `POLARIS_CI_GATE=passed POLARIS_ARTIFACT_CHANNEL=staging npm run ci:release-package`；候选包 SHA-256：`8ef36894b88d1472aacbab9dfc0ac48cde12eef86388e35b87ccc9968f70b564`，权限 `0444` |
 | staging 配置隔离 | PASS（静态） | `npm run ci:staging-audit`；独立端口/volume/bucket/project，生产 API 域名排除，6 个 live-write/sync flags 全 false |
 | Playwright 配置 | PASS | `npx playwright test --list`：2 个核心测试已被发现 |
-| Playwright 实际浏览器 | UNKNOWN | 本机无可用 Chromium；安装下载在 CDN 10% 处超时；已用 in-app browser 直接验证 V2 深层商品路由最终 URL 不循环、V2 壳层和隔离演示店铺正常 |
+| Playwright 实际浏览器 | PASS | `POLARIS_USE_SYSTEM_CHROME=1 npx playwright test tests/e2e/v2-core-flow.spec.ts --project=chromium`；系统 Chrome `152.0.7977.64`，2/2 通过；无 live SHEIN |
 | staging 实际运行 | UNKNOWN | 本机未安装 Docker，未启动 Compose，未触碰生产 DB/Redis/对象存储 |
 
 ## 3. 未闭合项与严格阻断理由
 
 1. 本机 Docker 不存在，因此不能证明 PostgreSQL、Redis、MinIO 和 Control 在真实 staging 网络中成功启动、迁移和互相隔离。
-2. 本机 Playwright Chromium 下载失败，因此不能把 `tests/e2e/v2-core-flow.spec.ts` 的实际浏览器执行标为 PASS；只允许保留配置级 PASS 和独立浏览器的补充证据。
-3. 当前代码仍没有 `server/cloud/outbox-dispatcher.js`。完整 release manifest 会声明它为 `not_implemented`，并固定输出 `outboxDispatcher_not_implemented`；同时默认 `product_publish_live_write_disabled`。因此新 PublishCommand 不能被授权，不能提前声称可靠发布管线完成。
-4. `npm audit` 当前报告 5 个 high、0 个 critical，均无自动修复方案（涉及 Vite/Tailwind/Vite React/nanoid/PostCSS 依赖链）。本 Run 没有擅自升级依赖；该项作为安全审查警告保留，需在后续依赖治理中单独处理。
+2. 当前代码仍没有 `server/cloud/outbox-dispatcher.js`。完整 release manifest 会声明它为 `not_implemented`，并固定输出 `outboxDispatcher_not_implemented`；同时默认 `product_publish_live_write_disabled`。因此新 PublishCommand 不能被授权，不能提前声称可靠发布管线完成。
+3. `npm audit` 当前报告 5 个 high、0 个 critical，均无自动修复方案（涉及 Vite/Tailwind/Vite React/nanoid/PostCSS 依赖链）。本 Run 没有擅自升级依赖；该项作为安全审查警告保留，需在后续依赖治理中单独处理。
 
 ## 4. 外部写入与生产边界
 
@@ -50,4 +49,4 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 
 ## 5. 放行结论
 
-ERP-03 当前只能保持 `GATE_FAILED`，不能标记 `COMPLETE`，也不能开始 ERP-04。待具备 Docker 与 Chromium 的隔离验收环境后，必须从同一 clean revision 重跑全部 gate；只有 staging 运行、Playwright 实际流程和完整 manifest 均通过，才可关闭本 Run。Outbox Dispatcher 仍须在 ERP-09/相关步骤实现并经过独立验证后，才可能解除发布命令阻断。
+ERP-03 当前只能保持 `GATE_FAILED`，不能标记 `COMPLETE`，也不能开始 ERP-04。Playwright 实际流程已在系统 Chrome 下通过；待具备 Docker staging 隔离验收环境后，必须从同一 clean revision 重跑完整 gate。只有 staging 实际运行和完整 manifest 的必要组件均通过，才可关闭本 Run。Outbox Dispatcher 仍须在 ERP-09/相关步骤实现并经过独立验证后，才可能解除发布命令阻断。

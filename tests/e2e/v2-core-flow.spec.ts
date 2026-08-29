@@ -35,7 +35,7 @@ test("login, scoped product routes, and logout remain deterministic without live
   await expect(page.getByRole("heading", { name: "登录工作台" })).toBeVisible();
 
   await page.getByLabel("邮箱").fill("demo@hanzhou.icu");
-  await page.getByLabel("密码").fill("deterministic-staging-password");
+  await page.locator('input[autocomplete="current-password"]').fill("deterministic-staging-password");
   await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/app\/overview$/);
   await expect(page.getByText("总览", { exact: true }).first()).toBeVisible();
