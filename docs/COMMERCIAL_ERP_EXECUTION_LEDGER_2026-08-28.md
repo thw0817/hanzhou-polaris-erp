@@ -1653,3 +1653,23 @@
 - COS 验收：实际运行中的 `control` 容器回归测试 `6/6`；PUT 上传签名为 COS 原生 `q-signature`/SHA-1，`content-type;host`；GET 下载签名为 COS 原生 `q-signature`/SHA-1，`host`；签名长度 40；未出现 AWS4 `X-Amz-*` 参数。探针未上传、下载、删除或修改任何真实对象。
 - 回滚点：`/opt/shein-console/releases/shein-cloud-deploy-20260829-frontend-restore-v1` 已保留；若线上健康检查或媒体验收失败，应将 `current` 原子切回该 release，并仅重建上述三个受影响服务。
 - 当前状态：`COMPLETE`；网页、API、COS 上传/下载签名链路已通过生产验收。未做真实业务图片上传，建议用户下一步在网页执行一次非敏感测试图片上传与预览，作为业务层最终确认。
+
+## 24. ERP-06 COS-first 对象权限修正与真实链路验收
+
+### RUN-20260829-ERP06-MEDIA-COS-POLICY-VERIFY-04
+
+- 类型：生产 COS 对象权限修正后的最小权限与真实对象链路验收。
+- 启动依据：用户反馈网页图片上传失败；生产签名请求返回 `403 AccessDenied`，已确认不是 CORS 或签名格式问题。
+- 根因：运行时子用户 `wow-rug-cos-service` 原有策略可执行 `GetBucket` 列表，但缺少对象级 `PutObject`、`GetObject`、`HeadObject`、`DeleteObject` 权限。
+- 用户操作：用户在 CAM 创建并直接关联 `SheinImageAssetsObjectAccessV2`，资源限定为 `shein-image-assets-1259300321` 香港桶对象范围；未授予 `cos:*`，未开放公有读。
+- 允许范围：生产 Control 容器现有凭据；对一个已有对象执行只读 `HEAD`/带 Range 的 `GET`；对自动生成的 `__deploy_probe__` 临时对象执行一次 `PUT`、`HEAD`、`DELETE` 验收。
+- 禁止范围：历史业务图片下载完整内容；数据库写入/状态修复；Redis、队列、SHEIN API 写入；修改或删除任何历史对象；输出密钥、签名、原始业务对象键或图片内容。
+- 完成标准：已有对象 `HEAD` 和带 Range 的下载成功；临时对象上传、校验、删除全部成功；业务数据库和历史媒体状态不变。
+
+### RUN-20260829-ERP06-MEDIA-COS-POLICY-VERIFY-04 结果
+
+- 已有对象只读校验：`HEAD HTTP 200`，对象大小 `1640549` bytes；带 Range 的 `GET HTTP 206`，返回 1 byte，类型为 `image/png`。
+- 临时对象完整性验收：`PUT HTTP 200`、`HEAD HTTP 200`、`DELETE HTTP 204`；临时对象内容为 12 bytes，已清理，未留下验收对象。
+- 结论：COS 对象上传、服务端存在性校验、下载和清理权限均已生效；无需再次部署代码，无需重启 PostgreSQL/Redis。
+- 未改变范围：未修改历史 `media_assets` 行、未修复或重试此前失败上传、未删除任何历史对象；此前遗留的 `uploading` 记录保持原状，等待用户业务层重新上传产生新 Asset。
+- 当前状态：`COMPLETE`；用户可刷新网页后重新选择图片上传并预览，作为最终业务验收。
