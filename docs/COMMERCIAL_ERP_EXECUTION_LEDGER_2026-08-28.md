@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v43
+版本：2026-08-30-v44
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结、原子发布交接、结果持久化与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结、原子发布交接、Worker 编排、结果持久化与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-PUBLISH-RESULT-PERSISTENCE-11
+当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-PUBLISH-WORKER-ORCHESTRATION-12
 
 ## 0. 台账用途
 
@@ -1788,3 +1788,19 @@
 - 环境证据：只读核对现有 staging Redis/PostgreSQL/MinIO 均 healthy，未重启、未写入；本 Run 的 repository 回归使用内存 fake pool，未连接生产或现有 staging。
 - 当前状态：`COMPLETE`；本 Run 的隔离结果持久化边界与失败保护完成。ERP-06 整体仍为 `IN_PROGRESS`，真实 Worker/sender/凭证/官方回读、正式迁移、生产部署和 SHEIN 写入均未开始。
 - 下一执行单元：另行评审真实 Worker → sender → 官方回读的生产接入；在完成门与单独授权前，不执行外部写入。
+
+## 32. ERP-06 Worker 编排边界隔离实现
+
+### RUN-20260830-ERP06-PUBLISH-WORKER-ORCHESTRATION-12
+
+- 类型：ERP-06 当前隔离实现单元；实现 `erp06-publish-command-v1` 的 Worker 编排与失败回归，不触碰生产。
+- 启动依据：第 31 Run 已完成 `send_started` 与平台结果的隔离持久化 repository；本 Run 将 claim、adapter 和结果 repository 串成可审查的单次编排边界，仍不接入生产 Worker。
+- 允许范围：新增隔离 Worker service、claim/身份/版本指纹校验、adapter 授权输入、`send_started` 与结果持久化串联、dry-run release、失败回归、全量门禁和文档台账更新。
+- 禁止范围：生产 PostgreSQL/COS/Redis/队列/SHEIN 访问或写入；正式 migration、生产部署/重启/切换；真实 sender、凭证读取、签名请求、Webhook/官方回读；历史回填、删除、恢复、重试或真实发布。
+- 实际文件：[erp06-publish-worker-service.js](../server/cloud/erp06-publish-worker-service.js)、[erp06-publish-worker-service.test.js](../server/cloud/erp06-publish-worker-service.test.js)，以及本台账、ERP-06 设计文档、V2 交接文档和隔离草案 README。未修改旧 `product-publish-worker`，未修改 `server/cloud/migrations/`。
+- 编排边界：只接受 `erp06-publish-command-v1`；claim 后校验租户/店铺、Command、Attempt、ProductVersion、来源摘要、版本指纹和 Worker claim；未 claim 不构造 adapter；adapter 先通过 `onSendStarted` 持久化发送意图，再返回 accepted/failed/unknown 给结果 repository。
+- 失败保护：`result_unknown`/`superseded_by_new_attempt` 在 adapter 前拒绝；`not_sent` 仅在显式 dry-run 调用 `releaseCommandDryRun`；非 `not_sent` 结果必须证明 `remoteCallMade=true` 与 `sendStarted=true`；结果持久化失败原样上抛，不释放、不转成安全重试。
+- 本地验证：Worker 回归 `7/7`；ERP-06 相关定向回归 `79/79`；全量测试 `1266/1266`；服务端测试 `125/125`；秘密扫描 `findings=[]`；`npm run build:v2`、release audit、`node --check`、`git diff --check` 均通过。
+- 环境证据：只读核对现有 staging Redis/PostgreSQL/MinIO 状态，未重启、未写入；Worker 使用 fake command/result repository 与 fake adapter，未连接生产或现有 staging，也没有真实 SHEIN 网络调用。
+- 当前状态：`COMPLETE`；本 Run 的隔离 Worker 编排边界和失败保护完成。ERP-06 整体仍为 `IN_PROGRESS`，真实 Worker/sender/凭证/官方回读、正式迁移、生产部署和 SHEIN 写入均未开始。
+- 下一执行单元：另行评审真实 Worker → sender → 官方回读接入及生产/预发授权；在 ERP-06 完成门与单独批准前，不执行外部写入。

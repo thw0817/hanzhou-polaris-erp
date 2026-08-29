@@ -47,6 +47,8 @@
 - `server/cloud/erp06-shein-publish-adapter-contract.test.js`：验证 endpoint/身份/指纹/敏感字段、显式授权、发送前持久化、成功/明确失败/`result_unknown` 分类，以及官方单据状态回读占位不联网。
 - `server/cloud/erp06-publish-result-repository.js`：隔离的 `send_started`/平台结果持久化服务；在同一事务内写入不可变事件、回执和 Attempt/Command 状态，拒绝 scope/claim/敏感字段漂移。
 - `server/cloud/erp06-publish-result-repository.test.js`：验证 048 additive 草案、发送前事件、幂等回调、成功/失败/`result_unknown` 结果、版本漂移、敏感字段和事务回滚。
+- `server/cloud/erp06-publish-worker-service.js`：隔离的 ERP-06 Worker 编排；claim 后验证 Command/Attempt/Version 指纹，串联 adapter、`send_started` 和结果 repository，`not_sent` 仅支持显式 dry-run 释放。
+- `server/cloud/erp06-publish-worker-service.test.js`：验证 Worker 契约、claim 作用域、未 claim no-op、版本漂移、`result_unknown`/superseded 阻断、发送顺序和结果持久化失败不重试。
 - `048_erp06_publish_result_persistence.sql`、`preflight-048.sql`、`verify-048.sql`、`rollback-048_empty.sql`：只用于一次性隔离数据库的 Command 时间字段与安全校验，未登记为正式 migration。
 - 以上服务及 handoff 的失败回归只使用 fake pool 和本地一次性数据库；没有接入生产路由、生产 Dispatcher、真实 Worker 或 SHEIN 写接口。
 
@@ -58,4 +60,4 @@
 - 没有把发布 Outbox 接入生产 dispatcher；本 Run 只在隔离内验证 claim/lease、确定性队列 handoff 和 Worker dry-run release，不代表远端发布成功。
 - 没有把 adapter contract 接入生产 Worker，没有配置真实 sender、凭证读取或官方回读请求；测试中的 sender 仅为内存 fake。
 - 没有把 `047`/`048` 草案登记为正式生产迁移，没有把结果 repository 接入生产 Worker，也没有配置真实 sender、凭证读取或官方回读请求；测试中的 sender/pool 仅为内存 fake。
-- 下一执行单元：另行评审真实 Worker → sender → 官方回读接入；在完成门与单独授权前，不执行生产迁移、生产部署或任何外部写入。
+- 下一执行单元：另行评审真实 Worker → sender → 官方回读接入及生产/预发授权；在完成门与单独授权前，不执行生产迁移、生产部署或任何外部写入。

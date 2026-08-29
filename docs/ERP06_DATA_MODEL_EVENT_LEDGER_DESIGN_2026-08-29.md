@@ -1,7 +1,7 @@
 # ERP-06 数据模型与事件账本设计
 
-版本：2026-08-30-v7
-状态：`IN_PROGRESS`（非生产设计、版本冻结、原子交接、Outbox claim/lease、Worker dry-run、SHEIN adapter boundary 与结果持久化隔离验证）
+版本：2026-08-30-v8
+状态：`IN_PROGRESS`（非生产设计、版本冻结、原子交接、Outbox claim/lease、Worker dry-run、SHEIN adapter boundary、结果持久化与 Worker 编排隔离验证）
 适用边界：COS-first；历史数据冻结只读；不执行生产迁移、不修改历史记录、不调用 SHEIN 写接口
 
 ## 0. 本文用途
@@ -253,7 +253,7 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 
 ## 10. 当前状态与下一 Run
 
-- 当前 Run：`RUN-20260830-ERP06-PUBLISH-RESULT-PERSISTENCE-11`
+- 当前 Run：`RUN-20260830-ERP06-PUBLISH-WORKER-ORCHESTRATION-12`
 - 当前状态：`COMPLETE`（本 Run 隔离结果持久化边界与全量门禁已完成；ERP-06 整体仍为 `IN_PROGRESS`）
 - 已完成：COS-first 决策登记、ERP-05 历史映射冻结豁免登记、目标模型 additive migration 草案、preflight/verify/rollback、真实本机 PostgreSQL 隔离 rehearsal、DraftRevision/ProductVersion 版本冻结、ProductVersion → PublishAttempt → PublishCommand → ProductPublishOutbox 原子交接、PublishBatch/BatchItem 显式关联和 legacy read-only adapter 最小实现。
 - 本 Run 实现边界：PublishBatch 服务按租户/店铺和 selection fingerprint 幂等创建 BatchItem；handoff 在同一事务内锁定 Batch/BatchItem，验证 Draft/Version 来源关系，建立 Attempt=`created`、Command=`queued`、Outbox=`pending`、current pointers、Draft=`handed_off`/lockVersion+1、BatchItem=`handed_off` 和 4 类 ProductEvent；不修改旧历史行，不调用远端。
@@ -268,5 +268,9 @@ result_unknown -> resolved_by_official_readback | superseded_by_new_attempt
 - 本 Run 新增隔离草案与回归：[erp06-publish-result-repository.js](../server/cloud/erp06-publish-result-repository.js)、[erp06-publish-result-repository.test.js](../server/cloud/erp06-publish-result-repository.test.js)、`048_erp06_publish_result_persistence.sql`、`preflight-048.sql`、`verify-048.sql`、`rollback-048_empty.sql`；048 只在 `erp06-draft/`，未登记 `server/cloud/migrations/`。
 - 失败保护：scope/版本/claim 漂移、未先 `send_started`、`result_unknown` 覆盖、敏感字段和事务中途失败均 fail closed；失败回归使用内存 fake pool，未向任何生产或现有 staging 数据库写入。
 - 当前 Run 定向回归：新结果持久化回归 `12/12`、ERP-06 相关定向回归 `72/72`；全量测试 `1259/1259`、服务端测试 `125/125`；秘密扫描 `findings=[]`；V2 构建与 release audit 通过；`node --check`/`git diff --check` 通过；只读 staging 核对显示 Redis/PostgreSQL/MinIO 均 healthy，未触碰。
+- 本 Run 新增隔离 Worker 编排：只消费 `erp06-publish-command-v1`，按租户/店铺、Command、Attempt、ProductVersion、版本指纹和 Worker claim 做 fail-closed 校验；claim 成功后通过 adapter 触发 `send_started`，再将 accepted/failed/unknown 结果交给结果 repository；`not_sent` 仅允许显式 dry-run 释放回 queued。
+- 本 Run 失败保护：未 claim 不构造 adapter；Command identity/scope/指纹漂移不执行；`result_unknown`/`superseded_by_new_attempt` 不执行；结果持久化失败不释放、不重试；非 `not_sent` 结果必须同时证明 `remoteCallMade=true` 与 `sendStarted=true`。
+- 本 Run 实际文件：[erp06-publish-worker-service.js](../server/cloud/erp06-publish-worker-service.js)、[erp06-publish-worker-service.test.js](../server/cloud/erp06-publish-worker-service.test.js)；Worker 只依赖隔离 command/result repository 与 adapter factory，没有接入生产队列、生产 Worker、真实 sender、凭证或 SHEIN HTTP。
+- 本 Run 已验证：Worker 回归 `7/7`；ERP-06 相关定向回归 `79/79`；全量测试 `1266/1266`、服务端测试 `125/125`；秘密扫描 `findings=[]`；V2 构建、release audit、`node --check`、`git diff --check` 均通过；staging 仅只读核对，未触碰。
 - 尚未完成：结果 repository 尚未接入生产 Worker；真实 SHEIN sender/签名凭证、官方 Webhook/单据状态回读与 SPU 关系回读、生产切换评估、正式生产迁移、历史数据迁移和 SHEIN 写入均未执行；旧历史继续只读，不因本 Run 自动映射。
-- 下一执行单元：单独评审并实现真实 Worker → sender → 官方回读接入契约；在 ERP-06 完成门通过且另行批准前，不接入生产 Worker、不执行生产迁移、不进入 ERP-07。
+- 下一执行单元：单独评审真实 Worker → sender → 官方回读接入契约及其生产/预发授权；在 ERP-06 完成门通过且另行批准前，不接入生产 Worker、不执行生产迁移、不进入 ERP-07。

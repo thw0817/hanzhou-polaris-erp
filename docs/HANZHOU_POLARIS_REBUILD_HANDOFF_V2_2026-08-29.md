@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v25
+版本：2026-08-30-v26
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary 与发布结果持久化的隔离验证，ERP-07～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化与 Worker 编排的隔离验证，ERP-07～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -177,7 +177,16 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - 048 仅为 `server/cloud/erp06-draft/` 中的 additive 草案：新增 `publish_commands.send_started_at/result_recorded_at`、配对约束、索引和隔离 preflight/verify/空库 rollback；未修改 `server/cloud/migrations/`，未执行正式迁移。
 - 失败保护已验证：scope、ProductVersion、Worker claim、`send_started` 前置条件和敏感结果字段漂移均拒绝；事务中途失败不会留下半条事件、回执或状态；新回归 `12/12`，ERP-06 相关定向回归 `72/72`。
 - 收尾证据：全量测试 `1259/1259`、服务端测试 `125/125`、秘密扫描 `findings=[]`、V2 构建、release audit、`node --check` 与 `git diff --check` 均通过；staging Redis/PostgreSQL/MinIO 只读核对为 healthy，未触碰。
-- 明确未完成：repository 尚未接入生产 Worker；真实 SHEIN sender/签名凭证、官方 Webhook/单据状态/SPU 回读、正式生产迁移、生产部署和任何 SHEIN 写入均未执行。
+- 明确未完成：repository 与本 Run Worker 编排尚未接入生产 Worker；真实 SHEIN sender/签名凭证、官方 Webhook/单据状态/SPU 回读、正式生产迁移、生产部署和任何 SHEIN 写入均未执行。
+
+### 4.6 ERP-06 Worker 编排边界隔离事实
+
+- 当前 Run：`RUN-20260830-ERP06-PUBLISH-WORKER-ORCHESTRATION-12`。
+- 本 Run 只在隔离代码与 fake dependency 中实现 `erp06-publish-command-v1` 的 Worker 编排：先按租户/店铺 claim Command，再验证 Command/Attempt/ProductVersion/版本指纹/claim identity，随后调用隔离 SHEIN adapter；adapter 的 `send_started` 通过结果 repository 先行持久化，最终 accepted/failed/unknown 结果再持久化。
+- `not_sent` 只在显式 dry-run 下调用 `releaseCommandDryRun`；`result_unknown` 和 `superseded_by_new_attempt` 在 adapter 前阻断；结果持久化异常原样上抛，不释放、不转成安全重试。默认仍关闭真实执行和远端调用。
+- 实际文件：[erp06-publish-worker-service.js](../server/cloud/erp06-publish-worker-service.js)、[erp06-publish-worker-service.test.js](../server/cloud/erp06-publish-worker-service.test.js)。未修改旧 `product-publish-worker`，未修改 `server/cloud/migrations/`，未接入生产队列、生产 Worker、真实 sender、凭证或 SHEIN HTTP。
+- 证据：Worker 回归 `7/7`；ERP-06 相关定向回归 `79/79`；全量测试 `1266/1266`、服务端测试 `125/125`；秘密扫描 `findings=[]`；V2 构建、release audit、`node --check`、`git diff --check` 均通过；现有 staging Redis/PostgreSQL/MinIO 仅只读核对，未触碰。
+- 本 Run 状态：`COMPLETE`。ERP-06 整体仍为 `IN_PROGRESS`；生产 Worker 接入、真实 SHEIN sender/签名凭证、官方 Webhook/单据状态/SPU 回读、正式迁移、生产部署和任何 SHEIN 写入均未执行。
 
 ## 5. 历史已执行工作如何使用
 
