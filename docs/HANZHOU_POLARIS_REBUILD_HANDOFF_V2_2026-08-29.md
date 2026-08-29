@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v24
+版本：2026-08-30-v25
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结、原子发布交接、Outbox claim/lease 与 SHEIN adapter boundary 的隔离验证，ERP-07～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 正在进行规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary 与发布结果持久化的隔离验证，ERP-07～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -48,7 +48,7 @@
 5. docs/REBUILD_HANDOFF_MASTER_2026-08-28.md
 6. docs/REBUILD_HANDOFF_2026-08-03.md
 
-ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并完成 ERP-00～ERP-04。ERP-05 已完成只读证据盘点和 COS 原生对象对账；用户已批准 COS-first，并批准历史 ProductVersion/PublishAttempt/PlatformProductLink 映射冻结为只读 legacy，不迁移、不恢复、不删除，不作为新链路进入 ERP-06 的前置条件。ERP-06 当前执行规范模型、事件账本、版本冻结实现、ProductVersion 到 Attempt/Command/Outbox 原子交接和隔离验证；foundation、版本冻结与原子 handoff 演练均已通过，但 PublishBatch/BatchItem 关联、legacy adapter 和生产切换尚未完成；生产迁移仍需单独批准。后续 ERP-07 及生产写入仍须以前一步完成门和单独批准为前提。
+ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并完成 ERP-00～ERP-04。ERP-05 已完成只读证据盘点和 COS 原生对象对账；用户已批准 COS-first，并批准历史 ProductVersion/PublishAttempt/PlatformProductLink 映射冻结为只读 legacy，不迁移、不恢复、不删除，不作为新链路进入 ERP-06 的前置条件。ERP-06 当前执行规范模型、事件账本、版本冻结实现、ProductVersion 到 Attempt/Command/Outbox 原子交接、隔离 Dispatcher/Worker、SHEIN adapter boundary、`send_started`/结果持久化和隔离验证；foundation、版本冻结、原子 handoff 与零远端演练均已通过，但生产切换尚未完成；生产迁移仍需单独批准。后续 ERP-07 及生产写入仍须以前一步完成门和单独批准为前提。
 
 先只读理解并向我汇报：
 - 17 个板块的整体目标和相互依赖；
@@ -119,7 +119,7 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - ERP 步骤总数：24。
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
 - `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11、Run 13 的 S3/AWS4 兼容列表请求返回 HTTP 403，但 Run 14 的 COS 原生 HMAC-SHA1 列表成功并完成归属对账：633 个对象匹配，187 条历史媒体记录无远端对象且均无引用；目标关系孤儿为 0，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
-- `IN_PROGRESS`：ERP-06（当前 Run：`RUN-20260830-ERP06-BATCH-LEGACY-IMPLEMENTATION-08`）。
+- `IN_PROGRESS`：ERP-06（当前 Run：`RUN-20260830-ERP06-PUBLISH-RESULT-PERSISTENCE-11`）。
 - `NOT_STARTED`：ERP-07～ERP-23。
 - ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口；Run 14 的历史证据缺口继续保留为只读 legacy，不阻断 ERP-06 新链路，但不允许历史自动回填。
 
@@ -168,6 +168,16 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - 失败回归覆盖 10 项（含 sender 缺失与 `send_started` 持久化失败），只使用内存 fake，不连接生产 PostgreSQL/COS/Redis/队列/SHEIN；历史数据仍冻结只读。
 - 收尾证据：全量测试 `1247/1247`、秘密扫描 `findings=[]`、V2 构建、release audit、`node --check` 与 `git diff --check` 均通过；现有 staging 容器仅做只读核对且未触碰。本 Run 状态：`COMPLETE`。
 - 明确未完成：真实 SHEIN sender/签名凭证接入、`send_started`/receipt 持久化实现、官方 Webhook/单据状态回读、SPU 关系回读、生产 Worker/迁移/部署和任何 SHEIN 写入，均需单独评审与明确批准。
+
+### 4.5 ERP-06 send_started 与发布结果持久化隔离事实
+
+- 当前 Run：`RUN-20260830-ERP06-PUBLISH-RESULT-PERSISTENCE-11`。
+- 已新增隔离 repository：[erp06-publish-result-repository.js](../server/cloud/erp06-publish-result-repository.js) 与回归测试；`recordSendStarted` 在同一事务内追加 `publish_send_started` 事件、更新 Attempt=`dispatched` 和 Command=`send_started_at`；`recordPublishResult` 在同一事务内追加平台回执/结果事件、更新 Attempt/Command 最终结果并清理当前 Worker claim。
+- accepted/failed/unknown 的结果合同与 adapter boundary 一致：accepted 需要完整 receipt，明确失败区分可重试与终止失败，网络异常/不完整响应进入 `result_unknown` 且 `retryable=false`；重复相同结果按 dedupe 幂等，未知结果不得被覆盖或自动重发，不建立 PlatformProductLink。
+- 048 仅为 `server/cloud/erp06-draft/` 中的 additive 草案：新增 `publish_commands.send_started_at/result_recorded_at`、配对约束、索引和隔离 preflight/verify/空库 rollback；未修改 `server/cloud/migrations/`，未执行正式迁移。
+- 失败保护已验证：scope、ProductVersion、Worker claim、`send_started` 前置条件和敏感结果字段漂移均拒绝；事务中途失败不会留下半条事件、回执或状态；新回归 `12/12`，ERP-06 相关定向回归 `72/72`。
+- 收尾证据：全量测试 `1259/1259`、服务端测试 `125/125`、秘密扫描 `findings=[]`、V2 构建、release audit、`node --check` 与 `git diff --check` 均通过；staging Redis/PostgreSQL/MinIO 只读核对为 healthy，未触碰。
+- 明确未完成：repository 尚未接入生产 Worker；真实 SHEIN sender/签名凭证、官方 Webhook/单据状态/SPU 回读、正式生产迁移、生产部署和任何 SHEIN 写入均未执行。
 
 ## 5. 历史已执行工作如何使用
 

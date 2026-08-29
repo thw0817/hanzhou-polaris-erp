@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v42
+版本：2026-08-30-v43
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结、原子发布交接与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结、原子发布交接、结果持久化与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-OUTBOX-DISPATCH-WORKER-IMPLEMENTATION-09
+当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-PUBLISH-RESULT-PERSISTENCE-11
 
 ## 0. 台账用途
 
@@ -31,7 +31,7 @@
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
-| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-OUTBOX-DISPATCH-WORKER-IMPLEMENTATION-09 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter 和隔离 Outbox claim/lease dry-run 均已验证；生产迁移、真实 SHEIN adapter/发布仍未完成 |
+| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-PUBLISH-RESULT-PERSISTENCE-11 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、隔离 Outbox claim/lease、adapter boundary 和结果持久化均已验证；生产迁移、真实 SHEIN adapter/发布仍未完成 |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
@@ -1771,3 +1771,20 @@
 - 当前状态：`COMPLETE`；本 Run 全量测试 `1247/1247`、adapter 定向回归 `10/10`、秘密扫描 `findings=[]`、V2 构建、release audit、`node --check` 与 `git diff --check` 均通过；staging 容器仅做只读核对且未触碰。
 - 仍未完成：真实 SHEIN adapter/生产 Worker/`send_started` 与 receipt 持久化/官方回读/生产迁移与部署仍未开始；本 Run 不代表商品已向 SHEIN 发出或发布成功。
 - 下一执行单元：另行评审 `send_started`/receipt 持久化、官方 Webhook/单据状态/SPU 回读和生产 Worker 接入；未获单独批准前不执行外部写入。
+
+## 31. ERP-06 send_started 与发布结果持久化隔离实现
+
+### RUN-20260830-ERP06-PUBLISH-RESULT-PERSISTENCE-11
+
+- 类型：ERP-06 当前隔离实现单元；实现 `send_started`、平台结果回执、Attempt/Command 状态和追加式事件的原子持久化，不触碰生产。
+- 启动依据：第 30 Run 已完成 SHEIN `publishOrEdit` adapter boundary、结果分类与官方回读占位；本 Run 补齐 adapter 与持久事实之间的隔离 repository 边界，但不接入真实 Worker。
+- 允许范围：新增结果 repository、048 additive draft/preflight/verify/rollback、fake-pool 失败回归、静态门禁和非敏感文档台账更新。
+- 禁止范围：生产 PostgreSQL/COS/Redis/队列/SHEIN 访问或写入；正式 migration、生产部署/重启/切换；真实 sender、凭证读取、签名请求、Webhook/官方回读；历史回填、删除、恢复、重试或真实发布。
+- 实际文件：[erp06-publish-result-repository.js](../server/cloud/erp06-publish-result-repository.js)、[erp06-publish-result-repository.test.js](../server/cloud/erp06-publish-result-repository.test.js)、[048_erp06_publish_result_persistence.sql](../server/cloud/erp06-draft/048_erp06_publish_result_persistence.sql)、[preflight-048.sql](../server/cloud/erp06-draft/preflight-048.sql)、[verify-048.sql](../server/cloud/erp06-draft/verify-048.sql)、[rollback-048_empty.sql](../server/cloud/erp06-draft/rollback-048_empty.sql)、更新 [erp06-draft/README.md](../server/cloud/erp06-draft/README.md)。
+- 持久化边界：`recordSendStarted` 在一个事务内追加 `publish_send_started`、更新 Attempt=`dispatched` 与 Command=`send_started_at`；`recordPublishResult` 在一个事务内追加 `platform_receipt_recorded`/`attempt_result_unknown`、插入 `product_publish_receipts`、更新 Attempt/Command 状态、写入 `result_recorded_at` 并清理 Worker claim。事件/回执 payload 仅保留可审计的非敏感字段和 hash。
+- 结果与恢复：accepted 必须带完整官方回执并映射 `submitted/succeeded`；明确失败映射 `known_failed`/`failed_terminal`；网络异常或不完整响应映射 `result_unknown`，不可重试；相同结果重复提交按 dedupe 幂等；scope、ProductVersion、claim、`send_started` 前置条件或敏感字段漂移均 fail closed；事务失败全部回滚。
+- 048 草案只新增 `publish_commands.send_started_at/result_recorded_at`、状态配对约束和索引，位于 `server/cloud/erp06-draft/`，未登记 `server/cloud/migrations/`，未应用于现有 staging 或生产数据库。
+- 本地验证：新结果持久化回归 `12/12`；ERP-06 相关定向回归 `72/72`；全量测试 `1259/1259`；服务端测试 `125/125`；`npm run ci:secret-scan` 通过且 `findings=[]`；`npm run build:v2`、release audit、`node --check`、`git diff --check` 均通过。
+- 环境证据：只读核对现有 staging Redis/PostgreSQL/MinIO 均 healthy，未重启、未写入；本 Run 的 repository 回归使用内存 fake pool，未连接生产或现有 staging。
+- 当前状态：`COMPLETE`；本 Run 的隔离结果持久化边界与失败保护完成。ERP-06 整体仍为 `IN_PROGRESS`，真实 Worker/sender/凭证/官方回读、正式迁移、生产部署和 SHEIN 写入均未开始。
+- 下一执行单元：另行评审真实 Worker → sender → 官方回读的生产接入；在完成门与单独授权前，不执行外部写入。
