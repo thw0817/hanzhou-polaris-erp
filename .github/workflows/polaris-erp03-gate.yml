@@ -53,11 +53,30 @@ jobs:
       - name: Audit staging isolation
         run: npm run ci:staging-audit
 
+      - name: Start isolated staging services
+        run: docker compose -p hanzhou-polaris-staging -f deploy/docker-compose.staging.yml up -d --wait postgres redis minio
+
+      - name: Initialize staging bucket
+        run: docker compose -p hanzhou-polaris-staging -f deploy/docker-compose.staging.yml run --rm minio-init
+
+      - name: Apply staging migrations
+        run: docker compose -p hanzhou-polaris-staging -f deploy/docker-compose.staging.yml --profile migration run --rm --build migration
+
+      - name: Start staging Control
+        run: docker compose -p hanzhou-polaris-staging -f deploy/docker-compose.staging.yml up -d --build --wait control
+
+      - name: Run staging Outbox to Worker chain
+        run: npm run ci:staging-outbox-chain
+
       - name: Install deterministic browser
         run: npx playwright install --with-deps chromium
 
       - name: Run deterministic core browser flow
         run: npm run test:e2e:core
+
+      - name: Tear down isolated staging services
+        if: always()
+        run: docker compose -p hanzhou-polaris-staging -f deploy/docker-compose.staging.yml down -v --remove-orphans
 
       - name: Preserve the single V2 build for packaging
         uses: actions/upload-artifact@v4

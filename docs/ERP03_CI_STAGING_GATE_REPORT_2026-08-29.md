@@ -10,7 +10,7 @@ Run：`RUN-20260829-ERP03-CI-STAGING-GATE-01`
 本 Run 只建立 ERP-03 的自动化门禁和隔离边界，没有修改业务 API、数据库语义、生产配置或 SHEIN 数据：
 
 - `.nvmrc`、`packageManager`、`engines`、`.npmrc` 固定 Node `24.16.0` 与 npm `11.13.0`，锁文件保持 lockfile v3。
-- `.github/workflows/polaris-erp03-gate.yml` 建立固定 revision 的 CI：secret scan、定向测试、全量测试、故障契约、V2 build、V2 release audit、完整 manifest、staging 隔离和 Playwright 核心流程；只有 `gate` 成功后才允许打包候选制品。
+- `.github/workflows/polaris-erp03-gate.yml` 建立固定 revision 的 CI：secret scan、定向测试、全量测试、故障契约、V2 build、V2 release audit、完整 manifest、staging 隔离、真实 staging Outbox 链和 Playwright 核心流程；只有 `gate` 成功后才允许打包候选制品。
 - `server/ci/release-manifest.js` 生成 source、UI、Control、Publish Worker、Outbox Dispatcher、其他 Worker、迁移全量 hash、schema range、flags、build time 和 PublishCommand 阻断结论。
 - `server/ci/erp03-fault-gates.js` 与测试覆盖提交崩溃、Outbox 重投、重复 jobId、Worker 发送前/后崩溃、SHEIN 超时、SSE 断线、回读重复/乱序、同义回读、Attempt 歧义、投影事务失败、来源失败保留 LKG 以及媒体故障。
 - `deploy/docker-compose.staging.yml` 与 `.env.staging.example` 建立独立 staging PostgreSQL、Redis、MinIO bucket、端口、Compose project 和默认关闭的 live-write flags。
@@ -74,6 +74,7 @@ ERP-03 当前仍保持 `GATE_FAILED`，不能标记 `COMPLETE`，也不能开始
 
 - 启动依据：第 6 节确认 Outbox DB 空队列探针通过，但真实 staging 投递闭环仍未验证；严格补齐可重复、无 SHEIN 写入的 synthetic command 演练。
 - 固化命令：`npm run ci:staging-outbox-chain`。命令强制要求 `SHEIN_ENVIRONMENT=staging`、`SHEIN_RUNTIME_MODE=cloud`、`SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED=false`，且 `DATABASE_URL`/`REDIS_URL` 必须指向本机 `55432/56379`；命令文件为 `server/ci/staging-outbox-chain.js`。
+- CI 接入：GitHub Actions 在该命令前启动隔离 PostgreSQL/Redis/MinIO、初始化 bucket、执行 migration 并启动 staging Control；命令完成后无条件 `docker compose down -v --remove-orphans` 清理 CI staging 项目。
 - 首次真实 staging 复验发现并修复：PostgreSQL 报 `42P18 could not determine data type of parameter $5`；根因是 `jsonb_build_object` 中 contract version 参数未显式类型化，修复为 `$5::text`，并加入 Outbox 回归断言。该次事务已回滚，无残留。
 - 第二次复验结果：真实 staging PostgreSQL 创建 1 个隔离 synthetic publish command；真实 `dispatchOutboxOnce` 返回 `claimed=1, dispatched=1, failed=0`；真实 Redis/BullMQ 接收确定性 `jobId`；真实 command-scoped Worker 完成 `submittedCount=1`；contract 为 `publish-command-v1`；`realSHEINCalls=0`。
 - 安全清理结果：演练后 `syntheticTenants=0`、`outboxRows=0`；队列使用随机 queue/prefix，清理仅匹配该 prefix；未连接生产服务、未启用 Publish Worker/Outbox Dispatcher 生产配置、未调用 SHEIN。

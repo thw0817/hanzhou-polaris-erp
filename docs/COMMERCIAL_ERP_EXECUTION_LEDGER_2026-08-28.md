@@ -1339,6 +1339,7 @@
 - 类型：ERP-03 补证；真实 staging 基础设施上的 Outbox → BullMQ → command-scoped Worker 安全演练。
 - 启动依据：上一 Run 只完成真实 staging PostgreSQL 空队列探针，未完成真实投递闭环；本 Run 将 synthetic command 演练固化为仓库命令，不触碰 SHEIN。
 - 固化实现：新增 `server/ci/staging-outbox-chain.js` 与 `ci:staging-outbox-chain`；命令强制 staging/cloud、live-write=false、本机 staging PostgreSQL/Redis 端口，并使用随机 queue/prefix 与 finally 清理。
+- CI 接入：`.github/workflows/polaris-erp03-gate.yml` 已接入同一命令；runner 会先启动隔离 staging PostgreSQL/Redis/MinIO、初始化 bucket、执行 migration、启动 Control，结束后无条件清理 staging Compose 项目。
 - 首次 staging 复验：发现 PostgreSQL `42P18` 参数类型错误（`jsonb_build_object` contract version 使用未类型化参数）；事务已回滚。修复为 `$5::text`，并纳入回归测试。
 - 第二次 staging 复验：真实 PostgreSQL Outbox `claimed=1, dispatched=1, failed=0`；真实 Redis/BullMQ 确定性 `jobId`；真实 command-scoped Worker `submittedCount=1`；`realSHEINCalls=0`；`contractVersion=publish-command-v1`。
 - 清理核验：`syntheticTenants=0`、`outboxRows=0`；随机 Redis prefix 无残留；无生产连接、无 SHEIN 写入。
