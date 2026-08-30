@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v56
+版本：2026-08-30-v57
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界和字段级 response evidence 回归，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界、字段级 response evidence 回归和只读响应证据脱敏捕获边界，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-FIELD-PROVENANCE-06
+当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-RESPONSE-EVIDENCE-CAPTURE-07
 
 ## 0. 台账用途
 
@@ -32,7 +32,7 @@
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
 | ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、隔离 Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账、单阶段编排和发布-回读组合隔离验证均已完成；生产迁移、真实 SHEIN adapter/发布仍未完成 |
-| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-FIELD-PROVENANCE-06 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter、字段级 response evidence 与回归通过；官方完整 response/店铺 evidence、canary/readback 和生产接入仍未完成 |
+| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-RESPONSE-EVIDENCE-CAPTURE-07 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter、字段级 response evidence、脱敏只读响应摘要与回归通过；官方完整 response/店铺 evidence、canary/readback 和生产接入仍未完成 |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
 | ERP-10 | 官方审核回读与状态投影 | NOT_STARTED | — | ERP-09 | — |
@@ -1996,3 +1996,18 @@
 - 制品状态：已生成最终文档 revision 对应的只读 staging 候选包；releaseId、绝对路径和 SHA-256 以本 Run 完成报告为准。该制品未部署。
 - 当前状态：`COMPLETE / LOCAL FIELD PROVENANCE HARDENED`。本 Run 完成；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
 - 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、现有线上业务路径的受控 adapter 接线、预发 canary/readback、ERP-07 完成门和单独部署批准仍未完成；本 Run 不得被解释为已上线。
+
+## 45. ERP-07 授权店铺响应证据脱敏捕获边界
+
+### RUN-20260830-ERP07-RESPONSE-EVIDENCE-CAPTURE-07
+
+- 类型：ERP-07 第七段本地隔离实现；为后续人工审阅真实授权店铺只读回执建立“只接收结构化响应、只输出脱敏摘要、不自动升级证据状态”的边界，不触碰生产。
+- 启动依据：第 44 Run 已确认 6 项 source-pending 接口没有官方完整 response 字段和真实授权店铺回执。直接把人工声明或本地 fixture 写入 `authorized_store_read` 会造成不可审计的证据伪造，因此本 Run 只实现捕获候选，不改变现有 schema catalog。
+- 实际文件：[server/cloud/erp07-response-evidence.js](../server/cloud/erp07-response-evidence.js)、[server/cloud/erp07-response-evidence.test.js](../server/cloud/erp07-response-evidence.test.js)。未接入现有线上路由、Worker、SHEIN adapter、网页、数据库或对象存储。
+- 输入边界：仅接受授权店铺只读回执编号、tenant/store/supplier scope、观测时间以及结构化 `payload`/`diagnostics`；只允许 `read` endpoint；必须是 HTTP 200、上游 `code=0`、有 `traceId` 且通过当前版本化 response schema；不接受请求头、请求体、凭证、原始响应包装或任意扩展字段。
+- 输出边界：仅保留 endpoint、contract/schema 版本、scope、时间、HTTP/code/traceId、响应 SHA-256、逐字段存在性/出现次数/类型摘要和 `sourceRef`；不保存原始 payload、字段值、headers、签名 URL、文件或密钥。摘要内部对象冻结，防止后续调用方改写已捕获结果。
+- 证据语义：输出固定为 `reviewStatus=pending_manual_acceptance`、`eligibleForCatalogUpgrade=false`；捕获工具不修改 `internal_consumer_contract`、不写 `authorizedStoreRead`，也不把摘要本身当作官方字段或授权店铺事实。真实回执仍须由人工核验来源后另行批准并更新字段账本。
+- Fail-closed 回归：写入 endpoint、缺失 scope/时间/traceId/code/status、非 200 或非 `code=0`、response schema 不合格、来源编号不符合 `authorized-store-read:*`、携带 headers/request/credentials/sensitive keys，均拒绝生成摘要；空数据只记录未观测字段，不推断为零值或完整字段证据。
+- 本地验证：证据捕获定向回归 `5/5`；ERP-07 schema、adapter、endpoint contract 与证据捕获相邻回归 `32/32`；项目全量 `npm test` `1359/1359`；未执行真实 SHEIN HTTP、真实凭证解析或任何生产/staging 外部访问。
+- 当前状态：`COMPLETE / LOCAL REDACTED CAPTURE ONLY`。本 Run 完成脱敏捕获边界，但 ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
+- 未完成门：真实授权店铺只读回执、官方完整 response 字段、统一 adapter 受控接线、预发 canary/readback、ERP-07 完成门、候选制品重建和单独部署批准仍未完成；本 Run 不产生部署授权。
