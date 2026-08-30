@@ -200,6 +200,7 @@ export class SheinWebReadService {
     now = () => new Date(),
     publishExecutionRepository = null,
     productReviewRepository = null,
+    sourcePendingDocumentStateReadEnabled = false,
   } = {}) {
     if (!storeRepository) {
       throw new Error("SheinWebReadService 缺少 storeRepository");
@@ -212,6 +213,7 @@ export class SheinWebReadService {
     this.now = now;
     this.publishExecutionRepository = publishExecutionRepository;
     this.productReviewRepository = productReviewRepository;
+    this.sourcePendingDocumentStateReadEnabled = sourcePendingDocumentStateReadEnabled === true;
     this.publishRuleCache = new Map();
   }
 
@@ -434,6 +436,13 @@ export class SheinWebReadService {
         "INVALID_REQUEST",
         "version和spuNames不能为空",
         400,
+      );
+    }
+    if (!this.sourcePendingDocumentStateReadEnabled) {
+      throw new WebAuthError(
+        "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED",
+        "商品文档状态的官方响应字段待核验，远端回读已安全锁定",
+        409,
       );
     }
     const credential = await this.#credential(context, storeId);

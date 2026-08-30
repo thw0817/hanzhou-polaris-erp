@@ -68,12 +68,57 @@ test("web product reads use encrypted store credentials without returning them",
   assert.equal(JSON.stringify(result).includes("OPEN-1"), false);
 });
 
+test("document state source-pending reads are locked before credentials or transport", async () => {
+  let credentialReads = 0;
+  let transportCalls = 0;
+  let receiptWrites = 0;
+  let reviewWrites = 0;
+  const service = new SheinWebReadService({
+    apiBaseUrl: "https://openapi.example",
+    storeRepository: {
+      async getCredential() {
+        credentialReads += 1;
+        return null;
+      },
+    },
+    publishExecutionRepository: {
+      async appendDocumentStateReceipts() {
+        receiptWrites += 1;
+      },
+    },
+    productReviewRepository: {
+      async saveDocumentStates() {
+        reviewWrites += 1;
+      },
+    },
+    fetchImpl: async () => {
+      transportCalls += 1;
+      return response({ code: "0", info: {} });
+    },
+  });
+
+  await assert.rejects(
+    service.queryDocumentState({
+      context: { tenantId: "tenant-1" },
+      storeId: "store-1",
+      version: "VERSION-1",
+      spuNames: ["SPU-1"],
+    }),
+    (error) => error.code === "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED" && error.status === 409,
+  );
+  assert.equal(credentialReads, 0);
+  assert.equal(transportCalls, 0);
+  assert.equal(receiptWrites, 0);
+  assert.equal(reviewWrites, 0);
+});
+
 test("document state reads send the official version and spuList fields and persist normalized receipts", async () => {
   let requestBody = null;
   let persisted = null;
   let reviewState = null;
   const service = new SheinWebReadService({
     apiBaseUrl: "https://openapi.example",
+    sourcePendingDocumentStateReadEnabled: true,
     storeRepository: {
       async getCredential() {
         return {
@@ -153,6 +198,7 @@ test("document state reads send the official version and spuList fields and pers
 test("document state reads keep the official result when one local projection fails", async () => {
   const service = new SheinWebReadService({
     apiBaseUrl: "https://openapi.example",
+    sourcePendingDocumentStateReadEnabled: true,
     storeRepository: {
       async getCredential() {
         return {
@@ -210,6 +256,7 @@ test("document state reads keep an official empty result non-fatal and do not pe
   let reviewed = false;
   const service = new SheinWebReadService({
     apiBaseUrl: "https://openapi.example",
+    sourcePendingDocumentStateReadEnabled: true,
     storeRepository: {
       async getCredential() {
         return {
@@ -257,6 +304,7 @@ test("document state reads reject a credential from another tenant before callin
   let fetches = 0;
   const service = new SheinWebReadService({
     apiBaseUrl: "https://openapi.example",
+    sourcePendingDocumentStateReadEnabled: true,
     storeRepository: {
       async getCredential() {
         return {
