@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v55
+版本：2026-08-30-v56
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 隔离实现已完成但生产接入前置审查为 `NO-GO/BLOCKED`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，按用户要求本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、source-pending method/path 审阅摘要与双重显式 adapter 证据采集门禁、网页商品单据状态回读默认锁定、diagnostics 敏感字段、未知 metadata、response evidence 状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正以及 3 项官方响应来源核验，其中 23 项可执行校验、10 项显式阻断；销售、发布额度、单据状态 3 项 source-pending 接口的字段仍明确标记为内部消费者契约，真实授权店铺只读证据尚未捕获；ERP-07 是当前唯一 `IN_PROGRESS` 步骤，当前 Run 为 `RUN-20260830-ERP07-WEB-DOCUMENT-STATE-GUARD-17`，ERP-08～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 隔离实现已完成但生产接入前置审查为 `NO-GO/BLOCKED`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，按用户要求本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、source-pending method/path 审阅摘要与双重显式 adapter 证据采集门禁，并默认锁定网页商品单据状态、经营同步、发品预检和自定义属性权限的旁路；diagnostics 敏感字段、未知 metadata、response evidence 状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正以及 3 项官方响应来源核验，其中 23 项可执行校验、10 项显式阻断；销售、发布额度、单据状态 3 项 source-pending 接口的字段仍明确标记为内部消费者契约，真实授权店铺只读证据尚未捕获；ERP-07 是当前唯一 `IN_PROGRESS` 步骤，当前 Run 为 `RUN-20260830-ERP07-SOURCE-PENDING-WEB-AND-LEGACY-GUARD-18`，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -664,3 +664,12 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 服务层现在默认在凭证读取、远端传输、receipt/review 投影写入之前返回 `409 ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED`。隔离测试若要模拟历史成功路径，必须显式传入未接入云端配置的构造器开关；默认网页运行不会借此开关恢复远端调用。
 - 这不是发布或生产修复：已部署旧环境不因本地提交自动改变。若未来通过完整门禁进入运行环境，网页批量回读会如实提示受控锁定，不会伪造成功、重发、回填或绕过待核验 response 字段。
 - 服务层 `30/30`、路由/adapter `69/69`、全量测试 `1378/1378`、V2 构建（1953 modules）、工具链、密钥扫描（`scannedFiles=651, findings=[]`）、静态 release audit（15/15）、staging isolation（14/14）和干净 revision manifest 均已通过；候选包仍不构成 deployment。未发送真实 SHEIN HTTP，未读取/打印真实凭证，未访问生产或现有 staging。
+
+## 31. ERP-07 网页读取、发品预检与旧本地入口默认锁定（2026-08-30）
+
+### RUN-20260830-ERP07-SOURCE-PENDING-WEB-AND-LEGACY-GUARD-18
+
+- 审计确认 `syncStoreBusiness()` 会经共享函数读取 SKU 销量，`preflightPublish()` 会经共享函数读取发布额度；发布规则管理员首次加载含销售属性类目时会读取自定义属性权限。三者此前均可绕过 source-pending adapter 门禁；旧 `server/index.js` 也复用两个共享函数，不能只修网页服务。批量发布服务调用同一网页预检入口；商品候选/远程预检模块仅消费预检对象而不自行发起 SHEIN 请求。
+- 云端网页服务的经营同步与发品预检在凭据读取和网络传输前无条件返回 `409 ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED`，不提供构造器或配置放行开关。共享函数也默认在任何请求前拒绝，使旧本地直连入口同步锁定；发布规则读取保留已核验字段、忽略当前与历史快照中的待核验权限并返回空自定义属性权限与受控诊断，绝不请求待核验接口或写入权限快照。仅测试文件显式使用 `allowSourcePendingSyntheticReadForTest=true` 运行离线 fixture。
+- 新增网页服务零凭据/零传输回归、共享经营同步零请求回归、共享预检零请求回归和发布规则零待核验请求回归；定向 `49/49`、全量 `1381/1381` 测试、V2 构建（1953 modules）、固定工具链、密钥扫描（651 文件、零 findings）、静态 release audit（15/15）和 staging isolation（14/14）均通过。发布执行仍为关闭状态。没有真实 SHEIN HTTP、凭据、生产/预发数据库、COS、Redis、队列、migration、部署或配置变更。
+- 该修正不会补造销量、额度、发布结果或审核结果；未来若部署，网页会如实显示受控锁定。ERP-07 仍为唯一 `IN_PROGRESS`；下一步继续审计 remaining source-pending 端点是否存在同类非 adapter 旁路。

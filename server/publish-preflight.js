@@ -71,9 +71,18 @@ export async function runPublishPreflight({
   supplierSkuList,
   brandCode = "",
   request,
+  allowSourcePendingSyntheticReadForTest = false,
 } = {}) {
   if (typeof request !== "function") {
     throw new TypeError("request is required");
+  }
+  if (!allowSourcePendingSyntheticReadForTest) {
+    const error = new Error(
+      "发品预检的官方响应字段待核验，远端预检已安全锁定",
+    );
+    error.code = "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED";
+    error.status = 409;
+    throw error;
   }
   const normalizedSkuList = normalizeSupplierSkuList(supplierSkuList);
   const permissionRequest = {

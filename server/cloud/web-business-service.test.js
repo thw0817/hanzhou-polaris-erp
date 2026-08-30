@@ -112,6 +112,42 @@ test("document state source-pending reads are locked before credentials or trans
   assert.equal(reviewWrites, 0);
 });
 
+test("business sync and publish preflight lock source-pending reads before credentials or transport", async () => {
+  let credentialReads = 0;
+  let transportCalls = 0;
+  const service = new SheinWebReadService({
+    apiBaseUrl: "https://openapi.example",
+    storeRepository: {
+      async getCredential() {
+        credentialReads += 1;
+        return null;
+      },
+    },
+    fetchImpl: async () => {
+      transportCalls += 1;
+      return response({ code: "0", info: {} });
+    },
+  });
+
+  await assert.rejects(
+    service.syncStoreBusiness({
+      context: { tenantId: "tenant-1" },
+      storeId: "store-1",
+    }),
+    (error) => error.code === "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED" && error.status === 409,
+  );
+  await assert.rejects(
+    service.preflightPublish({
+      context: { tenantId: "tenant-1" },
+      storeId: "store-1",
+      supplierSkuList: [],
+    }),
+    (error) => error.code === "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED" && error.status === 409,
+  );
+  assert.equal(credentialReads, 0);
+  assert.equal(transportCalls, 0);
+});
+
 test("document state reads send the official version and spuList fields and persist normalized receipts", async () => {
   let requestBody = null;
   let persisted = null;
@@ -1399,7 +1435,7 @@ test("publish category and schema rules are cached and concurrent reads are dedu
   ]);
 });
 
-test("publish schema reads and returns the official custom sale-value permission", async () => {
+test("publish schema locks the source-pending custom sale-value permission read", async () => {
   const calls = [];
   const writes = [];
   const service = new SheinWebReadService({
@@ -1416,7 +1452,18 @@ test("publish schema reads and returns the official custom sale-value permission
       },
     },
     ruleSnapshotRepository: {
-      async getFresh() { return null; },
+      async getFresh(input) {
+        if (input.ruleType === "publish_standard") {
+          return {
+            payload: {
+              __customAttributePermissions: {
+                data: [{ attribute_id: 27, allow_custom_value: true }],
+              },
+            },
+          };
+        }
+        return null;
+      },
       async upsert(input) { writes.push(input); },
     },
     fetchImpl: async (url, options) => {
@@ -1438,13 +1485,6 @@ test("publish schema reads and returns the official custom sale-value permission
           },
         });
       }
-      if (path.endsWith("get-custom-attribute-permission-config")) {
-        return response({
-          code: "0",
-          msg: "OK",
-          info: { data: [{ attribute_id: 87, has_permission: 1 }] },
-        });
-      }
       return response({ code: "0", msg: "OK", info: {} });
     },
   });
@@ -1456,24 +1496,24 @@ test("publish schema reads and returns the official custom sale-value permission
     productTypeId: "8658",
   });
 
-  assert.deepEqual(result.customAttributePermissions, {
-    data: [{ attribute_id: 87, has_permission: 1 }],
-  });
-  assert.deepEqual(
-    calls.find((call) => call.path.endsWith("get-custom-attribute-permission-config"))?.body,
-    {
-      category_id_list: ["11932"],
-      attribute_id_list: [27, 87],
-    },
+  assert.deepEqual(result.customAttributePermissions, {});
+  assert.equal(
+    calls.some((call) => call.path.endsWith("get-custom-attribute-permission-config")),
+    false,
   );
+  assert.ok(result.diagnostics.some((diagnostic) =>
+    diagnostic.code === "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED"));
   assert.equal(
     writes.some((write) => write.ruleType === "custom_attribute_permission"),
     false,
   );
-  assert.deepEqual(
-    writes.filter((write) => write.ruleType === "publish_standard").at(-1)
-      ?.payload.__customAttributePermissions,
-    { data: [{ attribute_id: 87, has_permission: 1 }] },
+  assert.equal(
+    Object.hasOwn(
+      writes.filter((write) => write.ruleType === "publish_standard").at(-1)
+        ?.payload || {},
+      "__customAttributePermissions",
+    ),
+    false,
   );
 });
 

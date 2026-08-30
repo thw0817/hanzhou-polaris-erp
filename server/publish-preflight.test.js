@@ -5,9 +5,31 @@ import {
   runPublishPreflight,
 } from "./publish-preflight.js";
 
+function runPublishPreflightForSyntheticTest(input = {}) {
+  return runPublishPreflight({
+    ...input,
+    allowSourcePendingSyntheticReadForTest: true,
+  });
+}
+
+test("publish preflight locks source-pending reads before any request", async () => {
+  let requests = 0;
+  await assert.rejects(
+    runPublishPreflight({
+      supplierSkuList: [],
+      request: async () => {
+        requests += 1;
+        throw new Error("must not request SHEIN");
+      },
+    }),
+    (error) => error.code === "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED" && error.status === 409,
+  );
+  assert.equal(requests, 0);
+});
+
 test("runs documented publish permission and supplier SKU checks", async () => {
   const calls = [];
-  const result = await runPublishPreflight({
+  const result = await runPublishPreflightForSyntheticTest({
     supplierSkuList: ["RUG-40X60", "RUG-50X80", "RUG-40X60"],
     request: async (options) => {
       calls.push(options);
@@ -64,7 +86,7 @@ test("runs documented publish permission and supplier SKU checks", async () => {
 
 test("forwards an optional brand code to the publish permission query", async () => {
   const calls = [];
-  await runPublishPreflight({
+  await runPublishPreflightForSyntheticTest({
     supplierSkuList: [],
     brandCode: "  2tgt1  ",
     request: async (options) => {
@@ -83,7 +105,7 @@ test("forwards an optional brand code to the publish permission query", async ()
 });
 
 test("treats an explicitly unlimited SHEIN publish quota as passed", async () => {
-  const result = await runPublishPreflight({
+  const result = await runPublishPreflightForSyntheticTest({
     supplierSkuList: ["RUG-40X60"],
     request: async ({ path }) => {
       if (path === PUBLISH_PREFLIGHT_PATHS.permission) {
@@ -109,7 +131,7 @@ test("treats an explicitly unlimited SHEIN publish quota as passed", async () =>
 
 test("allows a publish candidate without merchant SKU values", async () => {
   const paths = [];
-  const result = await runPublishPreflight({
+  const result = await runPublishPreflightForSyntheticTest({
     supplierSkuList: [],
     request: async ({ path }) => {
       paths.push(path);
@@ -133,7 +155,7 @@ test("allows a publish candidate without merchant SKU values", async () => {
 });
 
 test("blocks publishing when the store is denied or an SKU is repeated", async () => {
-  const result = await runPublishPreflight({
+  const result = await runPublishPreflightForSyntheticTest({
     supplierSkuList: ["TAKEN-SKU"],
     request: async ({ path }) => {
       if (path === PUBLISH_PREFLIGHT_PATHS.permission) {
@@ -174,7 +196,7 @@ test("blocks publishing when the store is denied or an SKU is repeated", async (
 });
 
 test("keeps publish preflight usable when the separate quota endpoint is not authorized", async () => {
-  const result = await runPublishPreflight({
+  const result = await runPublishPreflightForSyntheticTest({
     supplierSkuList: ["RUG-40X60"],
     request: async ({ path }) => {
       if (path === PUBLISH_PREFLIGHT_PATHS.permission) {
@@ -208,7 +230,7 @@ test("keeps publish preflight usable when the separate quota endpoint is not aut
 
 test("checks more than 200 supplier SKUs in documented 200-item batches", async () => {
   const skuBatchSizes = [];
-  const result = await runPublishPreflight({
+  const result = await runPublishPreflightForSyntheticTest({
     supplierSkuList: Array.from({ length: 201 }, (_, index) => `SKU-${index}`),
     request: async ({ path, body }) => {
       if (path === PUBLISH_PREFLIGHT_PATHS.permission) {

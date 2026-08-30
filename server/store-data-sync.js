@@ -358,9 +358,18 @@ export async function syncStoreBusinessData({
   request,
   previousSnapshot = null,
   now = () => new Date(),
+  allowSourcePendingSyntheticReadForTest = false,
 } = {}) {
   if (typeof request !== "function") {
     throw new TypeError("request is required");
+  }
+  if (!allowSourcePendingSyntheticReadForTest) {
+    const error = new Error(
+      "SKU销量的官方响应字段待核验，远端经营同步已安全锁定",
+    );
+    error.code = "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED";
+    error.status = 409;
+    throw error;
   }
 
   const rateLimitedRequest = createRateLimitedRequest(request);

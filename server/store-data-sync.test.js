@@ -7,6 +7,27 @@ import {
   syncStoreBusinessData,
 } from "./store-data-sync.js";
 
+function syncStoreBusinessDataForSyntheticTest(input = {}) {
+  return syncStoreBusinessData({
+    ...input,
+    allowSourcePendingSyntheticReadForTest: true,
+  });
+}
+
+test("business sync locks source-pending SKU sales before any request", async () => {
+  let requests = 0;
+  await assert.rejects(
+    syncStoreBusinessData({
+      request: async () => {
+        requests += 1;
+        throw new Error("must not request SHEIN");
+      },
+    }),
+    (error) => error.code === "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED" && error.status === 409,
+  );
+  assert.equal(requests, 0);
+});
+
 test("builds stock, slow-moving and sales-drop warnings only from real product metrics", () => {
   const warnings = buildStoreBusinessWarnings([
     {
@@ -56,7 +77,7 @@ function skc(skcName, skuCode, shelfStatus = 1) {
 
 test("paginates products, batches SKU sales and aggregates store totals", async () => {
   const calls = [];
-  const result = await syncStoreBusinessData({
+  const result = await syncStoreBusinessDataForSyntheticTest({
     request: async (options) => {
       calls.push(options);
       if (options.path === STORE_DATA_PATHS.productSearch) {
@@ -140,7 +161,7 @@ test("paginates products, batches SKU sales and aggregates store totals", async 
 });
 
 test("uses exact shelf state, physical stock, listing days and SKU metrics", async () => {
-  const result = await syncStoreBusinessData({
+  const result = await syncStoreBusinessDataForSyntheticTest({
     now: () => new Date("2026-08-02T06:00:00.000Z"),
     request: async (options) => {
       if (options.path === STORE_DATA_PATHS.productSearch) {
@@ -232,7 +253,7 @@ test("uses exact shelf state, physical stock, listing days and SKU metrics", asy
 });
 
 test("does not infer the shelf label when the exact SHEIN status readback fails", async () => {
-  const result = await syncStoreBusinessData({
+  const result = await syncStoreBusinessDataForSyntheticTest({
     request: async (options) => {
       if (options.path === STORE_DATA_PATHS.productSearch) {
         return {
@@ -268,7 +289,7 @@ test("does not infer the shelf label when the exact SHEIN status readback fails"
 });
 
 test("keeps missing stock-query fields unknown instead of creating a false zero-stock warning", async () => {
-  const result = await syncStoreBusinessData({
+  const result = await syncStoreBusinessDataForSyntheticTest({
     request: async (options) => {
       if (options.path === STORE_DATA_PATHS.productSearch) {
         return { payload: { info: { meta: { count: 1 }, data: [{
@@ -301,7 +322,7 @@ test("keeps missing stock-query fields unknown instead of creating a false zero-
 
 test("skips the sales endpoint when the store has no published SKU", async () => {
   const calls = [];
-  const result = await syncStoreBusinessData({
+  const result = await syncStoreBusinessDataForSyntheticTest({
     request: async (options) => {
       calls.push(options);
       return {
@@ -318,7 +339,7 @@ test("skips the sales endpoint when the store has no published SKU", async () =>
 
 test("retries a rate-limited SHEIN read before completing the refresh", async () => {
   let attempts = 0;
-  const result = await syncStoreBusinessData({
+  const result = await syncStoreBusinessDataForSyntheticTest({
     request: async (options) => {
       if (options.path !== STORE_DATA_PATHS.productSearch) {
         throw new Error(`unexpected path ${options.path}`);

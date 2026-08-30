@@ -2,10 +2,8 @@ import { requestShein } from "../shein-client.js";
 import { syncStoreComplianceData } from "../shein-compliance.js";
 import { fetchComplianceRuleBundle } from "../compliance-rules.js";
 import { buildCompliancePreflight } from "../compliance-workflow.js";
-import { runPublishPreflight } from "../publish-preflight.js";
 import { normalizeProductSearch } from "../shein-product.js";
 import { uploadSheinImageDirect } from "../shein-upload.js";
-import { syncStoreBusinessData } from "../store-data-sync.js";
 import { WebAuthError } from "./web-auth.js";
 import { normalizeProductDocumentState } from "./document-state-projections.js";
 import { normalizeSpuInfo } from "./spu-readback-projections.js";
@@ -27,8 +25,6 @@ const CATEGORY_TREE_PATH = "/open-api/goods/query-category-tree";
 const ATTRIBUTE_TEMPLATE_PATH = "/open-api/goods/query-attribute-template";
 const PUBLISH_STANDARD_PATH =
   "/open-api/goods/query-publish-fill-in-standard";
-const CUSTOM_ATTRIBUTE_PERMISSION_PATH =
-  "/open-api/goods/get-custom-attribute-permission-config";
 const ASSOCIATED_ATTRIBUTE_RULES_PATH =
   "/open-api/goods/get-associated-attribute-rules";
 const PRICE_DISCUSS_LIST_PATH = "/open-api/goods/discuss/query-discuss-list";
@@ -735,22 +731,11 @@ export class SheinWebReadService {
   }
 
   async syncStoreBusiness({ context, storeId, previousSnapshot = null } = {}) {
-    const credential = await this.#credential(context, storeId);
-    return syncStoreBusinessData({
-      previousSnapshot,
-      request: ({ method, path, query, body }) =>
-        this.#requestShein(storeId, {
-          baseUrl: this.apiBaseUrl,
-          method,
-          path,
-          ...(query ? { query } : {}),
-          body,
-          openKeyId: credential.openKeyId,
-          secretKey: credential.secretKey,
-          timeoutMs: 60_000,
-          fetchImpl: this.fetchImpl,
-        }),
-    });
+    throw new WebAuthError(
+      "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED",
+      "SKU销量的官方响应字段待核验，远端经营同步已安全锁定",
+      409,
+    );
   }
 
   async syncCompliance({
@@ -1187,52 +1172,16 @@ export class SheinWebReadService {
           .map((attribute) => attribute?.attribute_id)
           .filter((attributeId) => String(attributeId || "").trim()),
       ));
-      const hasPersistedPermissions = Object.prototype.hasOwnProperty.call(
-        standard.info || {},
-        "__customAttributePermissions",
-      );
-      let permissionInfo = hasPersistedPermissions
-        ? standard.info.__customAttributePermissions || {}
-        : {};
-      let permissionDiagnostics = null;
-      if (saleAttributeIds.length && !hasPersistedPermissions) {
-        if (!isAdministrator(context)) {
-          throw new WebAuthError(
-            "RULE_SYNC_REQUIRED",
-            "当前类目的自定义属性权限尚未由管理员同步，请联系管理员先完成同步",
-            409,
-          );
+      // This endpoint has no verified response contract yet. Ignore any
+      // historical snapshot too: otherwise an old remote response becomes a
+      // silent source-pending bypass even when no new request is sent.
+      const permissionInfo = {};
+      const permissionDiagnostics = saleAttributeIds.length
+        ? {
+          code: "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED",
+          message: "自定义属性权限的官方响应字段待核验，远端读取已安全锁定",
         }
-        const permissionResult = await request({
-          path: CUSTOM_ATTRIBUTE_PERMISSION_PATH,
-          body: {
-            category_id_list: [categoryId],
-            attribute_id_list: saleAttributeIds,
-          },
-        });
-        permissionInfo = permissionResult.payload.info || {};
-        permissionDiagnostics = permissionResult.diagnostics;
-        if (this.ruleSnapshotRepository) {
-          const fetchedAt = this.now();
-          await this.ruleSnapshotRepository.upsert({
-            tenantId,
-            storeId,
-            ruleType: "publish_standard",
-            categoryId,
-            productTypeId: "",
-            subjectKey: "",
-            payload: {
-              ...(standard.info || {}),
-              __customAttributePermissions: permissionInfo,
-            },
-            sourceTraceId: permissionDiagnostics?.traceId || null,
-            fetchedAt,
-            expiresAt: new Date(
-              fetchedAt.getTime() + PUBLISH_SCHEMA_CACHE_TTL_MS,
-            ),
-          });
-        }
-      }
+        : null;
       const publishStandard = { ...(standard.info || {}) };
       delete publishStandard.__customAttributePermissions;
       return {
@@ -1421,22 +1370,11 @@ export class SheinWebReadService {
     supplierSkuList,
     brandCode = "",
   } = {}) {
-    const credential = await this.#credential(context, storeId);
-    return runPublishPreflight({
-      supplierSkuList,
-      brandCode,
-      request: ({ method, path, body }) =>
-        this.#requestShein(storeId, {
-          baseUrl: this.apiBaseUrl,
-          method,
-          path,
-          body,
-          openKeyId: credential.openKeyId,
-          secretKey: credential.secretKey,
-          timeoutMs: 60_000,
-          fetchImpl: this.fetchImpl,
-        }),
-    });
+    throw new WebAuthError(
+      "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED",
+      "发品预检的官方响应字段待核验，远端预检已安全锁定",
+      409,
+    );
   }
 
   async uploadProductImage({
