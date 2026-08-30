@@ -1923,3 +1923,18 @@
 - 环境证据：以上测试使用本地 fake 输入和现有单元测试；未读取或打印真实密钥，未连接生产或现有 staging，未发送真实 SHEIN 请求，未执行数据库 migration、云端部署、重启或配置切换。
 - 当前状态：`COMPLETE / ISOLATED FOUNDATION`；本契约基础单元及其本地候选包已完成代码、回归和静态制品审计，但 ERP-07 整体未完成，ERP-06 生产接入门仍为 `NO-GO`。
 - 下一执行单元：先完成每个 endpoint 的官方来源/版本、请求响应 schema、成功/失败/限流/空/部分/超时 fixture 和 authorized-store read evidence，再评审 ERP-08；在完成预发 canary、回读和单独批准前，不执行任何外部写入。
+
+## 40. ERP-07 关键接口 schema 与失败 fixture 隔离验证
+
+### RUN-20260830-ERP07-ENDPOINT-SCHEMA-FIXTURES-02
+
+- 类型：ERP-07 契约基础的第二个本地隔离实现单元；本轮只为首批关键接口建立版本化 schema、读写模式和失败回归，不接生产、不接现有 staging。
+- 实际变更：[server/cloud/erp07-shein-endpoint-schema.js](../server/cloud/erp07-shein-endpoint-schema.js)、[server/cloud/erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js)，并更新本台账、主计划和 V2 交接文档版本。schema 与既有 `erp07-shein-endpoint-contract-v1` 关联，新增 `erp07-shein-endpoint-schemas-v1`。
+- 覆盖的 12 个关键接口：商品查询、SPU 详情、SKU 销量、发布权限/额度/商家 SKU 查重预检、商品图片上传、商品发布、单据状态回读、合规实拍图上传/绑定、价格证明上传。预检/回读即使采用 POST 也显式标为 `read`，不再按 HTTP 方法猜测写入风险。
+- 证据状态：商品查询、SPU、商品发布、合规实拍图上传/绑定使用已读取的官方原文或官方字段资料并结合代码回归；销量、预检、单据状态和价格证明等不足部分显式标记 `source_pending`/官方方法仅确认；所有 `authorizedStoreRead` 保持 `not_observed`。
+- Fixture：读取类覆盖 success、empty、partial、business failure、auth failure、rate limited、timeout；写入类覆盖 success、business failure、auth failure、rate limited、timeout，上传类另有 missing receipt。empty/not found/partial 不得被压成零值或覆盖 last-known-good；缺回执、发送后超时、429/网络不确定性只能进入 `result_unknown/readback_only`。
+- Fail-closed 校验：缺失必填字段、未知字段、未知枚举、未知 endpoint 和错误 fixture 方向均拒绝；request 校验必须传入实际 request object；schema 校验结果不携带 SecretId、SecretKey、Token、密码或 Authorization 等敏感值。
+- 验证结果：ERP-07 契约+schema 定向回归 `22/22`；相邻 SHEIN/ERP-06 回归 `80/80`；最终全量 `npm test` 已通过 `1333/1333`；V2 构建通过；`ci:toolchain` 通过（Node `24.16.0`、npm `11.13.0`、lockfile `3`）；密钥扫描 `scannedFiles=642` 且 `findings=[]`；静态 release audit 为 `READY`、14/14 release contracts 通过且 live-write flags 关闭；staging isolation audit `14/14` 通过。干净 revision 的 release manifest 和候选包须在提交后重新执行，不能把当前工作树结果冒充为最终发布证据。
+- 当前状态：`COMPLETE / PARTIAL SLICE`。12/33 契约项进入首批 schema/fixture slice，ERP-07 整体仍为 `IN_PROGRESS`；剩余官方来源、完整 request/response schema、分页/单位/状态枚举、authorized-store read evidence、staging canary/readback 和统一 adapter 接线未完成。
+- 环境边界：未解析或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行正式 migration、部署、重启、配置切换、历史回填或自动重发。
+- 下一执行单元：继续逐 endpoint 补齐官方证据和剩余 schema/fixtures，随后仅在隔离测试边界把校验接入唯一 server adapter；完成 ERP-07 门禁前不进入 ERP-08，不执行任何外部写入。
