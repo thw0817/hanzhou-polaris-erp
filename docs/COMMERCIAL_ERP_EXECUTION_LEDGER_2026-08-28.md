@@ -1919,7 +1919,7 @@
 - 写入边界：所有非读取 endpoint 默认 fail closed；`archived_frozen` 的图片转换、议价处理及授权换凭证的契约仍不代表可直接执行；业务写入必须由上层显式一次性授权；body 递归拒绝 SecretId/SecretKey/token/password/authorization/signature/openKeyId 等凭证字段。
 - 结果边界：HTTP 2xx + 业务 `code=0` 不是写入已接收证据；写入必须同时具备 TraceId 和 endpoint 专属完整回执，缺失则为 `result_unknown/readback_only`；发送边界后的网络、429、5xx、超时不自动重发；`openapi00001` 为 `manual_new_attempt` 且 `requiresReauthorization=true`；作用域/TraceId 超长直接拒绝，不静默截断。
 - 当前限制：本 Run 是契约基础层，不包含每个 endpoint 的正式请求/响应 schema、官方文档版本与逐接口 fixture 完整集、真实授权店铺只读证据、staging canary/readback 和线上接线；`auth.token_exchange` 也未接入真实凭证流程。上述项目仍是 ERP-07 后续完成门。
-- 本地验证结果：ERP-07 新回归 `14/14`；相邻 SHEIN/ERP-06 回归 `72/72`；全量 `npm test` `1325/1325`。构建、秘密扫描、release manifest、静态 release audit、`node --check` 和 `git diff --check` 在本 Run 收尾阶段复核。
+- 本地验证结果：ERP-07 新回归 `14/14`；相邻 SHEIN/ERP-06 回归 `72/72`；全量 `npm test` `1325/1325`；`npm run build:v2` 通过；`npm run ci:secret-scan` 扫描 `640` 个文件且 `findings=[]`；`npm run release:audit:v2` 为 `READY` 且所有 live-write flags 关闭；干净 revision 的 `npm run ci:release-manifest` 通过并确认 `sourceDirty=false`；变更 JS `node --check` 与 `git diff --check` 通过。
 - 环境证据：以上测试使用本地 fake 输入和现有单元测试；未读取或打印真实密钥，未连接生产或现有 staging，未发送真实 SHEIN 请求，未执行数据库 migration、云端部署、重启或配置切换。
-- 当前状态：`COMPLETE / ISOLATED FOUNDATION`；本契约基础单元已完成代码与回归，但 ERP-07 整体未完成，ERP-06 生产接入门仍为 `NO-GO`。
+- 当前状态：`COMPLETE / ISOLATED FOUNDATION`；本契约基础单元及其本地候选包已完成代码、回归和静态制品审计，但 ERP-07 整体未完成，ERP-06 生产接入门仍为 `NO-GO`。
 - 下一执行单元：先完成每个 endpoint 的官方来源/版本、请求响应 schema、成功/失败/限流/空/部分/超时 fixture 和 authorized-store read evidence，再评审 ERP-08；在完成预发 canary、回读和单独批准前，不执行任何外部写入。

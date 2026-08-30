@@ -485,4 +485,4 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 
 写入默认关闭；凭证字段不得进入 endpoint body；HTTP 2xx + `code=0` 但缺 TraceId 或完整回执时保持 `result_unknown/readback_only`；发送边界后的网络/429/5xx/超时禁止自动重发；`openapi00001` 要求人工新 Attempt 与重新授权；作用域和 TraceId 超长直接拒绝。
 
-本地验证已通过：新回归 `14/14`，相邻回归 `72/72`，全量 `npm test` `1325/1325`。当前仍未完成逐接口官方来源版本、请求/响应 schema、完整 fixtures、authorized-store read evidence、staging canary/readback 和线上接线；未执行生产或现有 staging 的网络、写入、migration、部署、重启或配置切换。
+本地验证已通过：新回归 `14/14`，相邻回归 `72/72`，全量 `npm test` `1325/1325`；V2 构建、密钥扫描（`findings=[]`）、静态 release audit（`READY`）、干净 revision release manifest（`sourceDirty=false`）、`node --check` 和 `git diff --check` 均通过；已生成只读的本地 staging 候选包。当前仍未完成逐接口官方来源版本、请求/响应 schema、完整 fixtures、authorized-store read evidence、staging canary/readback 和线上接线；未执行生产或现有 staging 的网络、写入、migration、部署、重启或配置切换。
