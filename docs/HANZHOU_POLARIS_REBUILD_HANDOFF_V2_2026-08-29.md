@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v32
+版本：2026-08-30-v33
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，本轮不继续扩展。ERP-07～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，本轮不继续扩展。ERP-07 当前开始适配器契约目录隔离基础，ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -119,8 +119,8 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - ERP 步骤总数：24。
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
 - `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11、Run 13 的 S3/AWS4 兼容列表请求返回 HTTP 403，但 Run 14 的 COS 原生 HMAC-SHA1 列表成功并完成归属对账：633 个对象匹配，187 条历史媒体记录无远端对象且均无引用；目标关系孤儿为 0，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
-- `IN_PROGRESS`：ERP-06（当前 Run：`RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17`）。
-- `NOT_STARTED`：ERP-07～ERP-23。
+- `IN_PROGRESS`：ERP-06 整体生产接入门仍为 `NO-GO`；当前活动开发单元为 ERP-07 契约目录 Run：`RUN-20260830-ERP07-ENDPOINT-CONTRACT-01`。
+- `NOT_STARTED`：ERP-08～ERP-23；ERP-07 整体仍未完成。
 - ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口；Run 14 的历史证据缺口继续保留为只读 legacy，不阻断 ERP-06 新链路，但不允许历史自动回填。
 
 使用规则：
@@ -474,3 +474,15 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 ### 14.4 当前状态和查看方式
 
 本次已完成代码、回归测试、构建、密钥扫描和静态审计；未执行生产部署、重启、切换、数据库 migration、COS 写入或 SHEIN 请求。上线后由管理员通过受保护的 internal API 查看；在上线前，任何生产页面不应出现诊断日志菜单，也不能把本地测试记录当成生产证据。
+
+## 15. ERP-07 SHEIN 适配器契约硬化（当前隔离基础已开始）
+
+### 15.1 当前 Run
+
+`RUN-20260830-ERP07-ENDPOINT-CONTRACT-01` 仅建立本地机器可读 endpoint 契约目录、请求 allowlist 和失败分类，不代表 ERP-07 整体完成，也不改变 ERP-06 生产 `NO-GO` 结论。
+
+已覆盖当前代码实际使用的商品、规则、预检、媒体、合规、核价和授权路径，共 33 个契约项；每项记录 exact method/path、来源 owner、读写模式、已知限制、重试类别、成功证据和冻结策略。当前 `GET /open-api/goods/product/check-publish-permission` 的方法已按源码证据纠正。
+
+写入默认关闭；凭证字段不得进入 endpoint body；HTTP 2xx + `code=0` 但缺 TraceId 或完整回执时保持 `result_unknown/readback_only`；发送边界后的网络/429/5xx/超时禁止自动重发；`openapi00001` 要求人工新 Attempt 与重新授权；作用域和 TraceId 超长直接拒绝。
+
+本地验证已通过：新回归 `14/14`，相邻回归 `72/72`，全量 `npm test` `1325/1325`。当前仍未完成逐接口官方来源版本、请求/响应 schema、完整 fixtures、authorized-store read evidence、staging canary/readback 和线上接线；未执行生产或现有 staging 的网络、写入、migration、部署、重启或配置切换。

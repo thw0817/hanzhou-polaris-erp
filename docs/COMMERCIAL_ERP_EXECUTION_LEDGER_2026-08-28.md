@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v50
+版本：2026-08-30-v51
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结、原子发布交接、Worker 编排、结果持久化、官方回读单阶段编排与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 已开始当前适配器契约目录隔离单元，ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17
+当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-ENDPOINT-CONTRACT-01
 
 ## 0. 台账用途
 
@@ -1905,3 +1905,21 @@
 - 本地验证：诊断定向回归与 Control 回归 `63/63`；全量 `npm test` `1303/1303`；`npm run build:v2` 通过；runtime capability matrix/audit 通过；`npm run ci:secret-scan` 通过且 `findings=[]`；新增 JS `node --check` 和 `git diff --check` 通过。未提交工作区运行 release manifest 时按预期报告 `source_dirty`，不能作为候选发布通过证据。
 - 当前状态：`COMPLETE / NOT DEPLOYED`；代码和文档已完成，生产数据库、生产容器、生产配置、COS 和 SHEIN 均未触碰。正式候选仍须先提交形成干净 revision，再重建制品、重跑 release manifest 和完整门禁。
 - 下一执行单元：如需上线，另行执行候选制品构建、制品一致性核验、预发只读/故障回归、观察窗口和部署批准；上线后由管理员使用 internal API 查看诊断数据，不在正常网页增加日志界面。
+
+## 39. ERP-07 SHEIN 适配器契约目录与失败分类隔离实现
+
+### RUN-20260830-ERP07-ENDPOINT-CONTRACT-01
+
+- 类型：ERP-07 当前隔离实现单元；建立机器可读的 SHEIN endpoint 目录、请求 allowlist 和失败分类边界，只在本地执行，不触碰生产。
+- 启动依据：ERP-06 组合隔离已完成但生产接入门为 `NO-GO`；复盘当前源码与 API 来源目录后发现，现有业务实际使用的商品、规则、预检、媒体、合规、核价和授权路径尚无统一 method/path、来源 owner、写入模式、限流/大小限制、回执证据和重试分类契约。
+- 允许范围：读取当前源码与 API 来源文档；新增 33 个当前代码实际使用/已登记的 endpoint 契约；补齐 exact method/path、read/non-business-write/business-write/credential-write 模式、来源 owner、已知限制、重试类别、成功证据和冻结策略；新增 fail-closed 失败回归；运行本地测试、构建、密钥扫描、release audit 与差异检查。
+- 禁止范围：生产或现有 staging 的 PostgreSQL/COS/Redis/队列/SHEIN 访问和写入；真实凭证解析；真实 HTTP；正式 migration；Control/长期 Worker/线上 adapter 接线；生产部署、重启、切换；自动重发、历史回填；不以契约目录完成冒充 ERP-07 整体完成。
+- 实际文件：[erp07-shein-endpoint-contract.js](../server/cloud/erp07-shein-endpoint-contract.js)、[erp07-shein-endpoint-contract.test.js](../server/cloud/erp07-shein-endpoint-contract.test.js)。当前只新增隔离模块和测试，未接入现有线上路由、Worker 或生产配置。
+- 目录范围：商品查询/SPU/SKU 销量/库存、类目与属性规则、发布预检、商品/合规/价格文件上传、商品发布、官方单据状态、合规证书/实拍图/警示语/代理公司、核价议价和授权换凭证等当前代码路径；发布权限路径明确为 `GET /open-api/goods/product/check-publish-permission`。
+- 写入边界：所有非读取 endpoint 默认 fail closed；`archived_frozen` 的图片转换、议价处理及授权换凭证的契约仍不代表可直接执行；业务写入必须由上层显式一次性授权；body 递归拒绝 SecretId/SecretKey/token/password/authorization/signature/openKeyId 等凭证字段。
+- 结果边界：HTTP 2xx + 业务 `code=0` 不是写入已接收证据；写入必须同时具备 TraceId 和 endpoint 专属完整回执，缺失则为 `result_unknown/readback_only`；发送边界后的网络、429、5xx、超时不自动重发；`openapi00001` 为 `manual_new_attempt` 且 `requiresReauthorization=true`；作用域/TraceId 超长直接拒绝，不静默截断。
+- 当前限制：本 Run 是契约基础层，不包含每个 endpoint 的正式请求/响应 schema、官方文档版本与逐接口 fixture 完整集、真实授权店铺只读证据、staging canary/readback 和线上接线；`auth.token_exchange` 也未接入真实凭证流程。上述项目仍是 ERP-07 后续完成门。
+- 本地验证结果：ERP-07 新回归 `14/14`；相邻 SHEIN/ERP-06 回归 `72/72`；全量 `npm test` `1325/1325`。构建、秘密扫描、release manifest、静态 release audit、`node --check` 和 `git diff --check` 在本 Run 收尾阶段复核。
+- 环境证据：以上测试使用本地 fake 输入和现有单元测试；未读取或打印真实密钥，未连接生产或现有 staging，未发送真实 SHEIN 请求，未执行数据库 migration、云端部署、重启或配置切换。
+- 当前状态：`COMPLETE / ISOLATED FOUNDATION`；本契约基础单元已完成代码与回归，但 ERP-07 整体未完成，ERP-06 生产接入门仍为 `NO-GO`。
+- 下一执行单元：先完成每个 endpoint 的官方来源/版本、请求响应 schema、成功/失败/限流/空/部分/超时 fixture 和 authorized-store read evidence，再评审 ERP-08；在完成预发 canary、回读和单独批准前，不执行任何外部写入。
