@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import test from "node:test";
+import { dirname, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION,
   Erp07EndpointSchemaError,
@@ -15,6 +18,38 @@ import {
   classifyErp07Response,
   listErp07EndpointContracts,
 } from "./erp07-shein-endpoint-contract.js";
+
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+
+function parseSourceReference(reference) {
+  const match = /^(.*):(\d+)(?:-(\d+))?$/.exec(reference);
+  if (!match) return { filePath: reference, startLine: null, endLine: null };
+  return {
+    filePath: match[1],
+    startLine: Number(match[2]),
+    endLine: Number(match[3] || match[2]),
+  };
+}
+
+function assertSourceReference(reference, endpoint) {
+  const parsed = parseSourceReference(reference);
+  const absolutePath = resolve(REPO_ROOT, parsed.filePath);
+  const relativePath = relative(REPO_ROOT, absolutePath);
+  assert.ok(
+    relativePath && !relativePath.startsWith("..") && !relativePath.startsWith("/"),
+    `${endpoint}: source reference must stay inside repository: ${reference}`,
+  );
+  assert.equal(
+    existsSync(absolutePath) && statSync(absolutePath).isFile(),
+    true,
+    `${endpoint}: source file does not exist: ${reference}`,
+  );
+  if (parsed.startLine === null) return;
+  const lineCount = readFileSync(absolutePath, "utf8").split(/\r?\n/).length;
+  assert.ok(parsed.startLine >= 1, `${endpoint}: source line must be positive: ${reference}`);
+  assert.ok(parsed.endLine >= parsed.startLine, `${endpoint}: source line range is inverted: ${reference}`);
+  assert.ok(parsed.endLine <= lineCount, `${endpoint}: source line is out of bounds: ${reference}`);
+}
 
 test("key ERP-07 endpoints expose versioned source, schema and evidence state", () => {
   const schemas = listErp07EndpointSchemas();
@@ -64,6 +99,25 @@ test("fixture catalog is complete for read and write failure classes", () => {
 
 test("response evidence catalog is complete and internally consistent", () => {
   assert.equal(assertErp07EndpointEvidenceCatalog(), true);
+});
+
+test("endpoint source and response-evidence references remain readable and in bounds", () => {
+  let sourceReferenceCount = 0;
+  let lineReferenceCount = 0;
+  for (const schema of listErp07EndpointSchemas()) {
+    const references = [
+      ...(schema.source?.files || []),
+      ...(schema.source?.responseEvidence?.sourceFiles || []),
+    ];
+    for (const reference of references) {
+      assert.equal(typeof reference, "string", `${schema.id}: source reference must be a string`);
+      assertSourceReference(reference, schema.id);
+      sourceReferenceCount += 1;
+      if (/:(\d+)(?:-\d+)?$/.test(reference)) lineReferenceCount += 1;
+    }
+  }
+  assert.ok(sourceReferenceCount > 0);
+  assert.ok(lineReferenceCount > 0);
 });
 
 test("response evidence rejects endpoint/field provenance status mixing", () => {

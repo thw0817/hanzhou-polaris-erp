@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v47
+版本：2026-08-30-v48
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 隔离实现已完成但生产接入前置审查为 `NO-GO/BLOCKED`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，按用户要求本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata 和 response evidence 状态一致性 fail-closed 修正，其中 23 项可执行校验、10 项显式阻断；6 项 source-pending 接口的字段仍明确标记为内部消费者契约，官方响应字段和真实授权店铺只读证据尚未捕获；ERP-07 是当前唯一 `IN_PROGRESS` 步骤，ERP-08～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 隔离实现已完成但生产接入前置审查为 `NO-GO/BLOCKED`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，按用户要求本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata、response evidence 状态一致性和来源引用完整性防回归，其中 23 项可执行校验、10 项显式阻断；6 项 source-pending 接口的字段仍明确标记为内部消费者契约，官方响应字段和真实授权店铺只读证据尚未捕获；ERP-07 是当前唯一 `IN_PROGRESS` 步骤，当前 Run 为 `RUN-20260830-ERP07-SOURCE-REFERENCE-INTEGRITY-12`，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -120,7 +120,7 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
 - `COMPLETE`：ERP-05（用户已批准 COS-first 与历史映射冻结豁免；历史关系保持只读 legacy，不迁移、不恢复、不删除、不阻断新链路；前序未映射证据继续保留为只读风险记录）。
 - `BLOCKED`：ERP-06（隔离 foundation 与发布-回读组合已完成；生产接入前置审查为 `NO-GO`，生产迁移、真实 Worker/SHEIN sender、正式回读接线和部署等待单独批准）。
-- `IN_PROGRESS`：ERP-07 整体仍在进行，当前活动开发单元为 `RUN-20260830-ERP07-RESPONSE-EVIDENCE-STATUS-CONSISTENCY-10`；这是当前唯一 `IN_PROGRESS` 步骤。
+- `IN_PROGRESS`：ERP-07 整体仍在进行，当前活动开发单元为 `RUN-20260830-ERP07-SOURCE-REFERENCE-INTEGRITY-12`；这是当前唯一 `IN_PROGRESS` 步骤。
 - `NOT_STARTED`：ERP-08～ERP-23；不得因 ERP-07 局部 schema 覆盖完成而提前进入后续步骤。
 - ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口；Run 14 的历史证据缺口继续保留为只读 legacy，不阻断 ERP-06 新链路，但不允许历史自动回填。
 
@@ -599,3 +599,15 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 环境边界：仅使用归档资料和 synthetic fixture；未读取/打印真实凭证，未发送 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
 - 当前状态：`COMPLETE / LOCAL FAIL-CLOSED CORRECTION`；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
 - 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、统一 adapter 线上接线、预发 canary/readback、ERP-07 完成门、干净 revision 制品和单独部署批准仍未完成。
+
+## 25. ERP-07 来源引用完整性防回归（2026-08-30）
+
+### RUN-20260830-ERP07-SOURCE-REFERENCE-INTEGRITY-12
+
+- 类型：ERP-07 本地证据账本防回归；将 endpoint 来源文件、response evidence 来源文件及可选行号引用固化为自动门禁，不触碰生产。
+- 审计结论：33 个 endpoint 的来源引用均指向仓库内实际文件；4 个带行号/行号范围引用均在有效文件边界内。该检查此前只是一次性审计，现已纳入持续回归，防止文件移动或行号漂移导致证据链接失效。
+- 实际变更：[erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js) 新增路径边界、文件存在性、文件类型、正行号、行号范围和越界校验；同时检查 `source.files` 与非空 `responseEvidence.sourceFiles`。
+- 证据语义：仅证明本地来源引用可读取，不升级官方 response evidence，不生成 `authorizedStoreRead`。6 项 source-pending 接口继续保持 `internal_consumer_contract`、`official_response_fields_not_captured`、`observed=false` 和 `authorizedStoreRead=not_observed`。
+- 本地定向验证：ERP-07 schema 回归 `17/17`；未执行真实 SHEIN HTTP、真实凭证解析、生产/现有 staging 访问、migration、部署或任何外部写入。
+- 当前状态：`COMPLETE / SOURCE REFERENCE INTEGRITY GUARD`；ERP-07 仍为唯一 `IN_PROGRESS`，ERP-06 为 `BLOCKED/NO-GO`，ERP-08～ERP-23 未开始。
+- 下一执行单元：继续补齐 6 项 source-pending 接口的官方完整 response 字段/版本与真实授权店铺只读 evidence；在 ERP-07 完成门、预发 canary/readback 和单独批准前，不接入线上 adapter，不执行外部写入。
