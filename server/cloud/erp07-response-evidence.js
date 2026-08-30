@@ -128,6 +128,7 @@ function responseInput(response) {
   }
   assertNoSensitiveKeys(payload);
   const diagnostics = object(source.diagnostics) || {};
+  assertNoSensitiveKeys(diagnostics);
   const status = Number(source.status ?? diagnostics.status);
   const httpStatus = Number.isInteger(status) ? status : null;
   const traceId = safeText(diagnostics.traceId || payload.traceId, 200);

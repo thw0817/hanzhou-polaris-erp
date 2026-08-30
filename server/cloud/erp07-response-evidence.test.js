@@ -147,6 +147,27 @@ test("ERP-07 response evidence snapshot rejects forged source and sensitive resp
   );
 });
 
+test("ERP-07 response evidence snapshot rejects sensitive diagnostics", () => {
+  assert.throws(
+    () => buildErp07ResponseEvidenceSnapshot({
+      endpoint: "sales.sku",
+      scope,
+      sourceRef: "authorized-store-read:erp07-sales-20260830-006",
+      observedAt: "2026-08-30T02:05:30.000Z",
+      response: {
+        ...response({ code: "0", traceId: "trace-diagnostics", info: { dataList: [] } }),
+        diagnostics: {
+          status: 200,
+          code: "0",
+          traceId: "trace-diagnostics",
+          authorization: "Bearer should-not-enter-evidence",
+        },
+      },
+    }),
+    (error) => error.code === "ERP07_RESPONSE_EVIDENCE_SENSITIVE_INPUT",
+  );
+});
+
 test("ERP-07 response evidence snapshot requires a scoped read receipt", () => {
   assert.throws(
     () => buildErp07ResponseEvidenceSnapshot({

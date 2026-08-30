@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v41
+版本：2026-08-30-v42
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性、字段级 provenance 回归和只读响应证据脱敏捕获边界，其中 23 项可执行校验、10 项显式阻断；6 项 source-pending 接口的字段仍明确标记为内部消费者契约，官方响应字段和真实授权店铺只读证据尚未捕获；ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，按用户要求本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界和 diagnostics fail-closed 修正，其中 23 项可执行校验、10 项显式阻断；6 项 source-pending 接口的字段仍明确标记为内部消费者契约，官方响应字段和真实授权店铺只读证据尚未捕获；ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -563,3 +563,13 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 本地验证：证据捕获 `5/5`；ERP-07 相邻定向回归 `32/32`；项目全量 `npm test` `1359/1359`；未执行真实 SHEIN HTTP、真实凭证解析、生产/现有 staging 访问、migration、部署、重启或配置切换。
 - 当前状态：`COMPLETE / LOCAL REDACTED CAPTURE ONLY`；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
 - 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、统一 adapter 受控接线、预发 canary/readback、ERP-07 完成门、候选制品重建与单独部署批准仍未完成。
+
+## 22. ERP-07 diagnostics 脱敏输入 fail-closed 修正（2026-08-30）
+
+### RUN-20260830-ERP07-RESPONSE-EVIDENCE-DIAGNOSTICS-08
+
+- 本地失败回归发现：响应证据捕获器原先只对 `payload` 做敏感键递归检查，`diagnostics` 内部的 `authorization`、签名或请求字段虽不会输出到摘要，但仍可能被接受，违反“捕获器不接收敏感输入”的边界。
+- 已以最小变更修正：`diagnostics` 结构在读取 `status/code/traceId` 前复用同一递归敏感键检查；正常诊断字段 `status/code/traceId/durationMs` 不受影响，敏感 diagnostics 稳定返回 `ERP07_RESPONSE_EVIDENCE_SENSITIVE_INPUT`。
+- 实际文件：[erp07-response-evidence.js](../server/cloud/erp07-response-evidence.js)、[erp07-response-evidence.test.js](../server/cloud/erp07-response-evidence.test.js)。本 Run 未接入线上路由、Worker、数据库、COS 或 SHEIN 网络。
+- 当前验证：证据捕获 `6/6`、ERP-07 相邻定向回归 `33/33` 已通过；全量测试、构建、密钥扫描、release audit、release manifest 和候选制品将在提交当前 revision 后重新验证。
+- 状态边界：`pending_manual_acceptance`、`eligibleForCatalogUpgrade=false`、`authorizedStoreRead=not_observed` 和 ERP-07 整体 `IN_PROGRESS` 保持不变；本 Run 不授权生产部署，不把本地回归转成真实店铺证据。

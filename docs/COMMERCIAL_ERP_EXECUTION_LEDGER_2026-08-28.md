@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v57
+版本：2026-08-30-v58
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界、字段级 response evidence 回归和只读响应证据脱敏捕获边界，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界、字段级 response evidence 回归、只读响应证据脱敏捕获边界和 diagnostics fail-closed 修正，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-RESPONSE-EVIDENCE-CAPTURE-07
+当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-RESPONSE-EVIDENCE-DIAGNOSTICS-08
 
 ## 0. 台账用途
 
@@ -32,7 +32,7 @@
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
 | ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、隔离 Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账、单阶段编排和发布-回读组合隔离验证均已完成；生产迁移、真实 SHEIN adapter/发布仍未完成 |
-| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-RESPONSE-EVIDENCE-CAPTURE-07 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter、字段级 response evidence、脱敏只读响应摘要与回归通过；官方完整 response/店铺 evidence、canary/readback 和生产接入仍未完成 |
+| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-RESPONSE-EVIDENCE-DIAGNOSTICS-08 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter、字段级 response evidence、脱敏只读响应摘要、diagnostics fail-closed 与回归通过；官方完整 response/店铺 evidence、canary/readback 和生产接入仍未完成 |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
 | ERP-10 | 官方审核回读与状态投影 | NOT_STARTED | — | ERP-09 | — |
@@ -2011,3 +2011,16 @@
 - 本地验证：证据捕获定向回归 `5/5`；ERP-07 schema、adapter、endpoint contract 与证据捕获相邻回归 `32/32`；项目全量 `npm test` `1359/1359`；未执行真实 SHEIN HTTP、真实凭证解析或任何生产/staging 外部访问。
 - 当前状态：`COMPLETE / LOCAL REDACTED CAPTURE ONLY`。本 Run 完成脱敏捕获边界，但 ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
 - 未完成门：真实授权店铺只读回执、官方完整 response 字段、统一 adapter 受控接线、预发 canary/readback、ERP-07 完成门、候选制品重建和单独部署批准仍未完成；本 Run 不产生部署授权。
+
+## 46. ERP-07 diagnostics 脱敏输入 fail-closed 修正
+
+### RUN-20260830-ERP07-RESPONSE-EVIDENCE-DIAGNOSTICS-08
+
+- 类型：ERP-07 第八段本地安全修正；修复响应证据捕获器只检查 `payload`、却可能接受 `diagnostics` 内部敏感键的边界漏洞，不触碰生产。
+- 失败基线：`diagnostics` 会参与提取 HTTP 状态、上游 code 和 traceId；修复前其内部 `authorization`、`signature`、`request` 等敏感字段未执行递归拒绝，即使不进入摘要也不应被捕获器接受。
+- 实际变更：`responseInput` 在读取 `status/code/traceId` 前对结构化 `diagnostics` 递归执行既有 `assertNoSensitiveKeys`；新增回归证明 `authorization` 等敏感 diagnostics 返回 `ERP07_RESPONSE_EVIDENCE_SENSITIVE_INPUT`，正常 `status/code/traceId/durationMs` 仍可生成摘要。未接入网页、adapter、Worker、路由、数据库或 COS。
+- 安全边界：仍只接受 `payload`、`diagnostics`、`status` 三类顶层输入；请求头、凭证、签名、原始请求/响应、body、文件和图片等敏感字段在 payload 与 diagnostics 两个结构内均递归 fail closed；不记录原始响应或敏感值，不改变 `pending_manual_acceptance` 和 `eligibleForCatalogUpgrade=false` 语义。
+- 本地验证：证据捕获定向回归 `6/6`；ERP-07 schema、adapter、endpoint contract 与证据捕获相邻回归 `33/33`；其余全量、构建、工具链、密钥扫描、静态 release audit、staging isolation 和干净 revision release manifest 将在提交后重跑并记录最终结果。
+- 环境证据：仅使用本地 synthetic payload/diagnostics 和 fake 依赖；未读取或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging，未执行 migration、部署、重启、配置切换或历史回填。
+- 当前状态：`IN_PROGRESS / LOCAL FAIL-CLOSED CORRECTION`；本 Run 的代码与失败回归已完成，待全量门禁、提交、当前 revision 制品重建及审计完成后关闭本 Run；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`。
+- 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、统一 adapter 受控接线、预发 canary/readback、ERP-07 完成门和单独部署批准仍未完成。
