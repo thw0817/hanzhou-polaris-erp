@@ -1206,6 +1206,40 @@ const RESPONSE_EVIDENCE_STATUSES = Object.freeze([
   "authorized_store_read",
 ]);
 
+function expectedFieldEvidenceStatus(responseEvidenceStatus) {
+  return responseEvidenceStatus === "official_response_contract"
+    ? "official_response_field"
+    : responseEvidenceStatus;
+}
+
+export function assertErp07ResponseEvidenceStatusConsistency({
+  endpoint = "unknown",
+  evidence,
+} = {}) {
+  if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) {
+    throw new Erp07EndpointSchemaError(
+      "ERP07_ENDPOINT_RESPONSE_EVIDENCE_STATUS_INVALID",
+      `endpoint ${endpoint} 的 response evidence 状态对象无效`,
+    );
+  }
+  if (!RESPONSE_EVIDENCE_STATUSES.includes(evidence.status)) {
+    throw new Erp07EndpointSchemaError(
+      "ERP07_ENDPOINT_RESPONSE_EVIDENCE_STATUS_INVALID",
+      `endpoint ${endpoint} 的 response evidence 状态不可识别: ${evidence.status}`,
+    );
+  }
+  const expected = expectedFieldEvidenceStatus(evidence.status);
+  if (!Array.isArray(evidence.fieldEvidence) || evidence.fieldEvidence.some(
+    (entry) => !entry || entry.status !== expected,
+  )) {
+    throw new Erp07EndpointSchemaError(
+      "ERP07_ENDPOINT_RESPONSE_FIELD_EVIDENCE_STATUS_MISMATCH",
+      `endpoint ${endpoint} 的字段证据状态必须与 response evidence 状态一致`,
+    );
+  }
+  return true;
+}
+
 function resolveSchema(endpoint) {
   const value = String(endpoint || "");
   if (SCHEMAS[value]) return { id: value, schema: SCHEMAS[value] };
@@ -1387,6 +1421,14 @@ export function assertErp07EndpointEvidenceCatalog() {
         `endpoint ${id} 的 response evidence 状态不可识别: ${evidence.status}`,
       );
     }
+    if (!Array.isArray(evidence.gaps) || evidence.gaps.some(
+      (gap) => typeof gap !== "string" || !gap.trim(),
+    )) {
+      throw new Erp07EndpointSchemaError(
+        "ERP07_ENDPOINT_RESPONSE_EVIDENCE_GAPS_INVALID",
+        `endpoint ${id} 的 response evidence 缺口清单无效`,
+      );
+    }
     if (!Array.isArray(evidence.fields) || evidence.fields.length === 0 ||
         evidence.fields.some((fieldName) => typeof fieldName !== "string" || !fieldName.trim())) {
       throw new Erp07EndpointSchemaError(
@@ -1408,6 +1450,7 @@ export function assertErp07EndpointEvidenceCatalog() {
         `endpoint ${id} 的逐字段 response evidence 清单必须与字段清单一一对应`,
       );
     }
+    assertErp07ResponseEvidenceStatusConsistency({ endpoint: id, evidence });
     const fieldNames = new Set(evidence.fields);
     const fieldEvidenceNames = new Set();
     for (const entry of evidence.fieldEvidence) {

@@ -1,8 +1,8 @@
 # SHEIN 商业 ERP 主执行计划
 
-版本：2026-08-30-v52
+版本：2026-08-30-v53
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：执行路线；ERP-00～ERP-04 已完成，ERP-05 已按用户批准的历史映射冻结豁免完成范围收口，ERP-06 整体仍处于非生产接入前置阶段，ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段和未知 metadata fail-closed 修正（23 项可执行、10 项阻断），整体仍在进行，ERP-08～ERP-23 尚未开始
+状态：执行路线；ERP-00～ERP-04 已完成，ERP-05 已按用户批准的历史映射冻结豁免完成范围收口，ERP-06 整体仍处于非生产接入前置阶段，ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata 和 response evidence 状态一致性 fail-closed 修正（23 项可执行、10 项阻断），整体仍在进行，ERP-08～ERP-23 尚未开始
 适用项目：SHEIN 超级运营中心 / SHEIN 涵舟工作室  
 执行编号：ERP-00 至 ERP-23
 
@@ -629,6 +629,7 @@
 - `RUN-20260830-ERP07-RESPONSE-EVIDENCE-CAPTURE-07` 已建立本地只读响应证据摘要边界：只接受带授权回执编号、完整 scope、观测时间、结构化 payload/diagnostics 的成功 read response；只输出字段存在性/次数/类型、摘要哈希和 trace/status/code，不保存原始响应、字段值、headers、凭证或文件；固定为 `pending_manual_acceptance`，不会自动升级现有 evidence catalog。当前仍无真实授权店铺回执，不能把该工具输出当成官方或店铺证据。
 - `RUN-20260830-ERP07-RESPONSE-EVIDENCE-DIAGNOSTICS-08` 已修正脱敏捕获器对 `diagnostics` 内部敏感字段的接收漏洞：`diagnostics` 现在在读取 `status/code/traceId` 前递归执行敏感键检查；正常 `status/code/traceId/durationMs` 保持可用，敏感 diagnostics、请求/签名/凭证输入 fail closed；不改变证据 catalog、人工审阅状态或真实授权店铺证据门。
 - `RUN-20260830-ERP07-RESPONSE-EVIDENCE-DIAGNOSTICS-09` 已完成更窄的 diagnostics 输入边界：只接受 `status/code/traceId/durationMs`，未知扩展 metadata 在摘要前 fail closed，避免未审计的消息或备注字段进入证据捕获器；证据捕获 `7/7`、ERP-07 相邻回归 `34/34`、全量测试 `1361/1361`、构建、工具链、密钥扫描、发布审计和隔离审计均通过；不改变 evidence catalog、人工审阅状态或真实授权店铺证据门。
+- `RUN-20260830-ERP07-RESPONSE-EVIDENCE-STATUS-CONSISTENCY-10` 完成 6 项 `source_pending` 接口归档资料复核，并修复 response evidence endpoint 状态与字段状态可能混搭的漏洞；`gaps` 清单和字段证据状态现在均有 fail-closed 结构/语义校验。当前资料仍不足以证明 6 项完整官方 response 字段，因此不升级 `internal_consumer_contract`、不改变 `authorizedStoreRead=not_observed`。
 - release/readiness 静态门禁已把 `server/cloud/erp07-shein-adapter.js` 纳入必要契约；缺少该文件或关键 fail-closed 标记时阻断候选包。该 adapter 目前只完成隔离实现与门禁接入，尚未接入现有线上路由、Worker、生产配置或真实 SHEIN HTTP。
 - 本进度不等于 ERP-07 完成门：尚缺每项完整官方来源版本、真实授权店铺只读 evidence、6 项接口的官方完整 response 字段/状态映射、现有线上业务路径的受控 adapter 接线、预发 canary/readback 和完成门审查；ERP-08～ERP-23 不得提前启动。
 

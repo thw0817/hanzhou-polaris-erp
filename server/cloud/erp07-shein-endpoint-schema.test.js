@@ -4,6 +4,7 @@ import {
   ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION,
   Erp07EndpointSchemaError,
   assertErp07EndpointEvidenceCatalog,
+  assertErp07ResponseEvidenceStatusConsistency,
   assertErp07FixtureCatalog,
   getErp07EndpointFixture,
   getErp07EndpointSchema,
@@ -63,6 +64,37 @@ test("fixture catalog is complete for read and write failure classes", () => {
 
 test("response evidence catalog is complete and internally consistent", () => {
   assert.equal(assertErp07EndpointEvidenceCatalog(), true);
+});
+
+test("response evidence rejects endpoint/field provenance status mixing", () => {
+  assert.throws(
+    () => assertErp07ResponseEvidenceStatusConsistency({
+      endpoint: "fixture.endpoint",
+      evidence: {
+        status: "internal_consumer_contract",
+        fieldEvidence: [{
+          field: "info.value",
+          status: "official_response_field",
+          observed: false,
+          sourceFiles: ["fixture.test.js"],
+        }],
+      },
+    }),
+    (error) => error instanceof Erp07EndpointSchemaError &&
+      error.code === "ERP07_ENDPOINT_RESPONSE_FIELD_EVIDENCE_STATUS_MISMATCH",
+  );
+  assert.equal(assertErp07ResponseEvidenceStatusConsistency({
+    endpoint: "fixture.endpoint",
+    evidence: {
+      status: "official_response_contract",
+      fieldEvidence: [{
+        field: "info.value",
+        status: "official_response_field",
+        observed: false,
+        sourceFiles: ["official-source.txt:1"],
+      }],
+    },
+  }), true);
 });
 
 test("every executable endpoint has a response fixture that passes its own schema", () => {

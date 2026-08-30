@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v45
+版本：2026-08-30-v46
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，按用户要求本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段和未知 metadata fail-closed 修正，其中 23 项可执行校验、10 项显式阻断；6 项 source-pending 接口的字段仍明确标记为内部消费者契约，官方响应字段和真实授权店铺只读证据尚未捕获；ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，按用户要求本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata 和 response evidence 状态一致性 fail-closed 修正，其中 23 项可执行校验、10 项显式阻断；6 项 source-pending 接口的字段仍明确标记为内部消费者契约，官方响应字段和真实授权店铺只读证据尚未捕获；ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -585,3 +585,16 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 全量门禁已通过：项目全量 `npm test` `1361/1361`、V2 构建、工具链（Node `24.16.0`、npm `11.13.0`、lockfile `3`）、密钥扫描（`scannedFiles=648, findings=[]`）、静态 release audit（`READY`、15/15）、staging isolation（14/14）和 release manifest（`passed=true, sourceDirty=false`）。
 - 已生成与本 Run 最终提交和 release manifest 对齐的只读 staging 候选包；releaseId、绝对路径、大小、权限和 SHA-256 以本 Run 最终完成报告及包内 `release-manifest.json` 为准，未部署。
 - 本 Run 状态：`COMPLETE / LOCAL FAIL-CLOSED CORRECTION`；未接入网页、SHEIN adapter、Worker、数据库、COS、Redis、队列，不执行 migration、部署、重启或配置切换。ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`。
+
+## 24. ERP-07 response evidence 状态一致性 fail-closed 修正（2026-08-30）
+
+### RUN-20260830-ERP07-RESPONSE-EVIDENCE-STATUS-CONSISTENCY-10
+
+- 类型：ERP-07 第十段本地证据账本修正；逐项复核 6 个 `source_pending` 接口的归档资料，并修复 endpoint 级 response evidence 状态与字段级状态可能混搭的问题，不触碰生产。
+- 资料结论：当前来源目录和归档原文可证明销量接口用途/存在，以及商品页中若干接口的目录、方法或业务字段约束；不能证明 6 项接口的独立完整官方 response 字段契约。`goods-publish-quotas/detail` 在当前原始资料归档中没有独立完整 response 字段原文，价格证明上传也没有独立 `objectKey` 官方响应契约原文。6 项继续保持 `internal_consumer_contract` 和 `official_response_fields_not_captured`，不因本地 schema 或 fixture 升级。
+- 失败基线：证据 catalog 原先没有强制 endpoint 状态与 `fieldEvidence[].status` 同态，未来可能出现一个内部 endpoint 混入官方字段或店铺实测字段的账本污染。
+- 实际修正：`server/cloud/erp07-shein-endpoint-schema.js` 新增并接入 `assertErp07ResponseEvidenceStatusConsistency()`；`gaps` 清单必须为字符串数组；`official_response_contract` 只能映射 `official_response_field`，其他状态逐字段一致。对应 schema 测试新增混搭拒绝回归。
+- 本地验证：schema `16/16`、ERP-07/ERP-06 相邻回归 `45/45`、全量 `npm test` `1362/1362` 已通过；干净提交后的构建、工具链、密钥扫描、发布审计、隔离审计、release manifest 和候选包需重新验证。
+- 环境边界：仅使用归档资料和 synthetic fixture；未读取/打印真实凭证，未发送 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
+- 当前状态：`COMPLETE / LOCAL FAIL-CLOSED CORRECTION`；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
+- 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、统一 adapter 线上接线、预发 canary/readback、ERP-07 完成门、干净 revision 制品和单独部署批准仍未完成。
