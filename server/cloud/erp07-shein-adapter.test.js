@@ -155,6 +155,94 @@ test("ERP-07 adapter sends one schema-validated read request and returns no cred
   assert.doesNotMatch(JSON.stringify(result), /OPEN-1|SECRET-1/);
 });
 
+test("ERP-07 adapter blocks source-pending reads outside the dedicated evidence-capture mode", async () => {
+  let credentialCalls = 0;
+  let transportCalls = 0;
+  const remote = adapter({
+    resolveCredentials: async () => {
+      credentialCalls += 1;
+      return { openKeyId: "OPEN-1", secretKey: "SECRET-1" };
+    },
+    request: async () => {
+      transportCalls += 1;
+    },
+  });
+
+  await assert.rejects(
+    remote.execute({
+      endpoint: "sales.sku",
+      body: { skuCodeList: ["SKU-1"] },
+      scope,
+      traceId: "trace-source-pending-blocked",
+    }),
+    (error) => error.code === "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED",
+  );
+  assert.equal(credentialCalls, 0);
+  assert.equal(transportCalls, 0);
+});
+
+test("ERP-07 adapter requires dual opt-in and returns only a dossier for source-pending evidence reads", async () => {
+  const requests = [];
+  const remote = adapter({
+    sourcePendingEvidenceCaptureEnabled: true,
+    request: async (input) => {
+      requests.push(input);
+      return {
+        status: 200,
+        payload: {
+          code: "0",
+          msg: "OK",
+          traceId: "trace-source-pending-capture",
+          info: {
+            dataList: [{
+              skuCode: "SKU-1",
+              realTimeSaleCnt: 3,
+              cydSaleCnt: 4,
+              c7dSaleCnt: 7,
+              c30dSaleCnt: 30,
+              dt: "20260830",
+              opaqueMarker: "capture-marker-should-not-return",
+            }],
+          },
+        },
+      };
+    },
+  });
+
+  await assert.rejects(
+    remote.execute({
+      endpoint: "sales.sku",
+      body: { skuCodeList: ["SKU-1"] },
+      scope,
+      traceId: "trace-source-pending-metadata-required",
+    }),
+    (error) => error.code === "ERP07_ADAPTER_SOURCE_PENDING_CAPTURE_REQUIRED",
+  );
+  assert.equal(requests.length, 0);
+
+  const result = await remote.execute({
+    endpoint: "sales.sku",
+    body: { skuCodeList: ["SKU-1"] },
+    scope,
+    traceId: "trace-source-pending-capture",
+    sourcePendingEvidenceCapture: {
+      sourceRef: "authorized-store-read:erp07-sales-20260830-adapter",
+      observedAt: "2026-08-30T04:00:00.000Z",
+    },
+  });
+
+  assert.equal(requests.length, 1);
+  assert.equal(result.outcome, "read_success");
+  assert.equal("payload" in result, false);
+  assert.equal("scope" in result.request, false);
+  assert.equal("body" in result.request, false);
+  assert.equal(result.request.redactedForEvidenceCapture, true);
+  assert.equal(result.responseEvidenceDossier.endpoint, "sales.sku");
+  assert.equal(result.responseEvidenceDossier.catalogUpgrade.eligible, false);
+  assert.equal(result.responseEvidenceDossier.catalogUpgrade.status, "blocked_source_pending");
+  assert.doesNotMatch(JSON.stringify(result), /capture-marker-should-not-return|SKU-1|tenant-1|store-1|supplier-1|OPEN-1|SECRET-1/);
+});
+
 test("ERP-07 adapter keeps business writes disabled even when reads are enabled", async () => {
   let transportCalls = 0;
   const remote = adapter({

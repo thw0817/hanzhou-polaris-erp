@@ -1,7 +1,7 @@
 # ERP-07 待核验响应证据审阅摘要
 
 日期：2026-08-30
-范围：仅本地、仅脱敏摘要、仅 ERP-07；不读取店铺、不发送 SHEIN 请求、不接入网页或 adapter、不改变生产配置。
+范围：仅本地、仅脱敏摘要、仅 ERP-07；普通 adapter 读取一律拒绝，未来单独授权的读取只能走双重显式证据采集模式；不接入网页、不改变生产配置。
 
 ## 目的
 
@@ -24,12 +24,13 @@
 3. 所有字段出现情况只代表候选响应与当前 schema 的结构匹配，不证明官方文档、当前店铺权限或真实线上请求来源。
 4. 店铺范围仅以 SHA-256 指纹写入审阅摘要；原始 tenant/store/supplier 标识不进入摘要。
 5. 未来如取得官方完整 response 页面或经单独批准的授权店铺只读回执，必须先独立人工审阅来源、方法、路径、字段含义、范围和时间，再单独修改 schema evidence catalog；不能使用此摘要自动升格。
+6. `sales.sku`、`preflight.publish_quota`、`review.document_state` 不能用普通 `readEnabled` 调用。即使未来获得读取批准，也必须同时启用隔离 adapter 的 source-pending 证据采集开关，并提供格式合法的 `sourceRef/observedAt`；adapter 成功结果仅输出本摘要，不返回原始 payload、scope、body 或 query。
 
 ## 回归门禁
 
 - 销量、额度、单据状态三项均有 method/path 固定与 `eligible=false` 回归。
 - 修改 snapshot endpoint、字段覆盖范围、字段出现次数或字段类型摘要，审阅摘要均拒绝。
-- 任何 payload 值、scope 原值、headers 或凭证不得进入最终摘要。
+- 任何 payload 值、scope 原值、body、query、headers 或凭证不得进入最终摘要或 source-pending adapter 的成功/失败结果。
 
 ## 结论
 

@@ -1,8 +1,8 @@
 # SHEIN 商业 ERP 主执行计划
 
-版本：2026-08-30-v60
+版本：2026-08-30-v61
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：执行路线；ERP-00～ERP-05 已完成，ERP-06 隔离实现已完成但生产接入门为 BLOCKED/NO-GO，ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、source-pending method/path 审阅摘要、diagnostics 敏感字段、未知 metadata、response evidence 状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正以及 3 项官方响应来源核验（23 项可执行、10 项阻断），ERP-07 整体仍在进行且是当前唯一 IN_PROGRESS 步骤，ERP-08～ERP-23 尚未开始
+状态：执行路线；ERP-00～ERP-05 已完成，ERP-06 隔离实现已完成但生产接入门为 BLOCKED/NO-GO，ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、source-pending method/path 审阅摘要与双重显式 adapter 证据采集门禁、diagnostics 敏感字段、未知 metadata、response evidence 状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正以及 3 项官方响应来源核验（23 项可执行、10 项阻断），ERP-07 整体仍在进行且是当前唯一 IN_PROGRESS 步骤，ERP-08～ERP-23 尚未开始
 适用项目：SHEIN 超级运营中心 / SHEIN 涵舟工作室  
 执行编号：ERP-00 至 ERP-23
 
@@ -633,6 +633,7 @@
 - `RUN-20260830-ERP07-SOURCE-REFERENCE-INTEGRITY-12` 已将 33 个 endpoint 的来源文件、非空 response evidence 来源文件及 4 个带行号/行号范围引用纳入持续回归；当前 56 条引用均存在且行号在边界内。该回归只证明本地来源链接可读取，不升级官方 response evidence 或 `authorizedStoreRead`。提交 `0af03b4` 的全量测试 `1364/1364`、V2 构建、工具链、密钥扫描、release audit `15/15`、staging isolation `14/14` 和干净 manifest 均通过；文档提交完成后将重新生成与最终提交一致的只读 staging 候选包，未部署。
 - `RUN-20260830-ERP07-EVIDENCE-INPUT-BOUNDARY-13` 收紧证据捕获入口与 `scope` 的未知字段边界：只接受声明的入口字段和 `tenantId/storeId/supplierId`，未知扩展字段直接 fail closed；新增失败回归，未改变 `pending_manual_acceptance`、官方 response provenance 或 `authorizedStoreRead`。代码提交 `c9c9e47` 的全量测试 `1365/1365`、V2 构建、工具链、密钥扫描 `scannedFiles=649, findings=[]`、release audit `15/15`、staging isolation `14/14` 和干净 manifest 均通过；文档提交完成后将重新生成与最终提交一致的只读 staging 候选包，未部署。
 - `RUN-20260830-ERP07-OFFICIAL-RESPONSE-SOURCES-14` 完成公开 SHEIN 官方响应来源的增量核验：`preflight.publish_permission`、`preflight.supplier_sku_duplicate`、`pricing.proof_upload` 记录官方页面 URL、更新时间和响应字段，升级为 `official_response_contract`；新增 `officialSourceUrls` HTTPS 官方域名白名单和 `bbl/info.url` 响应 schema，兼容别名不再被列为官方字段。3 项 `authorizedStoreRead` 仍为 `not_observed`、字段 `observed=false`；`sales.sku`、`preflight.publish_quota`、`review.document_state` 仍保留 `internal_consumer_contract` 与官方字段缺口，不以旧资料猜测新额度接口。全量测试、构建、工具链、密钥扫描、release audit、staging isolation 和当前 revision 制品将在提交后重新验证，未部署。
+- `RUN-20260830-ERP07-SOURCE-PENDING-ADAPTER-GUARD-16` 将上述 3 项 source-pending 读取接口收紧为双重显式证据采集模式：普通 `readEnabled` 路径在凭证/传输前拒绝；只有构造器与单次调用同时明确开启、绑定授权回执编号和观测时间时才允许隔离读取，且结果仅返回脱敏审阅摘要，永不返回原始 payload、scope 或请求 body/query。该摘要仍固定为 `blocked_source_pending/eligible=false`，不升级 catalog 或 `authorizedStoreRead`，未接入线上 adapter。
 - 本 Run 同步修正请求/响应侧契约漂移：可选 `brandCode` 查询转发并纳入签名路径，商家 SKU 查重单次上限统一为官方 200 项，权限成功响应允许 `info.reason=null`；新增 query schema、响应类型和 200/201 边界回归，未打开远端或生产写入。
 - 最新台账一致性修正：ERP-06 的生产接入前置审查为 `BLOCKED/NO-GO`，ERP-07 是唯一 `IN_PROGRESS` 步骤；不得把两个步骤同时标为 `IN_PROGRESS`。对应一致性回归固定“恰好一个活动步骤，且顶层 current run、步骤行和最新 Run 标题一致”。
 - release/readiness 静态门禁已把 `server/cloud/erp07-shein-adapter.js` 纳入必要契约；缺少该文件或关键 fail-closed 标记时阻断候选包。该 adapter 目前只完成隔离实现与门禁接入，尚未接入现有线上路由、Worker、生产配置或真实 SHEIN HTTP。

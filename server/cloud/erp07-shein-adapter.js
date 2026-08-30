@@ -11,6 +11,11 @@ import {
   validateErp07EndpointPayload,
   validateErp07EndpointQuery,
 } from "./erp07-shein-endpoint-schema.js";
+import {
+  buildErp07ResponseEvidenceReviewDossier,
+  buildErp07ResponseEvidenceSnapshot,
+  normalizeErp07ResponseEvidenceCaptureContext,
+} from "./erp07-response-evidence.js";
 
 export const ERP07_SHEIN_ADAPTER_CONTRACT_VERSION =
   "erp07-shein-adapter-v1";
@@ -69,20 +74,36 @@ function safeResponse(response) {
   };
 }
 
-function safeRequestMetadata(request, schema) {
-  return {
+function safeRequestMetadata(request, schema, { redactForEvidenceCapture = false } = {}) {
+  const metadata = {
     contractVersion: request.contractVersion,
     schemaVersion: ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION,
     endpoint: request.endpoint,
     method: request.method,
     path: request.path,
     mode: request.mode,
-    scope: request.scope,
     traceId: request.traceId,
     requiredHeaders: [...schema.headers],
+  };
+  if (redactForEvidenceCapture) {
+    return {
+      ...metadata,
+      redactedForEvidenceCapture: true,
+    };
+  }
+  return {
+    ...metadata,
+    scope: request.scope,
     body: request.body,
     ...(request.query ? { query: request.query } : {}),
   };
+}
+
+function sourcePendingRead(schema) {
+  const evidence = schema?.source?.responseEvidence;
+  return schema?.mode === "read" &&
+    evidence?.status === "internal_consumer_contract" &&
+    evidence?.gaps?.includes("official_response_fields_not_captured");
 }
 
 function schemaError(code, message, error, details = {}) {
@@ -116,21 +137,33 @@ function featureDisabledError(mode) {
   );
 }
 
-function classifyResult({ request, schema, classification, payload, diagnostics }) {
+function classifyResult({
+  request,
+  schema,
+  classification,
+  payload,
+  diagnostics,
+  responseEvidenceDossier = null,
+  redactRequestForEvidenceCapture = false,
+}) {
   const result = {
     adapterContractVersion: ERP07_SHEIN_ADAPTER_CONTRACT_VERSION,
     schemaVersion: ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION,
     endpoint: request.endpoint,
-    request: safeRequestMetadata(request, schema),
+    request: safeRequestMetadata(request, schema, {
+      redactForEvidenceCapture: redactRequestForEvidenceCapture,
+    }),
     sourceEvidenceStatus: schema.source.evidenceStatus,
     responseEvidence: schema.source.responseEvidence,
     authorizedStoreRead: schema.source.authorizedStoreRead,
     diagnostics,
     ...classification,
   };
-  if (classification.outcome === "read_success" || classification.outcome === "accepted") {
+  if ((classification.outcome === "read_success" || classification.outcome === "accepted") &&
+      !responseEvidenceDossier) {
     result.payload = payload;
   }
+  if (responseEvidenceDossier) result.responseEvidenceDossier = responseEvidenceDossier;
   return result;
 }
 
@@ -151,6 +184,7 @@ export class Erp07SheinAdapter {
     request = defaultRequestShein,
     readEnabled = false,
     writeEnabled = false,
+    sourcePendingEvidenceCaptureEnabled = false,
     language = "zh-cn",
     timeoutMs = 15_000,
   } = {}) {
@@ -159,6 +193,7 @@ export class Erp07SheinAdapter {
     this.request = request;
     this.readEnabled = readEnabled === true;
     this.writeEnabled = writeEnabled === true;
+    this.sourcePendingEvidenceCaptureEnabled = sourcePendingEvidenceCaptureEnabled === true;
     this.language = text(language, 20) || "zh-cn";
     this.timeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0
       ? Math.floor(timeoutMs)
@@ -174,6 +209,7 @@ export class Erp07SheinAdapter {
     allowWrite = false,
     sendBoundary = "unknown",
     acceptedEvidence = false,
+    sourcePendingEvidenceCapture = null,
   } = {}) {
     if (!SEND_BOUNDARIES.has(sendBoundary)) {
       throw new Erp07SheinAdapterError(
@@ -230,6 +266,27 @@ export class Erp07SheinAdapter {
           );
         }
         throw error;
+      }
+    }
+
+    const requiresSourcePendingCapture = sourcePendingRead(schema);
+    let evidenceCaptureContext = null;
+    if (requiresSourcePendingCapture) {
+      if (!this.sourcePendingEvidenceCaptureEnabled) {
+        throw new Erp07SheinAdapterError(
+          "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED",
+          "官方响应字段待核验的读取接口只允许专用证据采集模式执行",
+        );
+      }
+      try {
+        evidenceCaptureContext = normalizeErp07ResponseEvidenceCaptureContext(
+          sourcePendingEvidenceCapture,
+        );
+      } catch {
+        throw new Erp07SheinAdapterError(
+          "ERP07_ADAPTER_SOURCE_PENDING_CAPTURE_REQUIRED",
+          "source-pending 读取必须携带有效的授权回执编号和观测时间",
+        );
       }
     }
 
@@ -290,6 +347,7 @@ export class Erp07SheinAdapter {
         schema,
         classification,
         payload: null,
+        redactRequestForEvidenceCapture: requiresSourcePendingCapture,
         diagnostics: safeDiagnostics({
           status: error?.status,
           payload: error?.response,
@@ -323,12 +381,37 @@ export class Erp07SheinAdapter {
       sendBoundary,
       acceptedEvidence,
     });
+    let responseEvidenceDossier = null;
+    if (requiresSourcePendingCapture && classification.outcome === "read_success") {
+      try {
+        const snapshot = buildErp07ResponseEvidenceSnapshot({
+          endpoint: request.endpoint,
+          scope: request.scope,
+          sourceRef: evidenceCaptureContext.sourceRef,
+          observedAt: evidenceCaptureContext.observedAt,
+          response: {
+            status: normalized.diagnostics.status,
+            payload: normalized.payload,
+            diagnostics: normalized.diagnostics,
+          },
+        });
+        responseEvidenceDossier = buildErp07ResponseEvidenceReviewDossier({ snapshot });
+      } catch {
+        throw new Erp07SheinAdapterError(
+          "ERP07_ADAPTER_SOURCE_PENDING_EVIDENCE_INVALID",
+          "source-pending 读取响应未能生成脱敏证据摘要",
+          422,
+        );
+      }
+    }
     return classifyResult({
       request,
       schema,
       classification,
       payload: normalized.payload,
       diagnostics: normalized.diagnostics,
+      responseEvidenceDossier,
+      redactRequestForEvidenceCapture: requiresSourcePendingCapture,
     });
   }
 }

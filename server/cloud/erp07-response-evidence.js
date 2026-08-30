@@ -23,6 +23,7 @@ const SAFE_CAPTURE_INPUT_KEYS = new Set([
   "observedAt",
   "response",
 ]);
+const SAFE_CAPTURE_CONTEXT_KEYS = new Set(["sourceRef", "observedAt"]);
 const SAFE_DOSSIER_INPUT_KEYS = new Set(["snapshot"]);
 const SAFE_SNAPSHOT_KEYS = new Set([
   "captureVersion",
@@ -336,6 +337,21 @@ export class Erp07ResponseEvidenceError extends Error {
   }
 }
 
+export function normalizeErp07ResponseEvidenceCaptureContext({
+  ...input
+} = {}) {
+  if (Object.keys(input).some((key) => !SAFE_CAPTURE_CONTEXT_KEYS.has(key))) {
+    throw new Erp07ResponseEvidenceError(
+      "ERP07_RESPONSE_EVIDENCE_INPUT_INVALID",
+      "响应证据采集上下文禁止未知扩展字段",
+    );
+  }
+  return Object.freeze({
+    sourceRef: sourceRefSnapshot(input.sourceRef),
+    observedAt: observedAtSnapshot(input.observedAt),
+  });
+}
+
 export function buildErp07ResponseEvidenceSnapshot({
   ...input
 } = {}) {
@@ -369,8 +385,10 @@ export function buildErp07ResponseEvidenceSnapshot({
   }
 
   const normalizedScope = scopeSnapshot(scope);
-  const normalizedSourceRef = sourceRefSnapshot(sourceRef);
-  const normalizedObservedAt = observedAtSnapshot(observedAt);
+  const captureContext = normalizeErp07ResponseEvidenceCaptureContext({
+    sourceRef,
+    observedAt,
+  });
   const normalizedResponse = responseInput(response);
   if (normalizedResponse.httpStatus !== 200 || normalizedResponse.upstreamCode !== "0") {
     throw new Erp07ResponseEvidenceError(
@@ -396,9 +414,9 @@ export function buildErp07ResponseEvidenceSnapshot({
     endpoint: schema.id,
     contractVersion: schema.contractVersion,
     schemaVersion: schema.schemaVersion,
-    sourceRef: normalizedSourceRef,
+    sourceRef: captureContext.sourceRef,
     scope: Object.freeze(normalizedScope),
-    observedAt: normalizedObservedAt,
+    observedAt: captureContext.observedAt,
     httpStatus: normalizedResponse.httpStatus,
     upstreamCode: normalizedResponse.upstreamCode,
     traceId: normalizedResponse.traceId,
