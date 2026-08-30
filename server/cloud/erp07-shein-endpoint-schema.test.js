@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION,
   Erp07EndpointSchemaError,
+  assertErp07EndpointEvidenceCatalog,
   assertErp07FixtureCatalog,
   getErp07EndpointFixture,
   getErp07EndpointSchema,
@@ -58,6 +59,10 @@ test("every ERP-07 contract has explicit schema coverage with matching route and
 
 test("fixture catalog is complete for read and write failure classes", () => {
   assert.equal(assertErp07FixtureCatalog(), true);
+});
+
+test("response evidence catalog is complete and internally consistent", () => {
+  assert.equal(assertErp07EndpointEvidenceCatalog(), true);
 });
 
 test("every executable endpoint has a response fixture that passes its own schema", () => {
@@ -116,6 +121,113 @@ test("officially documented request fields validate without exposing credentials
   });
   assert.equal(upload.valid, true);
   assert.doesNotMatch(JSON.stringify(upload), /secret|token|password/i);
+});
+
+test("source-pending endpoints expose honest response evidence and reject malformed consumer fields", () => {
+  const expected = {
+    "sales.sku": [
+      "info.dataList[].skuCode",
+      "info.dataList[].realTimeSaleCnt",
+      "info.dataList[].cydSaleCnt",
+      "info.dataList[].c7dSaleCnt",
+      "info.dataList[].c30dSaleCnt",
+      "info.dataList[].dt",
+    ],
+    "preflight.publish_permission": [
+      "info.canPublishProduct",
+      "info.can_publish_product",
+      "info.reason",
+    ],
+    "preflight.publish_quota": [
+      "info.isControlled",
+      "info.availableQuota",
+      "info.availableLimit",
+      "info.totalQuota",
+      "info.usedCount",
+    ],
+    "preflight.supplier_sku_duplicate": [
+      "info[].supplierSku",
+      "info[].supplier_sku",
+      "info[].repeated",
+    ],
+    "review.document_state": [
+      "info[].spu_name",
+      "info[].skc_name",
+      "info[].sku_list[].sku_code",
+      "info[].document_sn",
+      "info[].version",
+      "info[].audit_time",
+      "info[].audit_state",
+      "info[].failed_reason[]",
+    ],
+    "pricing.proof_upload": ["info.objectKey"],
+  };
+  for (const [endpoint, fields] of Object.entries(expected)) {
+    const evidence = getErp07EndpointSchema(endpoint).source.responseEvidence;
+    assert.equal(evidence.status, "internal_consumer_contract", endpoint);
+    assert.deepEqual(evidence.fields, fields, endpoint);
+    assert.ok(evidence.gaps.includes("official_response_fields_not_captured"), endpoint);
+    assert.equal(evidence.authorizedStoreRead, "not_observed", endpoint);
+  }
+
+  assert.equal(validateErp07EndpointPayload({
+    endpoint: "sales.sku",
+    payload: {
+      code: "0",
+      info: {
+        dataList: [{
+          skuCode: "SKU-FIXTURE",
+          realTimeSaleCnt: 1,
+          cydSaleCnt: 2,
+          c7dSaleCnt: 7,
+          c30dSaleCnt: 30,
+          dt: "20260830",
+        }],
+      },
+    },
+  }).valid, true);
+  assert.throws(
+    () => validateErp07EndpointPayload({
+      endpoint: "sales.sku",
+      payload: { code: "0", info: { dataList: [{ c7dSaleCnt: {} }] } },
+    }),
+    /类型不符合 schema/,
+  );
+  assert.throws(
+    () => validateErp07EndpointPayload({
+      endpoint: "preflight.publish_permission",
+      payload: { code: "0", info: { canPublishProduct: "true" } },
+    }),
+    /类型不符合 schema/,
+  );
+  assert.throws(
+    () => validateErp07EndpointPayload({
+      endpoint: "preflight.publish_quota",
+      payload: { code: "0", info: { availableLimit: {} } },
+    }),
+    /类型不符合 schema/,
+  );
+  assert.throws(
+    () => validateErp07EndpointPayload({
+      endpoint: "preflight.supplier_sku_duplicate",
+      payload: { code: "0", info: [{ supplierSku: "SKU-FIXTURE", repeated: "false" }] },
+    }),
+    /类型不符合 schema/,
+  );
+  assert.throws(
+    () => validateErp07EndpointPayload({
+      endpoint: "review.document_state",
+      payload: { code: "0", info: [{ spu_name: "SPU-FIXTURE", audit_state: {} }] },
+    }),
+    /类型不符合 schema/,
+  );
+  assert.throws(
+    () => validateErp07EndpointPayload({
+      endpoint: "pricing.proof_upload",
+      payload: { code: "0", info: { objectKey: 42 } },
+    }),
+    /类型不符合 schema/,
+  );
 });
 
 test("official read schemas enforce the documented cardinality and paging limits", () => {

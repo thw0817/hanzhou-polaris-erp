@@ -39,12 +39,30 @@ function envelope(info = field(["object", "array"], { additionalProperties: "pre
   };
 }
 
-function source({ files, officialUpdatedAt = null, evidenceStatus }) {
+function source({
+  files,
+  officialUpdatedAt = null,
+  evidenceStatus,
+  responseEvidence = null,
+}) {
+  const evidence = responseEvidence || {
+    status: "not_captured",
+    fields: ["code", "msg", "traceId", "info"],
+    sourceFiles: [],
+    gaps: ["official_response_fields_not_captured"],
+  };
   return {
     files,
     officialUpdatedAt,
     evidenceStatus,
     authorizedStoreRead: "not_observed",
+    responseEvidence: {
+      status: evidence.status,
+      fields: evidence.fields,
+      sourceFiles: evidence.sourceFiles || [],
+      gaps: evidence.gaps || [],
+      authorizedStoreRead: "not_observed",
+    },
   };
 }
 
@@ -217,6 +235,104 @@ function readEndpoint({
   };
 }
 
+const SALES_RESPONSE_ROW = field("object", {
+  fields: {
+    skuCode: field("string"),
+    realTimeSaleCnt: field(["integer", "string"]),
+    cydSaleCnt: field(["integer", "string"]),
+    c7dSaleCnt: field(["integer", "string"]),
+    c30dSaleCnt: field(["integer", "string"]),
+    dt: field("string"),
+  },
+  additionalProperties: "preserve",
+});
+
+const SALES_RESPONSE_INFO = field("object", {
+  fields: {
+    dataList: arrayOf(SALES_RESPONSE_ROW),
+  },
+  additionalProperties: "preserve",
+});
+
+const PUBLISH_PERMISSION_RESPONSE_INFO = field("object", {
+  fields: {
+    canPublishProduct: field("boolean"),
+    can_publish_product: field("boolean"),
+    reason: field("string"),
+  },
+  additionalProperties: "preserve",
+});
+
+const PUBLISH_QUOTA_RESPONSE_INFO = field("object", {
+  fields: {
+    isControlled: field("boolean"),
+    availableQuota: field(["integer", "string"]),
+    availableLimit: field(["integer", "string"]),
+    totalQuota: field(["integer", "string"]),
+    usedCount: field(["integer", "string"]),
+  },
+  additionalProperties: "preserve",
+});
+
+const SUPPLIER_SKU_RESPONSE_ROW = field("object", {
+  fields: {
+    supplierSku: field("string"),
+    supplier_sku: field("string"),
+    repeated: field("boolean"),
+  },
+  additionalProperties: "preserve",
+});
+
+const SUPPLIER_SKU_RESPONSE_INFO = field(["object", "array"], {
+  fields: {
+    data: arrayOf(SUPPLIER_SKU_RESPONSE_ROW),
+    dataList: arrayOf(SUPPLIER_SKU_RESPONSE_ROW),
+  },
+  items: SUPPLIER_SKU_RESPONSE_ROW,
+  additionalProperties: "preserve",
+});
+
+const DOCUMENT_STATE_SKU = field("object", {
+  fields: {
+    sku_code: field("string"),
+    skuCode: field("string"),
+  },
+  additionalProperties: "preserve",
+});
+
+const DOCUMENT_STATE_RECORD = field("object", {
+  fields: {
+    spu_name: field(["string", "number"]),
+    spuName: field(["string", "number"]),
+    skc_name: field(["string", "number"]),
+    skcName: field(["string", "number"]),
+    sku_list: arrayOf(DOCUMENT_STATE_SKU),
+    skuList: arrayOf(DOCUMENT_STATE_SKU),
+    document_sn: field(["string", "number"]),
+    documentSn: field(["string", "number"]),
+    version: field(["string", "number"]),
+    audit_time: field(["string", "number"]),
+    auditTime: field(["string", "number"]),
+    audit_state: field(["integer", "string"]),
+    documentState: field(["integer", "string"]),
+    failed_reason: arrayOf(field("object", { additionalProperties: "preserve" })),
+    failedReason: arrayOf(field("object", { additionalProperties: "preserve" })),
+    workflow_stage: field("string"),
+    workflowStage: field("string"),
+    stage: field("string"),
+  },
+  additionalProperties: "preserve",
+});
+
+const DOCUMENT_STATE_RESPONSE_INFO = field(["object", "array", "string"], {
+  fields: {
+    data: arrayOf(DOCUMENT_STATE_RECORD),
+    skcList: arrayOf(DOCUMENT_STATE_RECORD),
+  },
+  items: DOCUMENT_STATE_RECORD,
+  additionalProperties: "preserve",
+});
+
 function blockedEndpoint({
   path,
   mode,
@@ -332,8 +448,25 @@ const SCHEMAS = {
     path: "/open-api/goods/query-sku-sales",
     schemaStatus: "fixture_ready_source_pending",
     source: source({
-      files: [CAPABILITY_MATRIX, "server/store-data-sync.js"],
+      files: [
+        CAPABILITY_MATRIX,
+        "docs/shein-api-raw/5e17972e-7544-4139-b348-e9e08037aaaf.txt:276",
+        "server/store-data-sync.js",
+      ],
       evidenceStatus: "code_tested_official_method_only",
+      responseEvidence: {
+        status: "internal_consumer_contract",
+        fields: [
+          "info.dataList[].skuCode",
+          "info.dataList[].realTimeSaleCnt",
+          "info.dataList[].cydSaleCnt",
+          "info.dataList[].c7dSaleCnt",
+          "info.dataList[].c30dSaleCnt",
+          "info.dataList[].dt",
+        ],
+        sourceFiles: ["server/store-data-sync.js", "server/store-data-sync.test.js"],
+        gaps: ["official_response_fields_not_captured"],
+      },
     }),
     headers: COMMON_REQUEST_HEADERS,
     request: {
@@ -346,9 +479,16 @@ const SCHEMAS = {
       },
       additionalProperties: "fail",
     },
-    response: envelope(),
+    response: envelope(SALES_RESPONSE_INFO),
     fixtures: readFixtures({
-      data: [{ skuCode: "SKU-FIXTURE", sales: 3 }],
+      dataList: [{
+        skuCode: "SKU-FIXTURE",
+        realTimeSaleCnt: 1,
+        cydSaleCnt: 2,
+        c7dSaleCnt: 7,
+        c30dSaleCnt: 30,
+        dt: "20260830",
+      }],
     }),
   },
   "preflight.publish_permission": {
@@ -360,10 +500,20 @@ const SCHEMAS = {
       files: [CAPABILITY_MATRIX, "docs/shein-api-raw/53ae21b9-3852-4fae-996e-b7a6ceb777c5.txt"],
       officialUpdatedAt: "2026-07-10 10:32:40",
       evidenceStatus: "code_tested_official_method_only",
+      responseEvidence: {
+        status: "internal_consumer_contract",
+        fields: [
+          "info.canPublishProduct",
+          "info.can_publish_product",
+          "info.reason",
+        ],
+        sourceFiles: [CAPABILITY_MATRIX, "server/publish-preflight.js"],
+        gaps: ["official_response_fields_not_captured"],
+      },
     }),
     headers: COMMON_REQUEST_HEADERS,
     request: { type: "object", fields: {}, additionalProperties: "fail" },
-    response: envelope(),
+    response: envelope(PUBLISH_PERMISSION_RESPONSE_INFO),
     fixtures: readFixtures({ canPublishProduct: true }),
   },
   "preflight.publish_quota": {
@@ -372,13 +522,24 @@ const SCHEMAS = {
     path: "/open-api/goods-publish-quotas/detail",
     schemaStatus: "fixture_ready_source_pending",
     source: source({
-      files: [CAPABILITY_MATRIX, "docs/shein-api-raw/b89edd4a-52b4-4077-abc2-51fdd9001701.txt"],
-      officialUpdatedAt: "2026-07-21 20:27:37",
+      files: [CAPABILITY_MATRIX, "server/publish-preflight.js"],
       evidenceStatus: "code_tested_official_method_only",
+      responseEvidence: {
+        status: "internal_consumer_contract",
+        fields: [
+          "info.isControlled",
+          "info.availableQuota",
+          "info.availableLimit",
+          "info.totalQuota",
+          "info.usedCount",
+        ],
+        sourceFiles: [CAPABILITY_MATRIX, "server/publish-preflight.js"],
+        gaps: ["official_response_fields_not_captured"],
+      },
     }),
     headers: COMMON_REQUEST_HEADERS,
     request: { type: "object", fields: {}, additionalProperties: "fail" },
-    response: envelope(),
+    response: envelope(PUBLISH_QUOTA_RESPONSE_INFO),
     fixtures: readFixtures({ availableLimit: 3 }),
   },
   "preflight.supplier_sku_duplicate": {
@@ -387,9 +548,23 @@ const SCHEMAS = {
     path: "/open-api/goods/product/check-supplierSku-repeated",
     schemaStatus: "fixture_ready_source_pending",
     source: source({
-      files: [CAPABILITY_MATRIX, "docs/shein-api-raw/05562b51-1db4-4f91-88dd-384ffb9af2b7.txt"],
+      files: [
+        CAPABILITY_MATRIX,
+        "docs/shein-api-raw/05562b51-1db4-4f91-88dd-384ffb9af2b7.txt:662",
+        "server/publish-preflight.js",
+      ],
       officialUpdatedAt: "2026-06-12 13:55:48",
       evidenceStatus: "code_tested_official_method_only",
+      responseEvidence: {
+        status: "internal_consumer_contract",
+        fields: [
+          "info[].supplierSku",
+          "info[].supplier_sku",
+          "info[].repeated",
+        ],
+        sourceFiles: ["server/publish-preflight.js", "server/publish-preflight.test.js"],
+        gaps: ["official_response_fields_not_captured"],
+      },
     }),
     headers: COMMON_REQUEST_HEADERS,
     request: {
@@ -400,7 +575,7 @@ const SCHEMAS = {
       },
       additionalProperties: "preserve",
     },
-    response: envelope(),
+    response: envelope(SUPPLIER_SKU_RESPONSE_INFO),
     fixtures: readFixtures({ data: [{ supplierSku: "SKU-FIXTURE", repeated: false }] }),
   },
   "media.product_upload": {
@@ -493,6 +668,24 @@ const SCHEMAS = {
     source: source({
       files: [CAPABILITY_MATRIX, "server/cloud/erp06-shein-publish-adapter-contract.js"],
       evidenceStatus: "adapter_tested_official_method_only",
+      responseEvidence: {
+        status: "internal_consumer_contract",
+        fields: [
+          "info[].spu_name",
+          "info[].skc_name",
+          "info[].sku_list[].sku_code",
+          "info[].document_sn",
+          "info[].version",
+          "info[].audit_time",
+          "info[].audit_state",
+          "info[].failed_reason[]",
+        ],
+        sourceFiles: [
+          "server/cloud/document-state-projections.js",
+          "server/cloud/erp06-shein-publish-adapter-contract.js",
+        ],
+        gaps: ["official_response_fields_not_captured"],
+      },
     }),
     headers: COMMON_REQUEST_HEADERS,
     request: {
@@ -504,8 +697,19 @@ const SCHEMAS = {
       },
       additionalProperties: "preserve",
     },
-    response: envelope(),
-    fixtures: readFixtures({ data: [{ status: "PENDING" }] }),
+    response: envelope(DOCUMENT_STATE_RESPONSE_INFO),
+    fixtures: readFixtures({
+      data: [{
+        spu_name: "SPU-FIXTURE",
+        skc_name: "SKC-FIXTURE",
+        sku_list: [{ sku_code: "SKU-FIXTURE" }],
+        document_sn: "DOC-FIXTURE",
+        version: "1",
+        audit_time: "2026-08-30T00:00:00Z",
+        audit_state: 1,
+        failed_reason: [],
+      }],
+    }),
   },
   "compliance.photo_upload": {
     mode: "non_business_write",
@@ -592,6 +796,12 @@ const SCHEMAS = {
     source: source({
       files: [CAPABILITY_MATRIX, "server/shein-upload.js"],
       evidenceStatus: "code_tested_official_method_only",
+      responseEvidence: {
+        status: "internal_consumer_contract",
+        fields: ["info.objectKey"],
+        sourceFiles: ["server/shein-upload.js", "server/shein-upload.test.js"],
+        gaps: ["official_response_fields_not_captured"],
+      },
     }),
     headers: COMMON_REQUEST_HEADERS,
     request: {
@@ -965,6 +1175,13 @@ const SCHEMA_BY_PATH = new Map(
   ]),
 );
 
+const RESPONSE_EVIDENCE_STATUSES = Object.freeze([
+  "not_captured",
+  "internal_consumer_contract",
+  "official_response_contract",
+  "authorized_store_read",
+]);
+
 function resolveSchema(endpoint) {
   const value = String(endpoint || "");
   if (SCHEMAS[value]) return { id: value, schema: SCHEMAS[value] };
@@ -1126,8 +1343,55 @@ export function validateErp07EndpointPayload({
     fixtureKind,
     schemaVersion: ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION,
     sourceEvidenceStatus: schema.source.evidenceStatus,
+    responseEvidence: schema.source.responseEvidence,
     authorizedStoreRead: schema.source.authorizedStoreRead,
   });
+}
+
+export function assertErp07EndpointEvidenceCatalog() {
+  for (const [id, schema] of Object.entries(SCHEMAS)) {
+    const evidence = schema.source?.responseEvidence;
+    if (!evidence) {
+      throw new Erp07EndpointSchemaError(
+        "ERP07_ENDPOINT_RESPONSE_EVIDENCE_MISSING",
+        `endpoint ${id} 缺少 response evidence 清单`,
+      );
+    }
+    if (!RESPONSE_EVIDENCE_STATUSES.includes(evidence.status)) {
+      throw new Erp07EndpointSchemaError(
+        "ERP07_ENDPOINT_RESPONSE_EVIDENCE_STATUS_INVALID",
+        `endpoint ${id} 的 response evidence 状态不可识别: ${evidence.status}`,
+      );
+    }
+    if (!Array.isArray(evidence.fields) || evidence.fields.length === 0 ||
+        evidence.fields.some((fieldName) => typeof fieldName !== "string" || !fieldName.trim())) {
+      throw new Erp07EndpointSchemaError(
+        "ERP07_ENDPOINT_RESPONSE_EVIDENCE_FIELDS_INVALID",
+        `endpoint ${id} 的 response evidence 字段清单无效`,
+      );
+    }
+    if (!Array.isArray(evidence.sourceFiles) ||
+        evidence.sourceFiles.some((sourceFile) => typeof sourceFile !== "string" || !sourceFile.trim())) {
+      throw new Erp07EndpointSchemaError(
+        "ERP07_ENDPOINT_RESPONSE_EVIDENCE_SOURCES_INVALID",
+        `endpoint ${id} 的 response evidence 来源清单无效`,
+      );
+    }
+    if (evidence.authorizedStoreRead !== schema.source.authorizedStoreRead) {
+      throw new Erp07EndpointSchemaError(
+        "ERP07_ENDPOINT_RESPONSE_EVIDENCE_STORE_STATUS_MISMATCH",
+        `endpoint ${id} 的 response evidence 店铺读取状态与 source 不一致`,
+      );
+    }
+    if (["not_captured", "internal_consumer_contract"].includes(evidence.status) &&
+        !evidence.gaps.includes("official_response_fields_not_captured")) {
+      throw new Erp07EndpointSchemaError(
+        "ERP07_ENDPOINT_RESPONSE_EVIDENCE_GAP_MISSING",
+        `endpoint ${id} 未捕获官方响应字段时必须声明证据缺口`,
+      );
+    }
+  }
+  return true;
 }
 
 export function assertErp07FixtureCatalog() {

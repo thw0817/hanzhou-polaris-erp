@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v53
+版本：2026-08-30-v54
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed 和唯一 server adapter 边界隔离回归，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-ADAPTER-BOUNDARY-04
+当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-RESPONSE-EVIDENCE-05
 
 ## 0. 台账用途
 
@@ -1968,3 +1968,17 @@
 - 环境边界：仅使用本地 fake credentials/transport 和 synthetic response fixture；未读取或打印真实密钥，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
 - 当前状态：`COMPLETE / ISOLATED ADAPTER BOUNDARY`。本 Run 完成，但 ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
 - 未完成门：逐 endpoint 官方来源版本与完整 response 字段映射、真实授权店铺只读 evidence、现有线上业务路径的受控 adapter 接线、预发 canary/readback、完成门审查和单独部署批准仍未完成；本 Run 不得被解释为已上线。
+
+## 43. ERP-07 response evidence 与消费者字段失败边界
+
+### RUN-20260830-ERP07-RESPONSE-EVIDENCE-05
+
+- 类型：ERP-07 第五段本地隔离实现；把剩余 6 个 source-pending 可执行 endpoint 的内部消费者字段显式登记为 response evidence，并为全量 33 个 endpoint 增加证据清单完整性门禁。
+- 实际文件：[erp07-shein-endpoint-schema.js](../server/cloud/erp07-shein-endpoint-schema.js)、[erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js)、[erp07-shein-adapter.js](../server/cloud/erp07-shein-adapter.js)。本轮仍未接入线上路由、Worker、生产配置、真实 SHEIN HTTP 或真实授权店铺读取。
+- 字段映射范围：SKU 销量登记 `dataList` 及 5 个销量/日期字段；发布权限登记双命名兼容字段、发布原因；发布额度登记控制标记、额度/上限、总额和已用数；商家 SKU 查重登记 SKU 与重复标记；单据状态登记 SPU/SKC/SKU、单据号、版本、审核时间、审核状态和失败原因；价格证明上传登记 `info.objectKey`。
+- 来源诚实性：上述 6 项全部标记 `responseEvidence.status=internal_consumer_contract`，来源只指向本地消费者/测试及可确认的官方方法上下文，统一保留 `official_response_fields_not_captured`；没有把内部字段推断写成官方完整响应，也没有伪造 `authorizedStoreRead`。
+- Fail-closed：上述字段不接受明显错误类型（例如对象冒充数字、字符串冒充布尔、数字冒充 objectKey）；响应不通过 schema 时不得进入 adapter 成功结果，也不返回原始响应内容。全量 evidence catalog 检查缺项、非法状态、空字段、无效来源和店铺读取状态不一致时直接失败。
+- 本地定向验证：ERP-07 schema、adapter、endpoint contract 回归 `41/41`；其中 response evidence 与 6 个消费者字段失败边界已覆盖。全量测试、构建、secret scan、静态 release audit、staging isolation 和 release manifest 必须在形成干净提交后重新执行，本条不提前宣称通过。
+- 环境边界：未解析或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
+- 当前状态：`IN_PROGRESS / RESPONSE EVIDENCE HARDENING`。本 Run 的代码与定向回归已完成，待全套发布前验证和干净 revision 制品验证后关闭；ERP-07 整体仍 `IN_PROGRESS`，ERP-06 生产接入仍 `NO-GO`，ERP-08～ERP-23 未开始。
+- 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、统一 adapter 线上接线、预发 canary/readback、ERP-07 完成门和单独部署批准仍未完成。

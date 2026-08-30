@@ -121,6 +121,7 @@ function classifyResult({ request, schema, classification, payload, diagnostics 
     endpoint: request.endpoint,
     request: safeRequestMetadata(request, schema),
     sourceEvidenceStatus: schema.source.evidenceStatus,
+    responseEvidence: schema.source.responseEvidence,
     authorizedStoreRead: schema.source.authorizedStoreRead,
     diagnostics,
     ...classification,
