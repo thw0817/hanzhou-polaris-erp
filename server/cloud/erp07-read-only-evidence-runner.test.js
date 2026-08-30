@@ -8,6 +8,7 @@ import {
   ERP07_READ_ONLY_CONFIRMATION,
   ERP07_SOURCE_PENDING_CONFIRMATION,
   resolveAuthorizedStoreFromDatabase,
+  resolvePlatformIdentityFromDatabase,
   runErp07ReadOnlyEvidence,
   runErp07ReadOnlyEvidenceCli,
 } from "./erp07-read-only-evidence-runner.js";
@@ -67,6 +68,10 @@ function runnerOptions(overrides = {}) {
   return {
     supplierId: "14152389",
     skc: "sf260512004051439215577",
+    documentStateIdentity: {
+      spuName: "SPU-PRIVATE",
+      version: "VERSION-PRIVATE",
+    },
     apiBaseUrl: "https://openapi.sheincorp.cn",
     now: () => new Date("2026-08-30T12:00:00.000Z"),
     resolveAuthorization: async () => ({
@@ -114,7 +119,10 @@ test("ERP-07 evidence runner performs exactly three scoped read requests", async
       {
         method: "POST",
         path: "/open-api/goods/query-document-state",
-        body: { skc_name: "sf260512004051439215577" },
+        body: {
+          version: "VERSION-PRIVATE",
+          spuList: [{ spuName: "SPU-PRIVATE" }],
+        },
       },
     ],
   );
@@ -140,6 +148,28 @@ test("ERP-07 evidence runner never returns credentials, scope, request body, or 
   assert.match(serialized, /sourceRefDigestSha256/);
   assert.match(serialized, /scopeDigestSha256/);
   assert.match(serialized, /fieldCoverage/);
+});
+
+test("ERP-07 evidence runner does not send document-state without SPU and version", async () => {
+  const options = runnerOptions({ documentStateIdentity: null });
+  const result = await runErp07ReadOnlyEvidence(options);
+
+  assert.deepEqual(
+    options.requests.map(({ path }) => path),
+    [
+      "/open-api/goods/query-sku-sales",
+      "/open-api/goods-publish-quotas/detail",
+    ],
+  );
+  assert.equal(
+    result.endpoints.find((endpoint) => endpoint.endpoint === "review.document_state").outcome,
+    "input_required",
+  );
+  assert.equal(
+    result.endpoints.find((endpoint) => endpoint.endpoint === "review.document_state")
+      .diagnostics.code,
+    "ERP07_EVIDENCE_PLATFORM_IDENTITY_REQUIRED",
+  );
 });
 
 test("ERP-07 evidence runner fails closed for an incomplete authorization scope", async () => {
@@ -229,6 +259,36 @@ test("ERP-07 database resolver fails closed when Supplier ID is ambiguous", asyn
     }),
     (error) => error.code === "ERP07_EVIDENCE_STORE_AMBIGUOUS",
   );
+});
+
+test("ERP-07 platform identity resolver only accepts one scoped SPU/version pair", async () => {
+  const queries = [];
+  const identity = await resolvePlatformIdentityFromDatabase({
+    pool: {
+      query: async (sql, params) => {
+        queries.push({ sql, params });
+        return {
+          rowCount: 1,
+          rows: [{ spu_name: "SPU-PRIVATE", version: "VERSION-PRIVATE" }],
+        };
+      },
+    },
+    scope,
+    skc: "sf260512004051439215577",
+  });
+
+  assert.deepEqual(identity, {
+    spuName: "SPU-PRIVATE",
+    version: "VERSION-PRIVATE",
+  });
+  assert.equal(queries.length, 1);
+  assert.match(queries[0].sql, /^\s*SELECT\b/i);
+  assert.doesNotMatch(queries[0].sql, /\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE)\b/i);
+  assert.deepEqual(queries[0].params, [
+    "tenant-1",
+    "store-1",
+    "sf260512004051439215577",
+  ]);
 });
 
 test("ERP-07 CLI requires both exact read-only confirmations before runtime access", async () => {

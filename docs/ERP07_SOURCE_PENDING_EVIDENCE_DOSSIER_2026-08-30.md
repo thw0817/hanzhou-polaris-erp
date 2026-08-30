@@ -26,6 +26,21 @@
 5. 未来如取得官方完整 response 页面或经单独批准的授权店铺只读回执，必须先独立人工审阅来源、方法、路径、字段含义、范围和时间，再单独修改 schema evidence catalog；不能使用此摘要自动升格。
 6. `sales.sku`、`preflight.publish_quota`、`review.document_state` 不能用普通 `readEnabled` 调用。即使未来获得读取批准，也必须同时启用隔离 adapter 的 source-pending 证据采集开关，并提供格式合法的 `sourceRef/observedAt`；adapter 成功结果仅输出本摘要，不返回原始 payload、scope、body 或 query。
 
+## 单据状态请求前置条件
+
+`review.document_state` 的目标可以由 SKC 指定，但官方回读请求不是 SKC-only 请求；当前冻结的请求契约是：
+
+```json
+{
+  "version": "<SHEIN version>",
+  "spuList": [{ "spuName": "<SHEIN SPU>" }]
+}
+```
+
+证据采集器只接受显式提供的 `SPU + version`，或从同租户、同店铺、同 SKC 的既有发布回执中通过只读查询解析出唯一的一对身份。两者均不存在时返回 `input_required`，身份不唯一时 fail closed；这两种情况都不会发送单据状态请求。SKC 不是 SPU 的替代字段，也不能把 `{ "skc_name": "..." }` 当作该接口的有效请求体。
+
+因此，接口返回的业务码 `20003` 在缺少 SPU/version 的错误请求场景下只能记录为请求失败证据，不能解释为商品审核失败、未找到或已驳回。
+
 ## 回归门禁
 
 - 销量、额度、单据状态三项均有 method/path 固定与 `eligible=false` 回归。

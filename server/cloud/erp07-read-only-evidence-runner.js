@@ -28,6 +28,8 @@ export const ERP07_SOURCE_PENDING_CONFIRMATION =
 
 const OFFICIAL_SHEIN_API_HOST = "openapi.sheincorp.cn";
 
+const PLATFORM_IDENTITY_PATTERN = /^[A-Za-z0-9._:-]+$/;
+
 const EVIDENCE_ENDPOINTS = Object.freeze([
   Object.freeze({
     endpoint: "sales.sku",
@@ -47,7 +49,10 @@ const EVIDENCE_ENDPOINTS = Object.freeze([
     endpoint: "review.document_state",
     method: "POST",
     path: "/open-api/goods/query-document-state",
-    body: ({ skc }) => ({ skc_name: skc }),
+    body: ({ documentStateIdentity }) => ({
+      version: documentStateIdentity.version,
+      spuList: [{ spuName: documentStateIdentity.spuName }],
+    }),
     sourceKey: "document",
   }),
 ]);
@@ -60,6 +65,31 @@ export const AUTHORIZED_STORE_LOOKUP_SQL = `
   WHERE s.supplier_id = $1
     AND s.status = 'active'
   ORDER BY s.id
+`;
+
+export const PLATFORM_IDENTITY_LOOKUP_SQL = `
+  SELECT DISTINCT
+         COALESCE(
+           NULLIF(job.request_summary->>'spuName', ''),
+           NULLIF(job.receipt->>'spuName', '')
+         ) AS spu_name,
+         job.shein_version AS version
+  FROM publish_jobs AS job
+  WHERE job.tenant_id = $1
+    AND job.store_id = $2
+    AND NULLIF(job.shein_version, '') IS NOT NULL
+    AND (
+      (
+        jsonb_typeof(job.request_summary->'skcNames') = 'array'
+        AND job.request_summary->'skcNames' ? $3
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(COALESCE(job.receipt->'skcs', '[]'::jsonb)) AS skc
+        WHERE skc->>'skcName' = $3
+      )
+    )
+  ORDER BY version, spu_name
 `;
 
 function object(value) {
@@ -122,6 +152,24 @@ function normalizeScope(scope, supplierId) {
   return Object.freeze(normalized);
 }
 
+function normalizeDocumentStateIdentity(value, { optional = false } = {}) {
+  const source = object(value);
+  const rawSpuName = text(source?.spuName, 160);
+  const rawVersion = text(source?.version, 160);
+  if (!rawSpuName && !rawVersion && optional) return null;
+  if (
+    !rawSpuName ||
+    !PLATFORM_IDENTITY_PATTERN.test(rawSpuName) ||
+    !rawVersion ||
+    !PLATFORM_IDENTITY_PATTERN.test(rawVersion)
+  ) {
+    const error = new Error("单据状态回读需要完整的 SPU 和 version");
+    error.code = "ERP07_EVIDENCE_PLATFORM_IDENTITY_INVALID";
+    throw error;
+  }
+  return Object.freeze({ spuName: rawSpuName, version: rawVersion });
+}
+
 function normalizeAuthorization(value, supplierId) {
   const source = object(value);
   const scope = normalizeScope(source?.scope, supplierId);
@@ -131,7 +179,14 @@ function normalizeAuthorization(value, supplierId) {
     error.code = "ERP07_EVIDENCE_CREDENTIALS_INVALID";
     throw error;
   }
-  return { scope, credentials };
+  return {
+    scope,
+    credentials,
+    documentStateIdentity: normalizeDocumentStateIdentity(
+      source?.documentStateIdentity,
+      { optional: true },
+    ),
+  };
 }
 
 function sourceRefFor(sourceKey, supplierId) {
@@ -278,10 +333,52 @@ export async function resolveAuthorizedStoreFromDatabase({
   };
 }
 
+export async function resolvePlatformIdentityFromDatabase({
+  pool,
+  scope,
+  skc,
+} = {}) {
+  if (!pool || typeof pool.query !== "function") {
+    const error = new Error("缺少只读数据库连接");
+    error.code = "ERP07_EVIDENCE_DATABASE_REQUIRED";
+    throw error;
+  }
+  const normalizedScope = normalizeScope(scope, text(scope?.supplierId, 160));
+  const normalizedSkc = safeIdentifier(
+    skc,
+    /^[A-Za-z0-9._-]+$/,
+    "SKC",
+  );
+  const result = await pool.query(PLATFORM_IDENTITY_LOOKUP_SQL, [
+    normalizedScope.tenantId,
+    normalizedScope.storeId,
+    normalizedSkc,
+  ]);
+  const identities = (result.rows || [])
+    .map((row) => normalizeDocumentStateIdentity({
+      spuName: row.spu_name,
+      version: row.version,
+    }, { optional: true }))
+    .filter(Boolean);
+  const unique = Array.from(
+    new Map(identities.map((identity) => [
+      `${identity.version}\u0000${identity.spuName}`,
+      identity,
+    ])).values(),
+  );
+  if (unique.length > 1) {
+    const error = new Error("SKC 对应的 SHEIN SPU/version 不唯一，已安全阻断回读");
+    error.code = "ERP07_EVIDENCE_PLATFORM_IDENTITY_AMBIGUOUS";
+    throw error;
+  }
+  return unique[0] || null;
+}
+
 export async function runErp07ReadOnlyEvidence({
   supplierId,
   skc,
   apiBaseUrl,
+  documentStateIdentity = null,
   resolveAuthorization,
   request = defaultRequestShein,
   now = () => new Date(),
@@ -313,6 +410,10 @@ export async function runErp07ReadOnlyEvidence({
     await resolveAuthorization(normalizedSupplierId),
     normalizedSupplierId,
   );
+  const normalizedDocumentStateIdentity = normalizeDocumentStateIdentity(
+    documentStateIdentity || authorization.documentStateIdentity,
+    { optional: true },
+  );
   const adapter = new Erp07SheinAdapter({
     apiBaseUrl: normalizedApiBaseUrl,
     resolveCredentials: async () => authorization.credentials,
@@ -325,10 +426,26 @@ export async function runErp07ReadOnlyEvidence({
   const endpoints = [];
 
   for (const definition of EVIDENCE_ENDPOINTS) {
+    if (definition.endpoint === "review.document_state" &&
+        !normalizedDocumentStateIdentity) {
+      endpoints.push(safeEndpointResult(definition, {
+        outcome: "input_required",
+        retryClass: "terminal",
+        diagnostics: {
+          status: null,
+          code: "ERP07_EVIDENCE_PLATFORM_IDENTITY_REQUIRED",
+          traceId: null,
+        },
+      }));
+      continue;
+    }
     const traceId = `erp07-evidence-${definition.sourceKey}-${Date.parse(observedAt)}`;
     const result = await adapter.execute({
       endpoint: definition.endpoint,
-      body: definition.body({ skc: normalizedSkc }),
+      body: definition.body({
+        skc: normalizedSkc,
+        documentStateIdentity: normalizedDocumentStateIdentity,
+      }),
       scope: authorization.scope,
       traceId,
       sendBoundary: "before_send",
@@ -353,6 +470,13 @@ export async function runErp07ReadOnlyEvidence({
     target: Object.freeze({
       supplierIdDigestSha256: sha256(normalizedSupplierId),
       skcDigestSha256: sha256(normalizedSkc),
+      ...(normalizedDocumentStateIdentity
+        ? {
+            documentStateIdentityDigestSha256: sha256(JSON.stringify(
+              normalizedDocumentStateIdentity,
+            )),
+          }
+        : {}),
     }),
     observedAt,
     endpoints: Object.freeze(endpoints),
@@ -369,6 +493,10 @@ function requiredEnvironment(env) {
   return {
     supplierId: env.ERP07_EVIDENCE_SUPPLIER_ID,
     skc: env.ERP07_EVIDENCE_SKC,
+    documentStateIdentity: normalizeDocumentStateIdentity({
+      spuName: env.ERP07_EVIDENCE_SPU_NAME,
+      version: env.ERP07_EVIDENCE_VERSION,
+    }, { optional: true }),
   };
 }
 
@@ -405,13 +533,21 @@ export async function runErp07ReadOnlyEvidenceCli({
     const result = await runErp07ReadOnlyEvidence({
       ...target,
       apiBaseUrl,
-      resolveAuthorization: (supplierId) =>
-        resolveAuthorizedStoreFromDatabase({
+      resolveAuthorization: async (supplierId) => {
+        const authorization = await resolveAuthorizedStoreFromDatabase({
           pool,
           cipher,
           supplierId,
           apiBaseUrl,
-        }),
+        });
+        if (target.documentStateIdentity) return authorization;
+        const identity = await resolvePlatformIdentityFromDatabase({
+          pool,
+          scope: authorization.scope,
+          skc: target.skc,
+        });
+        return { ...authorization, documentStateIdentity: identity };
+      },
     });
     logger.log(JSON.stringify(result, null, 2));
     return result;
