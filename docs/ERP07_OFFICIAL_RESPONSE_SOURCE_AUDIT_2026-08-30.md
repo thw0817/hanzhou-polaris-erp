@@ -8,7 +8,7 @@
 | ERP-07 endpoint | 官方页面 | 页面更新时间 | 本次确认的响应字段 |
 | --- | --- | --- | --- |
 | `preflight.publish_permission` | <https://open.sheincorp.com/zh/documents/apidoc/detail/3001589-1000001> | 2026-02-06 18:06:06 | `code`、`msg`、`traceId`、`info.canPublishProduct`、`info.reason` |
-| `preflight.publish_quota` | <https://open.sheincorp.com/documents/apidoc/detail/3001544-1000001> | 2026-01-12 10:19:43 | `code`、`msg`、`traceId`、`info.need`、`info.total_quota_count`、`info.on_shelf_count`、`info.remain_count` |
+| `preflight.publish_quota` | <https://open.sheincorp.com/documents/apidoc/detail/3001680> | 2026-08-10 14:59:29 | `code`、`msg`、`traceId`、`info.isControlled`、`info.totalQuota`、`info.availableQuota`、`info.usedCount` |
 | `preflight.supplier_sku_duplicate` | <https://open.sheincorp.com/zh/documents/apidoc/detail/3001437> | 2025-10-22 20:45:14 | `code`、`msg`、`traceId`、`info[].supplierSku`、`info[].repeated` |
 | `pricing.proof_upload` | <https://open.sheincorp.com/zh/documents/apidoc/detail/3001728> | 2026-05-22 11:58:16 | `code`、`msg`、`traceId`、`info.objectKey`、`info.url`、`bbl` |
 
@@ -19,7 +19,7 @@
 - `preflight.publish_permission`：官方文档将 `brandCode` 定义为可选查询参数；预检链路现在会在调用方提供时向 SHEIN 转发，并把查询参数纳入签名路径。未提供时保持原来的无查询参数请求。
 - `preflight.supplier_sku_duplicate`：官方文档规定 `supplierSkuList` 单次最多 200 个；schema 与分批调用均统一为 200，补充了 200/201 项边界回归测试。
 - `preflight.publish_permission` 的 `info.reason`：官方成功示例返回 `null`，schema 现在接受 `string|null`，避免把合法成功响应误判为格式错误。
-- `preflight.publish_quota`：官方页面确认额度接口是 `POST /open-api/goods/query-shelf-quota`，`info.need=false` 表示不受额度管控；受管控时以 `info.remain_count` 作为可用额度，并以 `total_quota_count`、`on_shelf_count` 保留总量和已上架量。旧的 `/open-api/goods-publish-quotas/detail` 不再作为 ERP-07 活动契约。
+- `preflight.publish_quota`：根据官方商家发品额度页面，接口是 `POST /open-api/goods-publish-quotas/detail`，`info.isControlled=false` 表示不受发品额度管控；受管控时以 `info.availableQuota` 作为可用额度，并以 `totalQuota`、`usedCount` 保留总量和已发品数。店铺上架额度接口不属于当前发布流程。
 
 这些修正只改变请求契约的准确性，不会打开 ERP-07 远端读取开关，也不代表已完成授权店铺实读。
 
@@ -30,11 +30,10 @@
 - `sales.sku`
 - `review.document_state`
 
-本次隔离只读重跑还发现：官方额度接口 `/open-api/goods/query-shelf-quota` 返回 HTTP `403`、上游码
-`openapi00003`。这不是旧路径证据，也不能解释为额度为零；当前只记录为店铺/应用能力待确认，发布额度保持未知。
-COS 的对象存储授权与 SHEIN Open API 的接口授权是两套权限，不能用 COS 策略解决该 403。
-
-此前审计中记录的 `/open-api/goods-publish-quotas/detail` 没有可确认的独立官方响应字段；本次已将活动契约校正为官方 `/open-api/goods/query-shelf-quota`，两者不再视为同一接口。
+此前隔离只读重跑请求了店铺上架额度接口并得到 HTTP `403`、上游码 `openapi00003`。这不是商家发品额度结果，
+不能解释为发品额度为零；该店铺上架额度能力现已从 ERP-07 和发布预检中移除。当前商家发品额度继续按官方
+`/open-api/goods-publish-quotas/detail` 单独核验。COS 的对象存储授权与 SHEIN Open API 的接口授权是两套权限，
+不能用 COS 策略解决 SHEIN 接口授权问题。
 
 ## 结论
 

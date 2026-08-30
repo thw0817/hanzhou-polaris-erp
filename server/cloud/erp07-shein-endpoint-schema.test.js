@@ -88,18 +88,18 @@ test("official response sources stay on the SHEIN Open API host", () => {
 test("publish quota is pinned to the verified official SHEIN endpoint contract", () => {
   const schema = getErp07EndpointSchema("preflight.publish_quota");
 
-  assert.equal(schema.path, "/open-api/goods/query-shelf-quota");
+  assert.equal(schema.path, "/open-api/goods-publish-quotas/detail");
   assert.deepEqual(schema.source.officialSourceUrls, [
-    "https://open.sheincorp.com/documents/apidoc/detail/3001544-1000001",
+    "https://open.sheincorp.com/documents/apidoc/detail/3001680",
   ]);
   assert.deepEqual(schema.source.responseEvidence.fields, [
     "code",
     "msg",
     "traceId",
-    "info.need",
-    "info.total_quota_count",
-    "info.on_shelf_count",
-    "info.remain_count",
+    "info.isControlled",
+    "info.totalQuota",
+    "info.availableQuota",
+    "info.usedCount",
   ]);
   assert.equal(schema.source.responseEvidence.status, "official_response_contract");
 });
@@ -328,7 +328,7 @@ test("source-pending endpoints expose honest response evidence and reject malfor
   assert.throws(
     () => validateErp07EndpointPayload({
       endpoint: "preflight.publish_quota",
-      payload: { code: "0", info: { need: true, remain_count: {} } },
+      payload: { code: "0", info: { isControlled: true, availableQuota: {} } },
     }),
     /类型不符合 schema/,
   );
@@ -339,20 +339,13 @@ test("source-pending endpoints expose honest response evidence and reject malfor
       msg: "OK",
       traceId: "quota-fixture",
       info: {
-        need: true,
-        total_quota_count: 2000,
-        on_shelf_count: 37,
-        remain_count: 1963,
+        isControlled: true,
+        totalQuota: 2000,
+        usedCount: 37,
+        availableQuota: 1963,
       },
     },
   }).valid, true);
-  assert.throws(
-    () => validateErp07EndpointPayload({
-      endpoint: "preflight.publish_quota",
-      payload: { code: "0", info: { availableLimit: 3 } },
-    }),
-    /缺少必填字段/,
-  );
   assert.throws(
     () => validateErp07EndpointPayload({
       endpoint: "preflight.supplier_sku_duplicate",
@@ -453,10 +446,10 @@ test("source-pending response fields carry field-level provenance and cannot cla
         "code",
         "msg",
         "traceId",
-        "info.need",
-        "info.total_quota_count",
-        "info.on_shelf_count",
-        "info.remain_count",
+        "info.isControlled",
+        "info.totalQuota",
+        "info.availableQuota",
+        "info.usedCount",
       ],
       sourceFiles: ["docs/ERP07_OFFICIAL_RESPONSE_SOURCE_AUDIT_2026-08-30.md"],
       status: "official_response_field",

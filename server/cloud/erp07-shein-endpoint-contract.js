@@ -135,7 +135,7 @@ const CONTRACTS = [
   contract({
     id: "preflight.publish_quota",
     title: "发品额度",
-    path: "/open-api/goods/query-shelf-quota",
+    path: "/open-api/goods-publish-quotas/detail",
     owner: "server/cloud/product-remote-preflight.js",
   }),
   contract({

@@ -1544,7 +1544,7 @@ export function createWebDemoServer() {
           "演示环境未连接真实SHEIN店铺，远程预检不可用",
         ],
         permission: { canPublishProduct: null, reason: "演示环境未连接真实店铺" },
-        shelfQuota: { availableLimit: null },
+        publishQuota: { availableQuota: null, availability: "unavailable" },
         supplierSkuCheck: {
           requestedCount: supplierSkuList.length,
           checkedCount: 0,

@@ -92,7 +92,7 @@
 | 发布字段规范 | `/open-api/goods/query-publish-fill-in-standard` | 读 | 代码测试 | rule snapshot/preflight owner | 服务端预检与编辑器同一 schema |
 | 属性关联规则 | `/open-api/goods/get-associated-attribute-rules` | 读 | 代码测试 | product preflight owner | 关联规则动态执行；禁止前端硬编码 |
 | 发品权限 | `/open-api/goods/product/check-publish-permission` | 读 | 代码测试 | `server/cloud/product-remote-preflight.js` | 每次真实发布前核验 |
-| 发品额度 | `/open-api/goods/query-shelf-quota` | 读 | SHEIN 官方文档 3001544-1000001、代码测试 | product preflight | `need=false` 表示不受管控；受管控时读取 `remain_count`，旧内部路径不作为活动契约 |
+| 发品额度 | `/open-api/goods-publish-quotas/detail` | 读 | SHEIN 官方文档 3001680（2026-08-10）、代码测试 | product preflight | `isControlled=false` 表示不受发品额度管控；受管控时读取 `availableQuota`，不检查店铺上架额度 |
 | SKU 查重 | `/open-api/goods/product/check-supplierSku-repeated` | 读 | 代码测试 | product preflight | 冻结 payload 前核验，保存逐 SKU 结果 |
 | 商品图片上传 | `/open-api/goods/upload-pic` | 文件写 | 有真实直传记录 | `server/shein-upload.js`、media service | 仅白名单、短时 URL；发布 payload 只使用 SHEIN URL |
 | 新增/编辑商品 | `/open-api/goods/product/publishOrEdit` | 业务写 | Adapter/契约存在，生产状态需复核 | publish command/outbox/worker/executor | 单一写 owner、一次性授权、发送边界、写后回读；禁止伪发布 |

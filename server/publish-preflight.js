@@ -1,6 +1,6 @@
 const PUBLISH_PERMISSION_PATH =
   "/open-api/goods/product/check-publish-permission";
-const SHELF_QUOTA_PATH = "/open-api/goods/query-shelf-quota";
+const PUBLISH_QUOTA_PATH = "/open-api/goods-publish-quotas/detail";
 const SUPPLIER_SKU_REPEATED_PATH =
   "/open-api/goods/product/check-supplierSku-repeated";
 const SUPPLIER_SKU_BATCH_SIZE = 200;
@@ -21,42 +21,29 @@ function getPublishPermission(info = {}) {
   return info.canPublishProduct ?? info.can_publish_product ?? null;
 }
 
-function normalizeShelfQuota(info = {}) {
-  if (info.need === false) {
+function normalizePublishQuota(info = {}) {
+  if (info.isControlled === false) {
     return {
       isControlled: false,
       availability: "unlimited",
       availableQuota: null,
-      availableLimit: null,
       totalQuota: null,
       usedCount: null,
     };
   }
-  const rawValue = info.remain_count;
+  const rawValue = info.availableQuota;
   const value = Number(rawValue);
-  const totalQuota = Number(info.total_quota_count);
-  const usedCount = Number(info.on_shelf_count);
+  const totalQuota = Number(info.totalQuota);
+  const usedCount = Number(info.usedCount);
   return {
-    isControlled: info.need === true ? true : null,
-    availability: info.need === true && Number.isFinite(value)
+    isControlled: info.isControlled === true ? true : null,
+    availability: info.isControlled === true && Number.isFinite(value)
       ? "available"
       : "unavailable",
-    availableQuota: info.need === true && Number.isFinite(value) ? value : null,
-    availableLimit: info.need === true && Number.isFinite(value) ? value : null,
+    availableQuota: info.isControlled === true && Number.isFinite(value) ? value : null,
     totalQuota: Number.isFinite(totalQuota) ? totalQuota : null,
     usedCount: Number.isFinite(usedCount) ? usedCount : null,
   };
-}
-
-function isShelfQuotaPermissionError(error) {
-  const message = [
-    error?.message,
-    error?.response?.msg,
-    error?.response?.message,
-  ]
-    .filter(Boolean)
-    .join(" ");
-  return /没有该接口访问权限|接口访问权限|无权访问|权限不足/.test(message);
 }
 
 function chunk(values, size) {
@@ -94,20 +81,19 @@ export async function runPublishPreflight({
   };
   const permissionResult = await request(permissionRequest);
   let quotaResult;
-  let shelfQuotaUnavailableReason = "";
+  let publishQuotaUnavailableReason = "";
   try {
     quotaResult = await request({
       method: "POST",
-      path: SHELF_QUOTA_PATH,
+      path: PUBLISH_QUOTA_PATH,
       body: {},
     });
   } catch (error) {
-    if (!isShelfQuotaPermissionError(error)) throw error;
-    shelfQuotaUnavailableReason =
-      error?.message || "当前应用未开通SHEIN上架额度查询权限";
+    publishQuotaUnavailableReason = error?.message || "无法读取SHEIN商家发品额度";
     quotaResult = {
-      payload: { code: "SHELF_QUOTA_PERMISSION_UNAVAILABLE", info: {} },
+      payload: { code: error?.code || "PUBLISH_QUOTA_UNAVAILABLE", info: {} },
       diagnostics: {
+        code: error?.code || null,
         traceId: error?.traceId || null,
         status: error?.status || null,
       },
@@ -127,9 +113,9 @@ export async function runPublishPreflight({
   const permissionInfo = permissionResult.payload?.info || {};
   const quotaInfo = quotaResult.payload?.info || {};
   const canPublishProduct = getPublishPermission(permissionInfo);
-  const shelfQuota = normalizeShelfQuota(quotaInfo);
-  const shelfQuotaUnavailable =
-    shelfQuotaUnavailableReason || shelfQuota.availability === "unavailable";
+  const publishQuota = normalizePublishQuota(quotaInfo);
+  const publishQuotaUnavailable =
+    publishQuotaUnavailableReason || publishQuota.availability === "unavailable";
   const skuResults = repeatedResults.flatMap((result) =>
     Array.isArray(result.payload?.info)
       ? result.payload.info.map((item) => ({
@@ -152,16 +138,16 @@ export async function runPublishPreflight({
           : "SHEIN未返回明确的可发品权限"),
     );
   }
-  if (shelfQuotaUnavailable) {
-    warnings.push(
-      `未读取SHEIN上架额度：${shelfQuotaUnavailableReason}；真实发布时由SHEIN最终校验额度`,
+  if (publishQuotaUnavailable) {
+    blockers.push(
+      `未读取SHEIN商家发品额度：${publishQuotaUnavailableReason || "SHEIN未返回明确的商家可用发品额度"}`,
     );
-  } else if (shelfQuota.availability === "unlimited") {
-    // The new quota API explicitly says this merchant is not quota-controlled.
-  } else if (shelfQuota.availableQuota === null) {
-    blockers.push("SHEIN未返回明确的店铺可用发品额度");
-  } else if (shelfQuota.availableQuota <= 0) {
-    blockers.push("当前店铺没有可用上架额度");
+  } else if (publishQuota.availability === "unlimited") {
+    // SHEIN explicitly says this merchant is not controlled by publish quota.
+  } else if (publishQuota.availableQuota === null) {
+    blockers.push("SHEIN未返回明确的商家可用发品额度");
+  } else if (publishQuota.availableQuota <= 0) {
+    blockers.push("当前商家没有可用发品额度");
   }
   if (skuResults.length !== normalizedSkuList.length) {
     blockers.push("SHEIN返回的商家SKU校验数量与请求数量不一致");
@@ -179,10 +165,10 @@ export async function runPublishPreflight({
       reason: permissionInfo.reason || "",
       diagnostics: permissionResult.diagnostics,
     },
-    shelfQuota: {
-      ...shelfQuota,
-      availability: shelfQuotaUnavailable ? "unavailable" : shelfQuota.availability,
-      reason: shelfQuotaUnavailableReason,
+    publishQuota: {
+      ...publishQuota,
+      availability: publishQuotaUnavailable ? "unavailable" : publishQuota.availability,
+      reason: publishQuotaUnavailableReason,
       diagnostics: quotaResult.diagnostics,
     },
     supplierSkuCheck: {
@@ -197,6 +183,6 @@ export async function runPublishPreflight({
 
 export const PUBLISH_PREFLIGHT_PATHS = Object.freeze({
   permission: PUBLISH_PERMISSION_PATH,
-  shelfQuota: SHELF_QUOTA_PATH,
+  publishQuota: PUBLISH_QUOTA_PATH,
   supplierSkuRepeated: SUPPLIER_SKU_REPEATED_PATH,
 });

@@ -31,7 +31,7 @@ function publishCandidate() {
     audit: { categoryId: "3155" },
     remoteChecks: [
       "check-publish-permission",
-      "goods/query-shelf-quota",
+      "goods-publish-quotas/detail",
       "check-supplierSku-repeated",
     ],
     blockers: [],
@@ -396,7 +396,7 @@ test("direct publish performs the real read-only preflight and blocks exhausted 
         passed: false,
         blockers: ["当前店铺没有可用上架额度"],
         permission: { canPublishProduct: true },
-        shelfQuota: { availability: "available", availableLimit: 0 },
+        publishQuota: { availability: "available", availableQuota: 0 },
         supplierSkuCheck: { requestedCount: 2, checkedCount: 2, results: [] },
       };
     },
@@ -420,7 +420,7 @@ test("direct publish performs the real read-only preflight and blocks exhausted 
 
   assert.deepEqual(preflightInput.supplierSkuList, ["RUG-40X60", "RUG-50X80"]);
   assert.equal(prepareCalled, false);
-  assert.equal(recorded.result.shelfQuota.availableLimit, 0);
+  assert.equal(recorded.result.publishQuota.availableQuota, 0);
   assert.equal(recorded.result.directPublish, true);
   assert.equal(result.batch.state, "failed");
 });
@@ -763,7 +763,7 @@ test("preflights all multi-size SKUs and records per-draft readiness", async () 
         passed: true,
         blockers: [],
         permission: { canPublishProduct: true, reason: "" },
-        shelfQuota: { availableLimit: 5 },
+        publishQuota: { availableQuota: 5 },
         supplierSkuCheck: { repeatedSkus: [] },
       };
     },
@@ -831,7 +831,7 @@ test("passes the previous remote candidate into a refreshed batch preflight", as
         passed: true,
         blockers: [],
         permission: { canPublishProduct: true },
-        shelfQuota: { availableLimit: 8 },
+        publishQuota: { availableQuota: 8 },
         supplierSkuCheck: {
           results: [
             { supplierSku: "RUG-40X60", repeated: false },

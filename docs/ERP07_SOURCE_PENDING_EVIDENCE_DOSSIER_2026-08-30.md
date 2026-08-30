@@ -14,7 +14,7 @@
 | endpoint | 方法 | 固定路径 | 当前字段证据状态 | 目录升级 |
 | --- | --- | --- | --- | --- |
 | `sales.sku` | `POST` | `/open-api/goods/query-sku-sales` | `internal_consumer_contract` | 禁止 |
-| `preflight.publish_quota` | `POST` | `/open-api/goods/query-shelf-quota` | `official_response_contract` | 需新路径授权只读回执 |
+| `preflight.publish_quota` | `POST` | `/open-api/goods-publish-quotas/detail` | `official_response_contract` | 需当前商家发品额度授权只读回执 |
 | `review.document_state` | `POST` | `/open-api/goods/query-document-state` | `internal_consumer_contract` | 禁止 |
 
 ## 审阅规则
@@ -96,13 +96,11 @@ runner 返回 `input_required`/依赖失败诊断。这是为避免把 SKC 当 S
 
 同一轮 `review.document_state` 也返回成功，真实包装仍为 `info.data[].skcList[]`；提交 `017f10b` 中的旧
 source-pending 字段目录因此显示 `0/8`，本地后续修复已将它对齐为 7 个实际嵌套路径，但尚未把它升级为官方字段
-契约。额度读取已经改为官方 `POST /open-api/goods/query-shelf-quota`，但该店铺返回 HTTP `403`、上游码
-`openapi00003`，所以没有形成额度成功回执；这更像是该 SHEIN 授权/应用对“获取店铺上架额度”能力未开放，不能
-通过重试或 COS 权限修复。以上均为脱敏结构和状态证据，不代表商品通过/驳回，不写数据库，不触碰生产，也不解除
+契约。此前隔离重跑请求了店铺上架额度接口并返回 HTTP `403`、上游码 `openapi00003`；该接口不属于当前发布流程，
+现已从 ERP-07 runner、发布预检和候选检查中移除。当前流程改为读取官方 `POST /open-api/goods-publish-quotas/detail`
+的商家发品额度，使用 `isControlled`、`totalQuota`、`availableQuota`、`usedCount`；缺少权限或额度字段时保持未知并
+fail closed，不能伪造额度或放行发布。以上均为脱敏结构和状态证据，不代表商品通过/驳回，不写数据库，不触碰生产，也不解除
 `blocked_source_pending`。
-
-后续分两条线处理：先在 SHEIN Open Platform 检查并补齐当前应用/店铺的“获取店铺上架额度”只读能力；权限变化后，
-在隔离 checkout 重跑同一 runner。额度仍不可读时，系统必须保持额度未知并 fail closed，不能伪造额度或放行发布。
 
 ## 结论
 

@@ -296,12 +296,11 @@ const PUBLISH_PERMISSION_RESPONSE_INFO = field("object", {
 });
 
 const PUBLISH_QUOTA_RESPONSE_INFO = field("object", {
-  required: ["need"],
   fields: {
-    need: field("boolean"),
-    total_quota_count: field("integer"),
-    on_shelf_count: field("integer"),
-    remain_count: field("integer"),
+    isControlled: field("boolean"),
+    totalQuota: field(["integer", "null"]),
+    availableQuota: field(["integer", "null"]),
+    usedCount: field(["integer", "null"]),
   },
   additionalProperties: "preserve",
 });
@@ -565,13 +564,13 @@ const SCHEMAS = {
   "preflight.publish_quota": {
     mode: "read",
     method: "POST",
-    path: "/open-api/goods/query-shelf-quota",
+    path: "/open-api/goods-publish-quotas/detail",
     schemaStatus: "fixture_ready_official_response",
     source: source({
       files: [CAPABILITY_MATRIX, OFFICIAL_RESPONSE_SOURCE_AUDIT],
-      officialUpdatedAt: "2026-01-12 10:19:43",
+      officialUpdatedAt: "2026-08-10 14:59:29",
       officialSourceUrls: [
-        "https://open.sheincorp.com/documents/apidoc/detail/3001544-1000001",
+        "https://open.sheincorp.com/documents/apidoc/detail/3001680",
       ],
       evidenceStatus: "official_request_and_response_fields_code_tested",
       responseEvidence: {
@@ -580,10 +579,10 @@ const SCHEMAS = {
           "code",
           "msg",
           "traceId",
-          "info.need",
-          "info.total_quota_count",
-          "info.on_shelf_count",
-          "info.remain_count",
+          "info.isControlled",
+          "info.totalQuota",
+          "info.availableQuota",
+          "info.usedCount",
         ],
         sourceFiles: [OFFICIAL_RESPONSE_SOURCE_AUDIT],
       },
@@ -592,10 +591,10 @@ const SCHEMAS = {
     request: { type: "object", fields: {}, additionalProperties: "fail" },
     response: envelope(PUBLISH_QUOTA_RESPONSE_INFO),
     fixtures: readFixtures({
-      need: true,
-      total_quota_count: 3,
-      on_shelf_count: 0,
-      remain_count: 3,
+      isControlled: true,
+      totalQuota: 3,
+      availableQuota: 3,
+      usedCount: 0,
     }),
   },
   "preflight.supplier_sku_duplicate": {

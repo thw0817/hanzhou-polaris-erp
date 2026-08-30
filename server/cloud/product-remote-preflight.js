@@ -3,7 +3,7 @@ import { verifyProductPublishCandidate } from "./product-publish-candidate.js";
 
 const ENDPOINTS = Object.freeze({
   permission: "/open-api/goods/product/check-publish-permission",
-  shelfQuota: "/open-api/goods/query-shelf-quota",
+  publishQuota: "/open-api/goods-publish-quotas/detail",
   supplierSkuRepeated:
     "/open-api/goods/product/check-supplierSku-repeated",
   uploadPic: "/open-api/goods/upload-pic",
@@ -230,7 +230,7 @@ export async function runProductRemotePreflight({
 
   const preflight = object(publishPreflight);
   const permission = object(preflight.permission);
-  const shelfQuota = object(preflight.shelfQuota);
+  const publishQuota = object(preflight.publishQuota);
   const supplierSkuCheck = object(preflight.supplierSkuCheck);
   const supplierSkus = candidateSupplierSkus(source);
   const skuResults = Array.isArray(supplierSkuCheck.results)
@@ -245,9 +245,9 @@ export async function runProductRemotePreflight({
   const uncheckedSkus = supplierSkus.filter(
     (supplierSku) => !resultBySku.has(supplierSku),
   );
-  const availableLimit = Number(shelfQuota.availableLimit);
-  const shelfQuotaUnavailable = shelfQuota.availability === "unavailable";
-  const shelfQuotaUnlimited = shelfQuota.availability === "unlimited";
+  const availableQuota = Number(publishQuota.availableQuota);
+  const publishQuotaUnavailable = publishQuota.availability === "unavailable";
+  const publishQuotaUnlimited = publishQuota.availability === "unlimited";
 
   if (permission.canPublishProduct !== true) {
     blockers.push({
@@ -255,18 +255,17 @@ export async function runProductRemotePreflight({
       message: text(permission.reason) || "当前店铺不允许发布商品",
     });
   }
-  if (shelfQuotaUnavailable || shelfQuotaUnlimited) {
-    // SHEIN may expose publish permission while restricting the separate
-    // quota endpoint. The publish API remains the final quota authority.
-  } else if (!Number.isFinite(availableLimit)) {
+  if (publishQuotaUnlimited) {
+    // SHEIN explicitly says this merchant is not controlled by publish quota.
+  } else if (publishQuotaUnavailable || !Number.isFinite(availableQuota)) {
     blockers.push({
-      code: "SHELF_QUOTA_UNAVAILABLE",
-      message: "SHEIN未返回明确的店铺可用上架额度",
+      code: "PUBLISH_QUOTA_UNAVAILABLE",
+      message: "SHEIN未返回明确的商家可用发品额度",
     });
-  } else if (availableLimit <= 0) {
+  } else if (availableQuota <= 0) {
     blockers.push({
-      code: "SHELF_QUOTA_EXHAUSTED",
-      message: "当前店铺没有可用上架额度",
+      code: "PUBLISH_QUOTA_EXHAUSTED",
+      message: "当前商家没有可用发品额度",
     });
   }
   if (uncheckedSkus.length) {
@@ -288,23 +287,23 @@ export async function runProductRemotePreflight({
       state: permission.canPublishProduct === true ? "passed" : "blocked",
       traceId: traceId(permission.diagnostics),
     },
-    shelfQuota: {
-      endpoint: ENDPOINTS.shelfQuota,
-      state: shelfQuotaUnavailable
+    publishQuota: {
+      endpoint: ENDPOINTS.publishQuota,
+      state: publishQuotaUnavailable
         ? "unavailable"
-        : shelfQuotaUnlimited
+        : publishQuotaUnlimited
         ? "unlimited"
-        : Number.isFinite(availableLimit) && availableLimit > 0
+        : Number.isFinite(availableQuota) && availableQuota > 0
         ? "passed"
         : "blocked",
-      availableLimit: Number.isFinite(availableLimit) ? availableLimit : null,
-      availability: shelfQuotaUnavailable
+      availableQuota: Number.isFinite(availableQuota) ? availableQuota : null,
+      availability: publishQuotaUnavailable
         ? "unavailable"
-        : shelfQuotaUnlimited
+        : publishQuotaUnlimited
         ? "unlimited"
         : "available",
-      reason: text(shelfQuota.reason, 500),
-      traceId: traceId(shelfQuota.diagnostics),
+      reason: text(publishQuota.reason, 500),
+      traceId: traceId(publishQuota.diagnostics),
     },
     supplierSkuRepeated: {
       endpoint: ENDPOINTS.supplierSkuRepeated,

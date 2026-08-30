@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 const PRODUCT_ATTRIBUTE_MODES = new Set([0, 1, 3, 4]);
 const REMOTE_CHECKS = [
   "check-publish-permission",
-  "goods/query-shelf-quota",
+  "goods-publish-quotas/detail",
   "check-supplierSku-repeated",
   "upload-pic",
   "transform-pic",

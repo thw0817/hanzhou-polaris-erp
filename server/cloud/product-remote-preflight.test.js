@@ -65,7 +65,7 @@ function candidate(overrides = {}) {
     audit: { categoryId: "3155" },
     remoteChecks: [
       "check-publish-permission",
-      "goods/query-shelf-quota",
+      "goods-publish-quotas/detail",
       "check-supplierSku-repeated",
       "upload-pic",
       "transform-pic",
@@ -86,8 +86,8 @@ function passedPreflight(overrides = {}) {
       reason: "",
       diagnostics: { traceId: "permission-trace" },
     },
-    shelfQuota: {
-      availableLimit: 9,
+    publishQuota: {
+      availableQuota: 9,
       diagnostics: { traceId: "quota-trace" },
     },
     supplierSkuCheck: {
@@ -164,8 +164,8 @@ test("reuses verified SHEIN image uploads while refreshing every remote check", 
   const second = await runProductRemotePreflight({
     candidate: source,
     publishPreflight: passedPreflight({
-      shelfQuota: {
-        availableLimit: 8,
+      publishQuota: {
+        availableQuota: 8,
         diagnostics: { traceId: "fresh-quota-trace" },
       },
     }),
@@ -180,8 +180,8 @@ test("reuses verified SHEIN image uploads while refreshing every remote check", 
   assert.equal(repeatedUpload, false);
   assert.equal(second.state, "ready_for_publish_confirmation");
   assert.equal(second.checkedAt, "2026-08-05T08:05:00.000Z");
-  assert.equal(second.checks.shelfQuota.availableLimit, 8);
-  assert.equal(second.checks.shelfQuota.traceId, "fresh-quota-trace");
+  assert.equal(second.checks.publishQuota.availableQuota, 8);
+  assert.equal(second.checks.publishQuota.traceId, "fresh-quota-trace");
   assert.equal(second.checks.uploadPic.uploadedCount, 0);
   assert.equal(second.checks.uploadPic.reusedCount, 5);
   assert.equal(verifyProductRemotePublishCandidate(second), true);
@@ -251,7 +251,7 @@ test("rejects a forged candidate before any remote image action", async () => {
   );
 });
 
-test("does not upload images when permission, quota or SKU checks are blocked", async () => {
+test("does not upload images when permission, publish quota or SKU checks are blocked", async () => {
   let called = false;
   const result = await runProductRemotePreflight({
     candidate: candidate(),
@@ -261,7 +261,7 @@ test("does not upload images when permission, quota or SKU checks are blocked", 
         reason: "店铺当前不可发品",
         diagnostics: {},
       },
-      shelfQuota: { availableLimit: 0, diagnostics: {} },
+      publishQuota: { availableQuota: 0, diagnostics: {} },
       supplierSkuCheck: {
         results: [
           { supplierSku: "RUG-001-40X60", repeated: true },
@@ -280,19 +280,19 @@ test("does not upload images when permission, quota or SKU checks are blocked", 
     result.blockers.map((blocker) => blocker.code),
     [
       "PUBLISH_PERMISSION_DENIED",
-      "SHELF_QUOTA_EXHAUSTED",
+      "PUBLISH_QUOTA_EXHAUSTED",
       "SUPPLIER_SKU_CHECK_INCOMPLETE",
       "SUPPLIER_SKU_REPEATED",
     ],
   );
 });
 
-test("does not block a publish candidate when quota lookup is unavailable by permission", async () => {
+test("blocks a publish candidate when merchant publish quota lookup is unavailable", async () => {
   const result = await runProductRemotePreflight({
     candidate: candidate({ pendingImageUploads: [] }),
     publishPreflight: passedPreflight({
-      shelfQuota: {
-        availableLimit: null,
+      publishQuota: {
+        availableQuota: null,
         availability: "unavailable",
         reason: "应用没有该接口访问权限",
         diagnostics: { traceId: "quota-denied-trace" },
@@ -300,17 +300,19 @@ test("does not block a publish candidate when quota lookup is unavailable by per
     }),
   });
 
-  assert.equal(result.state, "ready_for_publish_confirmation");
-  assert.equal(result.checks.shelfQuota.state, "unavailable");
-  assert.deepEqual(result.blockers, []);
+  assert.equal(result.state, "blocked");
+  assert.equal(result.checks.publishQuota.state, "unavailable");
+  assert.deepEqual(result.blockers.map((blocker) => blocker.code), [
+    "PUBLISH_QUOTA_UNAVAILABLE",
+  ]);
 });
 
-test("does not block a publish candidate when SHEIN declares quota control disabled", async () => {
+test("does not block a publish candidate when SHEIN declares publish quota control disabled", async () => {
   const result = await runProductRemotePreflight({
     candidate: candidate({ pendingImageUploads: [] }),
     publishPreflight: passedPreflight({
-      shelfQuota: {
-        availableLimit: null,
+      publishQuota: {
+        availableQuota: null,
         availability: "unlimited",
         diagnostics: { traceId: "unlimited-quota-trace" },
       },
@@ -318,6 +320,6 @@ test("does not block a publish candidate when SHEIN declares quota control disab
   });
 
   assert.equal(result.state, "ready_for_publish_confirmation");
-  assert.equal(result.checks.shelfQuota.state, "unlimited");
+  assert.equal(result.checks.publishQuota.state, "unlimited");
   assert.deepEqual(result.blockers, []);
 });

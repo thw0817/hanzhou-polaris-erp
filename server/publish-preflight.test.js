@@ -42,15 +42,15 @@ test("runs documented publish permission and supplier SKU checks", async () => {
           diagnostics: { traceId: "permission-trace" },
         };
       }
-      if (options.path === PUBLISH_PREFLIGHT_PATHS.shelfQuota) {
+      if (options.path === PUBLISH_PREFLIGHT_PATHS.publishQuota) {
         return {
           payload: {
             code: "0",
             info: {
-              need: true,
-              total_quota_count: 12,
-              on_shelf_count: 0,
-              remain_count: 12,
+              isControlled: true,
+              totalQuota: 12,
+              usedCount: 0,
+              availableQuota: 12,
             },
           },
           diagnostics: { traceId: "quota-trace" },
@@ -76,7 +76,7 @@ test("runs documented publish permission and supplier SKU checks", async () => {
     },
     {
       method: "POST",
-      path: "/open-api/goods/query-shelf-quota",
+      path: "/open-api/goods-publish-quotas/detail",
       body: {},
     },
     {
@@ -89,22 +89,22 @@ test("runs documented publish permission and supplier SKU checks", async () => {
   assert.equal(result.supplierSkuCheck.requestedCount, 2);
 });
 
-test("normalizes the official SHEIN shelf quota response", async () => {
+test("normalizes the official SHEIN merchant publish quota response", async () => {
   const result = await runPublishPreflightForSyntheticTest({
     supplierSkuList: [],
     request: async ({ path }) => {
       if (path === PUBLISH_PREFLIGHT_PATHS.permission) {
         return { payload: { code: "0", info: { canPublishProduct: true } }, diagnostics: {} };
       }
-      if (path === PUBLISH_PREFLIGHT_PATHS.shelfQuota) {
+      if (path === PUBLISH_PREFLIGHT_PATHS.publishQuota) {
         return {
           payload: {
             code: "0",
             info: {
-              need: true,
-              total_quota_count: 2000,
-              on_shelf_count: 37,
-              remain_count: 1963,
+              isControlled: true,
+              totalQuota: 2000,
+              usedCount: 37,
+              availableQuota: 1963,
             },
           },
           diagnostics: {},
@@ -115,12 +115,11 @@ test("normalizes the official SHEIN shelf quota response", async () => {
   });
 
   assert.equal(result.passed, true);
-  assert.equal(result.shelfQuota.isControlled, true);
-  assert.equal(result.shelfQuota.availability, "available");
-  assert.equal(result.shelfQuota.availableQuota, 1963);
-  assert.equal(result.shelfQuota.availableLimit, 1963);
-  assert.equal(result.shelfQuota.totalQuota, 2000);
-  assert.equal(result.shelfQuota.usedCount, 37);
+  assert.equal(result.publishQuota.isControlled, true);
+  assert.equal(result.publishQuota.availability, "available");
+  assert.equal(result.publishQuota.availableQuota, 1963);
+  assert.equal(result.publishQuota.totalQuota, 2000);
+  assert.equal(result.publishQuota.usedCount, 37);
 });
 
 test("forwards an optional brand code to the publish permission query", async () => {
@@ -133,7 +132,7 @@ test("forwards an optional brand code to the publish permission query", async ()
       if (options.path === PUBLISH_PREFLIGHT_PATHS.permission) {
         return { payload: { code: "0", info: { canPublishProduct: true } }, diagnostics: {} };
       }
-      return { payload: { code: "0", info: { need: false } }, diagnostics: {} };
+      return { payload: { code: "0", info: { isControlled: false } }, diagnostics: {} };
     },
   });
   assert.deepEqual(calls[0], {
@@ -150,9 +149,9 @@ test("treats an explicitly unlimited SHEIN publish quota as passed", async () =>
       if (path === PUBLISH_PREFLIGHT_PATHS.permission) {
         return { payload: { code: "0", info: { canPublishProduct: true } }, diagnostics: {} };
       }
-      if (path === PUBLISH_PREFLIGHT_PATHS.shelfQuota) {
+      if (path === PUBLISH_PREFLIGHT_PATHS.publishQuota) {
         return {
-          payload: { code: "0", info: { need: false } },
+          payload: { code: "0", info: { isControlled: false } },
           diagnostics: {},
         };
       }
@@ -164,8 +163,8 @@ test("treats an explicitly unlimited SHEIN publish quota as passed", async () =>
   });
 
   assert.equal(result.passed, true);
-  assert.equal(result.shelfQuota.availability, "unlimited");
-  assert.equal(result.shelfQuota.availableQuota, null);
+  assert.equal(result.publishQuota.availability, "unlimited");
+  assert.equal(result.publishQuota.availableQuota, null);
 });
 
 test("allows a publish candidate without merchant SKU values", async () => {
@@ -178,7 +177,7 @@ test("allows a publish candidate without merchant SKU values", async () => {
         return { payload: { code: "0", info: { canPublishProduct: true } }, diagnostics: {} };
       }
       return {
-        payload: { code: "0", info: { need: false } },
+        payload: { code: "0", info: { isControlled: false } },
         diagnostics: {},
       };
     },
@@ -189,7 +188,7 @@ test("allows a publish candidate without merchant SKU values", async () => {
   assert.equal(result.supplierSkuCheck.checkedCount, 0);
   assert.deepEqual(paths, [
     PUBLISH_PREFLIGHT_PATHS.permission,
-    PUBLISH_PREFLIGHT_PATHS.shelfQuota,
+    PUBLISH_PREFLIGHT_PATHS.publishQuota,
   ]);
 });
 
@@ -209,15 +208,15 @@ test("blocks publishing when the store is denied or an SKU is repeated", async (
             diagnostics: {},
           };
       }
-      if (path === PUBLISH_PREFLIGHT_PATHS.shelfQuota) {
+      if (path === PUBLISH_PREFLIGHT_PATHS.publishQuota) {
         return {
           payload: {
             code: "0",
             info: {
-              need: true,
-              total_quota_count: 2000,
-              on_shelf_count: 2000,
-              remain_count: 0,
+              isControlled: true,
+              totalQuota: 2000,
+              usedCount: 2000,
+              availableQuota: 0,
             },
           },
           diagnostics: {},
@@ -237,42 +236,41 @@ test("blocks publishing when the store is denied or an SKU is repeated", async (
   assert.deepEqual(result.supplierSkuCheck.repeatedSkus, ["TAKEN-SKU"]);
   assert.deepEqual(result.blockers, [
     "店铺当前不可发品",
-    "当前店铺没有可用上架额度",
+    "当前商家没有可用发品额度",
     "已有 1 个商家SKU被占用",
   ]);
 });
 
-test("keeps publish preflight usable when the separate quota endpoint is not authorized", async () => {
+test("blocks publish preflight when merchant publish quota cannot be read", async () => {
   const result = await runPublishPreflightForSyntheticTest({
     supplierSkuList: ["RUG-40X60"],
     request: async ({ path }) => {
       if (path === PUBLISH_PREFLIGHT_PATHS.permission) {
         return {
           payload: { code: "0", info: { canPublishProduct: true } },
-          diagnostics: { traceId: "permission-trace" },
+          diagnostics: {},
         };
       }
-      if (path === PUBLISH_PREFLIGHT_PATHS.shelfQuota) {
-        const error = new Error("应用没有该接口访问权限，请检查：/open-api/goods/query-shelf-quota");
-        error.traceId = "quota-denied-trace";
-        error.status = 403;
-        throw error;
+      if (path === PUBLISH_PREFLIGHT_PATHS.supplierSkuRepeated) {
+        return {
+          payload: {
+            code: "0",
+            info: [{ supplierSku: "RUG-40X60", repeated: false }],
+          },
+          diagnostics: {},
+        };
       }
-      return {
-        payload: {
-          code: "0",
-          info: [{ supplierSku: "RUG-40X60", repeated: false }],
-        },
-        diagnostics: { traceId: "sku-trace" },
-      };
+      const error = new Error("应用没有该接口访问权限，请检查：/open-api/goods-publish-quotas/detail");
+      error.traceId = "quota-denied-trace";
+      error.status = 403;
+      throw error;
     },
   });
 
-  assert.equal(result.passed, true);
-  assert.deepEqual(result.blockers, []);
-  assert.equal(result.shelfQuota.availableLimit, null);
-  assert.equal(result.shelfQuota.availability, "unavailable");
-  assert.match(result.warnings[0], /真实发布时由SHEIN最终校验额度/);
+  assert.equal(result.passed, false);
+  assert.equal(result.publishQuota.availability, "unavailable");
+  assert.equal(result.publishQuota.diagnostics.status, 403);
+  assert.match(result.blockers[0], /商家发品额度/);
 });
 
 test("checks more than 200 supplier SKUs in documented 200-item batches", async () => {
@@ -286,15 +284,15 @@ test("checks more than 200 supplier SKUs in documented 200-item batches", async 
           diagnostics: {},
         };
       }
-      if (path === PUBLISH_PREFLIGHT_PATHS.shelfQuota) {
+      if (path === PUBLISH_PREFLIGHT_PATHS.publishQuota) {
         return {
           payload: {
             code: "0",
             info: {
-              need: true,
-              total_quota_count: 2000,
-              on_shelf_count: 1992,
-              remain_count: 8,
+              isControlled: true,
+              totalQuota: 2000,
+              usedCount: 1992,
+              availableQuota: 8,
             },
           },
           diagnostics: {},

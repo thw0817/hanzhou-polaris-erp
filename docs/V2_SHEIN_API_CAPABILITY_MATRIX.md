@@ -70,7 +70,7 @@
 | 能力 | 方法与路径 | 模式 | 类型/限额 | 来源 | 当前状态 | V2 门禁 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 发品权限 | `/open-api/goods/product/check-publish-permission` | 含全托管 | 读 | 发布契约 | 代码测试 | 每次预检必查 |
-| 发品额度 | `/open-api/goods/query-shelf-quota` | 含全托管 | 读 | SHEIN 官方文档 3001544-1000001（2026-01-12） | 官方响应字段已锁定；代码测试 | 每次预检查询，`need=false` 时通过 |
+| 发品额度 | `/open-api/goods-publish-quotas/detail` | 含自运营/全托管/半托管 | 读 | SHEIN 官方文档 3001680（2026-08-10） | 官方响应字段已锁定；代码测试 | 每次预检查询，`isControlled=false` 时通过 |
 | 商家 SKU 查重 | `/open-api/goods/product/check-supplierSku-repeated` | 含全托管 | 读；200 SKU/次 | 发布契约 | 代码测试 | 每次预检必查 |
 | 商品图片上传 | `POST /open-api/goods/upload-pic` | 含全托管 | 非业务写；JPG/PNG，常规 3 MB | `53ae...` 配套文档 | 真实直传实测 | 仅白名单短时代签 |
 | 图片转换 | `/open-api/goods/transform-pic` | 按原文 | 非业务写 | 集成蓝图 | 归档 | 非必要不依赖 |
