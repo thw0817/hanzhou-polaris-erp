@@ -1,6 +1,6 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v39
+版本：2026-08-30-v40
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
 当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性和字段级 provenance 回归，其中 23 项可执行校验、10 项显式阻断；6 项 source-pending 接口的字段仍明确标记为内部消费者契约，官方响应字段和真实授权店铺只读证据尚未捕获；ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
@@ -545,6 +545,7 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 复核确认：SKU 销量、发布权限、发布额度、商家 SKU 查重、单据状态和价格证明上传共 6 项 source-pending 接口，当前仍没有足以支持完整响应字段的官方原文，也没有授权店铺真实只读回执；全部字段保持 `internal_consumer_contract`、`observed=false`，并继续保留 `official_response_fields_not_captured`。
 - Fail-closed 规则：字段缺失、重复、顺序或覆盖范围不一致、非法证据状态、来源格式错误、未捕获字段声称已观测、官方字段原文声称为店铺实测，均阻断 evidence catalog；当前 `authorizedStoreRead` 仍为 `not_observed`。
 - 实际变更：[erp07-shein-endpoint-schema.js](../server/cloud/erp07-shein-endpoint-schema.js)、[erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js)。本轮没有接入线上路由、Worker、生产配置、真实 SHEIN HTTP、生产/现有 staging 数据库、COS、Redis、队列或 migration。
-- 定向字段级回归 `15/15`；项目全量 `npm test` 当前 `1354/1354`。完成本 Run 仍需在干净提交后重跑构建、工具链、密钥扫描、release audit、staging isolation、release manifest 和只读 staging 候选包。
-- 当前状态：`IN_PROGRESS / LOCAL FIELD PROVENANCE HARDENING`。这一步已完成代码与定向回归，尚未把未执行的制品/门禁写成已完成证据。
+- 定向字段级回归 `15/15`；项目全量 `npm test` `1354/1354`；最终文档 revision 后的构建、工具链、密钥扫描、release audit、staging isolation、release manifest 和只读 staging 候选包均已重新验证通过。
+- 制品状态：已生成最终文档 revision 对应的只读 staging 候选包；releaseId、绝对路径和 SHA-256 以本 Run 完成报告为准，未部署。
+- 当前状态：`COMPLETE / LOCAL FIELD PROVENANCE HARDENED`。本 Run 的代码、文档、门禁和候选包验证已完成；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`。
 - 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、现有线上业务路径的受控 adapter 接线、预发 canary/readback、ERP-07 完成门和单独部署批准仍未完成。

@@ -1,6 +1,6 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v55
+版本：2026-08-30-v56
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界和字段级 response evidence 回归，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
@@ -1983,3 +1983,16 @@
 - 环境边界：未解析或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
 - 当前状态：`COMPLETE / RESPONSE EVIDENCE HARDENED`。本 Run 的代码、回归、干净 revision manifest 和候选包验证已完成；ERP-07 整体仍 `IN_PROGRESS`，ERP-06 生产接入仍 `NO-GO`，ERP-08～ERP-23 未开始。
 - 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、统一 adapter 线上接线、预发 canary/readback、ERP-07 完成门和单独部署批准仍未完成。
+
+## 44. ERP-07 字段级 response evidence 来源账本
+
+### RUN-20260830-ERP07-FIELD-PROVENANCE-06
+
+- 类型：ERP-07 第六段本地隔离复核；为全量 33 个 endpoint 的 response evidence 字段补齐 `field/status/sourceFiles/observed`，并把来源状态与授权店铺实测状态分开核验。
+- 复核结论：SKU 销量、发布权限、发布额度、商家 SKU 查重、单据状态和价格证明上传共 6 项 source-pending 接口，当前仍只有本地消费者/测试契约证据；字段全部保持 `internal_consumer_contract`、`observed=false`，继续保留 `official_response_fields_not_captured`，`authorizedStoreRead` 继续为 `not_observed`。
+- Fail-closed：字段缺失、重复、顺序或覆盖范围不一致、非法状态、来源格式错误、未捕获字段声称已观测、官方字段原文冒充店铺实测，均直接阻断 evidence catalog；未凭内部字段推断官方完整响应。
+- 实际变更：[erp07-shein-endpoint-schema.js](../server/cloud/erp07-shein-endpoint-schema.js)、[erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js)。本 Run 未接入线上路由、Worker、生产配置、真实 SHEIN HTTP、生产/现有 staging 数据库、COS、Redis、队列或 migration。
+- 本地验证：字段级定向回归 `15/15`；项目全量 `npm test` `1354/1354`；V2 构建、工具链、密钥扫描、静态 release audit、staging isolation、干净 revision release manifest 和只读 staging 候选包均在最终文档 revision 后重新验证通过。
+- 制品状态：已生成最终文档 revision 对应的只读 staging 候选包；releaseId、绝对路径和 SHA-256 以本 Run 完成报告为准。该制品未部署。
+- 当前状态：`COMPLETE / LOCAL FIELD PROVENANCE HARDENED`。本 Run 完成；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
+- 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、现有线上业务路径的受控 adapter 接线、预发 canary/readback、ERP-07 完成门和单独部署批准仍未完成；本 Run 不得被解释为已上线。
