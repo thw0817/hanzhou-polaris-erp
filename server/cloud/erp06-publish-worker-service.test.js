@@ -154,6 +154,40 @@ test("ERP-06 Worker validates the queue contract, claims one command, and persis
   assert.deepEqual(calls[3][1].result, acceptedResult());
 });
 
+test("Worker passes the frozen job and one-time authorization to adapterFactory", async () => {
+  const captured = {};
+  const { commandRepository, resultRepository } = fakeDependencies();
+  const result = await processErp06PublishJob({
+    job: queueJob(),
+    commandRepository,
+    resultRepository,
+    adapterFactory(input) {
+      captured.factory = input;
+      return {
+        async execute(input) {
+          captured.execute = input;
+          return acceptedResult();
+        },
+      };
+    },
+    executionEnabled: true,
+    authorizesPublishing: true,
+    workerId: "worker-1",
+    claimId,
+  });
+
+  assert.equal(result.outcome, "accepted");
+  assert.deepEqual(captured.factory.job, captured.execute.job);
+  assert.deepEqual(captured.factory.authorization, captured.execute.authorization);
+  assert.equal(captured.factory.job.commandId, commandId);
+  assert.equal(captured.factory.authorization.claimId, claimId);
+  assert.equal(captured.factory.authorization.attemptState, "claimed");
+  assert.equal(captured.factory.authorization.tenantId, tenantId);
+  assert.equal(captured.factory.authorization.storeId, storeId);
+  assert.equal(captured.factory.authorization.publishAttemptId, attemptId);
+  assert.equal(captured.factory.authorization.productVersionId, versionId);
+});
+
 test("disabled or not-sent adapter result is released only in explicit dry-run and never recorded as a platform result", async () => {
   const { calls, commandRepository, resultRepository, adapterFactory } = fakeDependencies({
     adapterResult: {

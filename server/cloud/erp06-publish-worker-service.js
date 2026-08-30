@@ -249,18 +249,32 @@ export async function processErp06PublishJob({
   }
   assertClaimIdentity(claimed, payload, normalizedClaimId);
 
+  const authorization = {
+    executionEnabled: executionEnabled === true,
+    authorizesPublishing: authorizesPublishing === true,
+    attemptState: "claimed",
+    claimId: normalizedClaimId,
+    tenantId: payload.tenantId,
+    storeId: payload.storeId,
+    commandId: payload.commandId,
+    publishAttemptId: payload.publishAttemptId,
+    productVersionId: payload.productVersionId,
+  };
+  const onSendStarted = async (info = {}) => resultRepository.recordSendStarted({
+    tenantId: payload.tenantId,
+    storeId: payload.storeId,
+    commandId: payload.commandId,
+    publishAttemptId: payload.publishAttemptId,
+    claimId: normalizedClaimId,
+    productVersionId: payload.productVersionId,
+    versionFingerprint: payload.versionFingerprint,
+    path: info.path,
+    occurredAt: now(),
+  });
   const adapter = adapterFactory({
-    onSendStarted: async (info = {}) => resultRepository.recordSendStarted({
-      tenantId: payload.tenantId,
-      storeId: payload.storeId,
-      commandId: payload.commandId,
-      publishAttemptId: payload.publishAttemptId,
-      claimId: normalizedClaimId,
-      productVersionId: payload.productVersionId,
-      versionFingerprint: payload.versionFingerprint,
-      path: info.path,
-      occurredAt: now(),
-    }),
+    job: payload,
+    authorization,
+    onSendStarted,
   });
   if (!adapter || typeof adapter.execute !== "function") {
     throw new Erp06PublishWorkerError(
@@ -271,16 +285,7 @@ export async function processErp06PublishJob({
   const adapterResult = assertAdapterResult(
     await adapter.execute({
       job: payload,
-      authorization: {
-        executionEnabled: executionEnabled === true,
-        authorizesPublishing: authorizesPublishing === true,
-        attemptState: "claimed",
-        claimId: normalizedClaimId,
-        tenantId: payload.tenantId,
-        storeId: payload.storeId,
-        commandId: payload.commandId,
-        publishAttemptId: payload.publishAttemptId,
-      },
+      authorization,
       sourceLoader,
     }),
     payload,

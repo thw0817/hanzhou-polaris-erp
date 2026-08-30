@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v49
+版本：2026-08-30-v50
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 正在执行规范数据模型、版本冻结、原子发布交接、Worker 编排、结果持久化、官方回读单阶段编排与非生产验证；ERP-07～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-RELEASE-READINESS-16
+当前活动步骤：ERP-06 / IN_PROGRESS / RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17
 
 ## 0. 台账用途
 
@@ -31,7 +31,7 @@
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
-| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-OFFICIAL-READBACK-ORCHESTRATION-15 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、隔离 Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账和单阶段编排均已验证；生产迁移、真实 SHEIN adapter/发布仍未完成 |
+| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、隔离 Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账、单阶段编排和发布-回读组合隔离验证均已完成；生产迁移、真实 SHEIN adapter/发布仍未完成 |
 | ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
@@ -1875,7 +1875,21 @@
 - 当前状态：`NO-GO / IN_PROGRESS`；ERP-06 隔离设计与回归完成，真实 Worker/sender/凭证/生产队列/正式 migration/部署/SHEIN 写入尚未完成。
 - 下一执行单元：另行批准并记录生产发布开关的安全处置方案（含正在运行任务的 drain/观察，不在本 Run 自动关闭），随后在真实写入关闭的独立预发环境接入 ERP-06 Worker → sender → 官方回读与持久化；通过预发回归、制品一致性、备份/回滚和观察窗口后，才可重新评审生产部署。
 
-## 37. 全站诊断日志与隐藏诊断读取隔离实现
+## 37. ERP-06 发布 → 官方回读 → 结果落账组合接线隔离实现
+
+### RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17
+
+- 类型：ERP-06 当前隔离实现单元；暂停诊断日志扩展，补齐 Worker、SHEIN publish adapter、remote boundary、官方单阶段 readback orchestrator 和 readback repository 的组合调用，不触碰生产。
+- 启动依据：第 36 Run 的预发/生产接入前置审查结论为 `NO-GO`；第 37 Run 的诊断日志代码保持冻结。当前只验证 ERP-06 组件之间的调用顺序、授权身份一致性和失败保护，不把组合编排接入长期 Worker、Control 路由或现有 staging。
+- 允许范围：先写 Worker 授权传递与组合管线失败回归；新增隔离组合编排模块；使用 fake command/result/readback repository、fake source loader 和 fake remote boundary；运行定向/全量测试、V2 构建、静态安全与差异检查；更新本台账和交接文档。
+- 禁止范围：生产 PostgreSQL/COS/Redis/队列/SHEIN 访问或写入；现有 staging 数据库/容器写入或重启；正式 migration、长期 Worker/Control/路由接线、真实凭证解析、真实 HTTP、外部发布、自动重试、自动重发、历史回填；不继续扩展诊断日志。
+- 失败基线：当前 Worker 只把 `onSendStarted` 传给 `adapterFactory`，没有把同一 claim 的冻结任务身份和一次性授权传给 factory；仓库没有发布-回读组合管线，因此无法验证发送、结果持久化和官方回读是否沿用同一 Command/Attempt/ProductVersion。
+- 目标验收：`adapterFactory` 与 `adapter.execute` 收到同一冻结 job/authorization；成功路径严格按 claim → send_started → remote publish → publish result → 单阶段 official readback → readback persistence；关闭态零远端/零凭证/零回读落账；`result_unknown` 未被官方完整证据解除前不重发；scope 漂移、回读阶段漂移、落账失败均 fail closed。
+- 本地验证结果：组合/Worker 定向回归 `15/15`；项目全量 `npm test` `1311/1311`；V2 构建通过；静态 release audit 为 `READY` 且写入开关保持关闭；秘密扫描 `scannedFiles=638, findings=[]`；变更 JS `node --check` 与 `git diff --check` 通过。
+- 环境证据：仅使用 fake command/result/readback repository、fake source loader 和 fake remote boundary；未解析真实凭证，未连接生产或现有 staging，未发送真实 SHEIN HTTP，未执行数据库 migration、部署、重启或配置切换。
+- 当前状态：`COMPLETE`；本 Run 的隔离发布-回读组合和 Worker 授权传递完成。日志功能保持上一 Run 的 `COMPLETE / NOT DEPLOYED` 状态，本 Run 未扩展。ERP-06 整体仍为 `IN_PROGRESS`，真实 Worker/队列/凭证/正式 migration/部署/SHEIN 写入仍未开始。
+
+## 38. 全站诊断日志与隐藏诊断读取隔离实现
 
 ### RUN-20260830-DIAGNOSTIC-OBSERVABILITY-01
 

@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v31
+版本：2026-08-30-v32
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账和单阶段官方回读编排的隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。ERP-07～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，本轮不继续扩展。ERP-07～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -119,7 +119,7 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - ERP 步骤总数：24。
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
 - `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11、Run 13 的 S3/AWS4 兼容列表请求返回 HTTP 403，但 Run 14 的 COS 原生 HMAC-SHA1 列表成功并完成归属对账：633 个对象匹配，187 条历史媒体记录无远端对象且均无引用；目标关系孤儿为 0，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
-- `IN_PROGRESS`：ERP-06（当前 Run：`RUN-20260830-ERP06-OFFICIAL-READBACK-PERSISTENCE-14`）。
+- `IN_PROGRESS`：ERP-06（当前 Run：`RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17`）。
 - `NOT_STARTED`：ERP-07～ERP-23。
 - ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口；Run 14 的历史证据缺口继续保留为只读 legacy，不阻断 ERP-06 新链路，但不允许历史自动回填。
 
@@ -220,6 +220,17 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - 证据：新编排回归 `8/8`；组合定向回归 `68/68`；全量测试 `1291/1291`；服务端测试 `125/125`；秘密扫描 `scannedFiles=631, findings=[]`；V2 构建、release audit、`node --check`、`git diff --check` 均通过。
 - 环境证据：现有 staging Redis/PostgreSQL/MinIO 仅只读核对且均 healthy；测试仅使用 fake remote/repository，未解析真实凭证、未连接生产或 staging、没有真实 SHEIN HTTP。
 - 本 Run 状态：`COMPLETE`。ERP-06 整体仍为 `IN_PROGRESS`；真实 Worker/凭证/生产队列/回读持久化接线、正式 migration、生产部署和 SHEIN 写入仍未开始。
+
+### 4.10 ERP-06 发布 → 官方回读 → 结果落账组合隔离事实
+
+- 当前 Run：`RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17`。
+- 本 Run 暂停诊断日志扩展，新增隔离组合器：[erp06-publish-readback-pipeline.js](../server/cloud/erp06-publish-readback-pipeline.js)。它只编排既有 Worker、SHEIN publish adapter、remote boundary、单阶段 official readback orchestrator 与 readback repository，不接入生产 Worker、Control 路由或现有 staging。
+- Worker 接线修正：`adapterFactory` 与 `adapter.execute` 现在共享同一份冻结 job 和一次性授权对象，授权中携带 tenant/store、Command、Attempt、ProductVersion、claimId 与 `attemptState=claimed`，避免 factory 与 execute 使用不同作用域。
+- 成功顺序固定为：claim → source/冻结版本 → `send_started` → SHEIN publish boundary → publish result persistence → 明确选择一个官方回读阶段 → readback persistence；`spu_info` 不会被隐式追加到 `document_state`，反之亦然。
+- 失败保护：执行关闭时为 `not_sent` 并仅在显式 dry-run 释放；`result_unknown` 只允许以 `result_unknown` Attempt 状态回读，空/不完整证据保持 `readback_pending`，未回读前不重发；回读 scope/fingerprint 非法在 claim 前拒绝；结果或回读落账失败原样上抛，不自动重试。
+- 实际文件：[erp06-publish-readback-pipeline.js](../server/cloud/erp06-publish-readback-pipeline.js)、[erp06-publish-readback-pipeline.test.js](../server/cloud/erp06-publish-readback-pipeline.test.js)，以及更新后的 [erp06-publish-worker-service.js](../server/cloud/erp06-publish-worker-service.js) 与测试。未修改旧 `product-publish-worker`、Control 路由、生产配置、正式 migration 或诊断日志实现。
+- 本 Run 已通过：组合/Worker 定向回归 `15/15`；回归覆盖成功顺序、关闭态零远端、`result_unknown` 未解除、单阶段、scope 漂移、回读持久化失败、缺少回读规格和 factory/execute 授权一致性；项目全量 `npm test` `1311/1311`；V2 构建、静态 release audit、秘密扫描、JS 语法和差异检查均通过。
+- 当前状态：`COMPLETE / ISOLATED ONLY`。本 Run 未解析真实凭证、未连接生产或现有 staging、未发真实 SHEIN 请求、未部署、未执行 migration；日志功能保持已实现但未部署，本 Run 未继续扩展。ERP-06 下一步仍需另行评审预发真实接入授权和回滚证据。
 
 ## 5. 历史已执行工作如何使用
 
