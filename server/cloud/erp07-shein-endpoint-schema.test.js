@@ -85,6 +85,25 @@ test("official response sources stay on the SHEIN Open API host", () => {
   }
 });
 
+test("publish quota is pinned to the verified official SHEIN endpoint contract", () => {
+  const schema = getErp07EndpointSchema("preflight.publish_quota");
+
+  assert.equal(schema.path, "/open-api/goods/query-shelf-quota");
+  assert.deepEqual(schema.source.officialSourceUrls, [
+    "https://open.sheincorp.com/documents/apidoc/detail/3001544-1000001",
+  ]);
+  assert.deepEqual(schema.source.responseEvidence.fields, [
+    "code",
+    "msg",
+    "traceId",
+    "info.need",
+    "info.total_quota_count",
+    "info.on_shelf_count",
+    "info.remain_count",
+  ]);
+  assert.equal(schema.source.responseEvidence.status, "official_response_contract");
+});
+
 test("every ERP-07 contract has explicit schema coverage with matching route and mode", () => {
   const contracts = listErp07EndpointContracts();
   const schemas = listErp07EndpointSchemas();
@@ -258,13 +277,6 @@ test("source-pending endpoints expose honest response evidence and reject malfor
       "info.dataList[].c30dSaleCnt",
       "info.dataList[].dt",
     ],
-    "preflight.publish_quota": [
-      "info.isControlled",
-      "info.availableQuota",
-      "info.availableLimit",
-      "info.totalQuota",
-      "info.usedCount",
-    ],
     "review.document_state": [
       "info[].spu_name",
       "info[].skc_name",
@@ -317,9 +329,30 @@ test("source-pending endpoints expose honest response evidence and reject malfor
   assert.throws(
     () => validateErp07EndpointPayload({
       endpoint: "preflight.publish_quota",
-      payload: { code: "0", info: { availableLimit: {} } },
+      payload: { code: "0", info: { need: true, remain_count: {} } },
     }),
     /类型不符合 schema/,
+  );
+  assert.equal(validateErp07EndpointPayload({
+    endpoint: "preflight.publish_quota",
+    payload: {
+      code: "0",
+      msg: "OK",
+      traceId: "quota-fixture",
+      info: {
+        need: true,
+        total_quota_count: 2000,
+        on_shelf_count: 37,
+        remain_count: 1963,
+      },
+    },
+  }).valid, true);
+  assert.throws(
+    () => validateErp07EndpointPayload({
+      endpoint: "preflight.publish_quota",
+      payload: { code: "0", info: { availableLimit: 3 } },
+    }),
+    /缺少必填字段/,
   );
   assert.throws(
     () => validateErp07EndpointPayload({
@@ -418,13 +451,16 @@ test("source-pending response fields carry field-level provenance and cannot cla
     },
     "preflight.publish_quota": {
       fields: [
-        "info.isControlled",
-        "info.availableQuota",
-        "info.availableLimit",
-        "info.totalQuota",
-        "info.usedCount",
+        "code",
+        "msg",
+        "traceId",
+        "info.need",
+        "info.total_quota_count",
+        "info.on_shelf_count",
+        "info.remain_count",
       ],
-      sourceFiles: ["docs/V2_SHEIN_API_CAPABILITY_MATRIX.md", "server/publish-preflight.js"],
+      sourceFiles: ["docs/ERP07_OFFICIAL_RESPONSE_SOURCE_AUDIT_2026-08-30.md"],
+      status: "official_response_field",
     },
     "preflight.supplier_sku_duplicate": {
       fields: [

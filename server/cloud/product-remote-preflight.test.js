@@ -65,7 +65,7 @@ function candidate(overrides = {}) {
     audit: { categoryId: "3155" },
     remoteChecks: [
       "check-publish-permission",
-      "goods-publish-quotas/detail",
+      "goods/query-shelf-quota",
       "check-supplierSku-repeated",
       "upload-pic",
       "transform-pic",

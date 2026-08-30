@@ -296,12 +296,12 @@ const PUBLISH_PERMISSION_RESPONSE_INFO = field("object", {
 });
 
 const PUBLISH_QUOTA_RESPONSE_INFO = field("object", {
+  required: ["need"],
   fields: {
-    isControlled: field("boolean"),
-    availableQuota: field(["integer", "string"]),
-    availableLimit: field(["integer", "string"]),
-    totalQuota: field(["integer", "string"]),
-    usedCount: field(["integer", "string"]),
+    need: field("boolean"),
+    total_quota_count: field("integer"),
+    on_shelf_count: field("integer"),
+    remain_count: field("integer"),
   },
   additionalProperties: "preserve",
 });
@@ -565,28 +565,38 @@ const SCHEMAS = {
   "preflight.publish_quota": {
     mode: "read",
     method: "POST",
-    path: "/open-api/goods-publish-quotas/detail",
-    schemaStatus: "fixture_ready_source_pending",
+    path: "/open-api/goods/query-shelf-quota",
+    schemaStatus: "fixture_ready_official_response",
     source: source({
-      files: [CAPABILITY_MATRIX, "server/publish-preflight.js"],
-      evidenceStatus: "code_tested_official_method_only",
+      files: [CAPABILITY_MATRIX, OFFICIAL_RESPONSE_SOURCE_AUDIT],
+      officialUpdatedAt: "2026-01-12 10:19:43",
+      officialSourceUrls: [
+        "https://open.sheincorp.com/documents/apidoc/detail/3001544-1000001",
+      ],
+      evidenceStatus: "official_request_and_response_fields_code_tested",
       responseEvidence: {
-        status: "internal_consumer_contract",
+        status: "official_response_contract",
         fields: [
-          "info.isControlled",
-          "info.availableQuota",
-          "info.availableLimit",
-          "info.totalQuota",
-          "info.usedCount",
+          "code",
+          "msg",
+          "traceId",
+          "info.need",
+          "info.total_quota_count",
+          "info.on_shelf_count",
+          "info.remain_count",
         ],
-        sourceFiles: [CAPABILITY_MATRIX, "server/publish-preflight.js"],
-        gaps: ["official_response_fields_not_captured"],
+        sourceFiles: [OFFICIAL_RESPONSE_SOURCE_AUDIT],
       },
     }),
     headers: COMMON_REQUEST_HEADERS,
     request: { type: "object", fields: {}, additionalProperties: "fail" },
     response: envelope(PUBLISH_QUOTA_RESPONSE_INFO),
-    fixtures: readFixtures({ availableLimit: 3 }),
+    fixtures: readFixtures({
+      need: true,
+      total_quota_count: 3,
+      on_shelf_count: 0,
+      remain_count: 3,
+    }),
   },
   "preflight.supplier_sku_duplicate": {
     mode: "read",

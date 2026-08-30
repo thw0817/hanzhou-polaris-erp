@@ -61,12 +61,17 @@ function successfulPayload(path) {
       },
     };
   }
-  if (path === "/open-api/goods-publish-quotas/detail") {
+  if (path === "/open-api/goods/query-shelf-quota") {
     return {
       code: "0",
       msg: "OK",
       traceId: "trace-quota",
-      info: { availableLimit: 3 },
+      info: {
+        need: true,
+        total_quota_count: 3,
+        on_shelf_count: 0,
+        remain_count: 3,
+      },
     };
   }
   return {
@@ -140,7 +145,7 @@ test("ERP-07 evidence runner resolves target SKC SKU codes before sales read", a
       },
       {
         method: "POST",
-        path: "/open-api/goods-publish-quotas/detail",
+        path: "/open-api/goods/query-shelf-quota",
         body: {},
       },
       {
@@ -183,7 +188,7 @@ test("ERP-07 evidence runner performs scoped SKU, quota, and document reads", as
       },
       {
         method: "POST",
-        path: "/open-api/goods-publish-quotas/detail",
+        path: "/open-api/goods/query-shelf-quota",
         body: {},
       },
       {
@@ -228,7 +233,7 @@ test("ERP-07 evidence runner does not send document-state without SPU and versio
   assert.deepEqual(
     options.requests.map(({ path }) => path),
     [
-      "/open-api/goods-publish-quotas/detail",
+      "/open-api/goods/query-shelf-quota",
     ],
   );
   assert.equal(
@@ -285,7 +290,7 @@ test("ERP-07 evidence runner blocks sales when SPU detail cannot map the target 
     options.requests.map(({ path }) => path),
     [
       "/open-api/goods/spu-info",
-      "/open-api/goods-publish-quotas/detail",
+      "/open-api/goods/query-shelf-quota",
       "/open-api/goods/query-document-state",
     ],
   );
@@ -348,7 +353,7 @@ test("ERP-07 evidence runner never constructs a writable endpoint", async () => 
       assert.equal(input.method, "POST");
       assert.match(
         input.path,
-        /^\/open-api\/(goods\/spu-info|goods\/query-sku-sales|goods-publish-quotas\/detail|goods\/query-document-state)$/,
+        /^\/open-api\/(goods\/spu-info|goods\/query-sku-sales|goods\/query-shelf-quota|goods\/query-document-state)$/,
       );
       return { status: 200, payload: successfulPayload(input.path) };
     },

@@ -3,7 +3,7 @@ import { verifyProductPublishCandidate } from "./product-publish-candidate.js";
 
 const ENDPOINTS = Object.freeze({
   permission: "/open-api/goods/product/check-publish-permission",
-  shelfQuota: "/open-api/goods-publish-quotas/detail",
+  shelfQuota: "/open-api/goods/query-shelf-quota",
   supplierSkuRepeated:
     "/open-api/goods/product/check-supplierSku-repeated",
   uploadPic: "/open-api/goods/upload-pic",

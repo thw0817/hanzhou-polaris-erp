@@ -141,7 +141,7 @@ test("ERP-07 source-pending read dossier fixes endpoint identity and stays fail-
   }, TypeError);
 });
 
-test("ERP-07 source-pending dossier coverage includes sales, quota and document state", () => {
+test("ERP-07 source-pending dossier coverage includes sales and document state", () => {
   const cases = [
     {
       endpoint: "sales.sku",
@@ -149,13 +149,6 @@ test("ERP-07 source-pending dossier coverage includes sales, quota and document 
       path: "/open-api/goods/query-sku-sales",
       sourceRef: "authorized-store-read:erp07-sales-20260830-coverage",
       info: { dataList: [] },
-    },
-    {
-      endpoint: "preflight.publish_quota",
-      method: "POST",
-      path: "/open-api/goods-publish-quotas/detail",
-      sourceRef: "authorized-store-read:erp07-quota-20260830-coverage",
-      info: { availableLimit: 3 },
     },
     {
       endpoint: "review.document_state",
@@ -249,14 +242,23 @@ test("ERP-07 document-state dossier records safe response shape when expected fi
 
 test("ERP-07 source-pending review dossier rejects altered snapshot endpoint identity", () => {
   const snapshot = buildErp07ResponseEvidenceSnapshot({
-    endpoint: "preflight.publish_quota",
+    endpoint: "sales.sku",
     scope,
-    sourceRef: "authorized-store-read:erp07-quota-20260830-dossier",
+    sourceRef: "authorized-store-read:erp07-sales-20260830-altered-endpoint",
     observedAt: "2026-08-30T03:01:00.000Z",
     response: response({
       code: "0",
-      traceId: "trace-quota-dossier",
-      info: { availableLimit: 3 },
+      traceId: "trace-sales-altered-endpoint",
+      info: {
+        dataList: [{
+          skuCode: "SKU-1",
+          realTimeSaleCnt: 1,
+          cydSaleCnt: 2,
+          c7dSaleCnt: 3,
+          c30dSaleCnt: 4,
+          dt: "20260830",
+        }],
+      },
     }),
   });
 

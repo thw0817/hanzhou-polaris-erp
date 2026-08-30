@@ -1,6 +1,6 @@
 const PUBLISH_PERMISSION_PATH =
   "/open-api/goods/product/check-publish-permission";
-const SHELF_QUOTA_PATH = "/open-api/goods-publish-quotas/detail";
+const SHELF_QUOTA_PATH = "/open-api/goods/query-shelf-quota";
 const SUPPLIER_SKU_REPEATED_PATH =
   "/open-api/goods/product/check-supplierSku-repeated";
 const SUPPLIER_SKU_BATCH_SIZE = 200;
@@ -22,7 +22,7 @@ function getPublishPermission(info = {}) {
 }
 
 function normalizeShelfQuota(info = {}) {
-  if (info.isControlled === false) {
+  if (info.need === false) {
     return {
       isControlled: false,
       availability: "unlimited",
@@ -32,19 +32,19 @@ function normalizeShelfQuota(info = {}) {
       usedCount: null,
     };
   }
-  const rawValue = info.availableQuota ?? info.availableLimit;
+  const rawValue = info.remain_count;
   const value = Number(rawValue);
+  const totalQuota = Number(info.total_quota_count);
+  const usedCount = Number(info.on_shelf_count);
   return {
-    isControlled: info.isControlled === true ? true : null,
-    availability: Number.isFinite(value) ? "available" : "unavailable",
-    availableQuota: Number.isFinite(value) ? value : null,
-    availableLimit: Number.isFinite(value) ? value : null,
-    totalQuota: Number.isFinite(Number(info.totalQuota))
-      ? Number(info.totalQuota)
-      : null,
-    usedCount: Number.isFinite(Number(info.usedCount))
-      ? Number(info.usedCount)
-      : null,
+    isControlled: info.need === true ? true : null,
+    availability: info.need === true && Number.isFinite(value)
+      ? "available"
+      : "unavailable",
+    availableQuota: info.need === true && Number.isFinite(value) ? value : null,
+    availableLimit: info.need === true && Number.isFinite(value) ? value : null,
+    totalQuota: Number.isFinite(totalQuota) ? totalQuota : null,
+    usedCount: Number.isFinite(usedCount) ? usedCount : null,
   };
 }
 

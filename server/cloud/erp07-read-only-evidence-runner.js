@@ -51,7 +51,7 @@ const EVIDENCE_ENDPOINTS = Object.freeze([
   Object.freeze({
     endpoint: "preflight.publish_quota",
     method: "POST",
-    path: "/open-api/goods-publish-quotas/detail",
+    path: "/open-api/goods/query-shelf-quota",
     body: () => ({}),
     sourceKey: "quota",
   }),
