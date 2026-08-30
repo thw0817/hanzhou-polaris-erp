@@ -534,4 +534,5 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 对 SKU 销量、发布权限、发布额度、商家 SKU 查重、单据状态和价格证明上传，已按现有本地消费者与测试证据建立显式 response schema；6 项均保持 `internal_consumer_contract`，并保留 `official_response_fields_not_captured`，不把内部字段推断冒充官方完整响应。
 - 明显错误类型已进入失败回归：销量统计对象、布尔字符串、额度对象、重复标记字符串、审核状态对象和数字 `objectKey` 均被拒绝；响应 schema 失败时 adapter 不返回原始响应。
 - 变更文件：[erp07-shein-endpoint-schema.js](../server/cloud/erp07-shein-endpoint-schema.js)、[erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js)、[erp07-shein-adapter.js](../server/cloud/erp07-shein-adapter.js)。本轮未接入线上路由、Worker、生产配置或真实 SHEIN HTTP。
-- 当前状态：代码与定向回归已完成，待全套发布前验证和干净 revision 制品验证后关闭；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
+- 本地验证已完成：定向回归 `41/41`；项目全量 `npm test` `1353/1353`；V2 构建、工具链、密钥扫描（`scannedFiles=646, findings=[]`）、静态 release audit（`READY`，15/15）、staging isolation（14/14）和干净 revision release manifest（`passed=true, sourceDirty=false`）均通过。已生成 staging 候选包，SHA-256：`5b99da9f146a80cb229e1b2b7f85a359aad6ab2dcab5fd6a8d6b09f7045bef94`。
+- 当前状态：`COMPLETE / RESPONSE EVIDENCE HARDENED`。本 Run 的代码、回归和制品验证已完成；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。

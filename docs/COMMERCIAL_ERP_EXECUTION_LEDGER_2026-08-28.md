@@ -1978,7 +1978,8 @@
 - 字段映射范围：SKU 销量登记 `dataList` 及 5 个销量/日期字段；发布权限登记双命名兼容字段、发布原因；发布额度登记控制标记、额度/上限、总额和已用数；商家 SKU 查重登记 SKU 与重复标记；单据状态登记 SPU/SKC/SKU、单据号、版本、审核时间、审核状态和失败原因；价格证明上传登记 `info.objectKey`。
 - 来源诚实性：上述 6 项全部标记 `responseEvidence.status=internal_consumer_contract`，来源只指向本地消费者/测试及可确认的官方方法上下文，统一保留 `official_response_fields_not_captured`；没有把内部字段推断写成官方完整响应，也没有伪造 `authorizedStoreRead`。
 - Fail-closed：上述字段不接受明显错误类型（例如对象冒充数字、字符串冒充布尔、数字冒充 objectKey）；响应不通过 schema 时不得进入 adapter 成功结果，也不返回原始响应内容。全量 evidence catalog 检查缺项、非法状态、空字段、无效来源和店铺读取状态不一致时直接失败。
-- 本地定向验证：ERP-07 schema、adapter、endpoint contract 回归 `41/41`；其中 response evidence 与 6 个消费者字段失败边界已覆盖。全量测试、构建、secret scan、静态 release audit、staging isolation 和 release manifest 必须在形成干净提交后重新执行，本条不提前宣称通过。
+- 本地验证：ERP-07 schema、adapter、endpoint contract 回归 `41/41`；项目全量 `npm test` `1353/1353`；`npm run build:v2`、`ci:toolchain`、`ci:secret-scan`（`scannedFiles=646, findings=[]`）、静态 release audit（`READY`，15/15 release contracts）、staging isolation（14/14）和干净 revision release manifest（`passed=true, sourceDirty=false`）均通过。response evidence 与 6 个消费者字段失败边界已覆盖。
+- 制品状态：已生成只读 staging 候选包 [polaris-staging-fbd28068ce888b6e9986c9b0f79d77ae34195f08.tar.gz](../artifacts/polaris-staging-fbd28068ce888b6e9986c9b0f79d77ae34195f08.tar.gz)，SHA-256：`5b99da9f146a80cb229e1b2b7f85a359aad6ab2dcab5fd6a8d6b09f7045bef94`；releaseId：`polaris-fbd28068ce888b6e9986c9b0f79d77ae34195f08`。
 - 环境边界：未解析或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
-- 当前状态：`IN_PROGRESS / RESPONSE EVIDENCE HARDENING`。本 Run 的代码与定向回归已完成，待全套发布前验证和干净 revision 制品验证后关闭；ERP-07 整体仍 `IN_PROGRESS`，ERP-06 生产接入仍 `NO-GO`，ERP-08～ERP-23 未开始。
+- 当前状态：`COMPLETE / RESPONSE EVIDENCE HARDENED`。本 Run 的代码、回归、干净 revision manifest 和候选包验证已完成；ERP-07 整体仍 `IN_PROGRESS`，ERP-06 生产接入仍 `NO-GO`，ERP-08～ERP-23 未开始。
 - 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、统一 adapter 线上接线、预发 canary/readback、ERP-07 完成门和单独部署批准仍未完成。
