@@ -190,6 +190,30 @@ test("ERP-07 response evidence snapshot rejects unknown diagnostics metadata", (
   );
 });
 
+test("ERP-07 response evidence snapshot rejects unknown capture and scope fields", () => {
+  assert.throws(
+    () => buildErp07ResponseEvidenceSnapshot({
+      endpoint: "sales.sku",
+      scope,
+      sourceRef: "authorized-store-read:erp07-sales-20260830-009",
+      observedAt: "2026-08-30T02:05:50.000Z",
+      response: response({ code: "0", traceId: "trace-input-extension", info: { dataList: [] } }),
+      authorizationReceipt: "receipt-must-not-be-silently-dropped",
+    }),
+    (error) => error.code === "ERP07_RESPONSE_EVIDENCE_INPUT_INVALID",
+  );
+  assert.throws(
+    () => buildErp07ResponseEvidenceSnapshot({
+      endpoint: "sales.sku",
+      scope: { ...scope, secretKey: "must-not-be-accepted" },
+      sourceRef: "authorized-store-read:erp07-sales-20260830-010",
+      observedAt: "2026-08-30T02:05:55.000Z",
+      response: response({ code: "0", traceId: "trace-scope-extension", info: { dataList: [] } }),
+    }),
+    (error) => error.code === "ERP07_RESPONSE_EVIDENCE_SCOPE_INVALID",
+  );
+});
+
 test("ERP-07 response evidence snapshot requires a scoped read receipt", () => {
   assert.throws(
     () => buildErp07ResponseEvidenceSnapshot({

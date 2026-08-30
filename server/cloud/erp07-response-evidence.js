@@ -14,6 +14,13 @@ const SENSITIVE_SOURCE_VALUE = /(?:[?&](?:token|sig|signature|x-amz-[^=&]+|autho
 const SAFE_INPUT_KEYS = new Set(["payload", "diagnostics", "status"]);
 const SAFE_DIAGNOSTIC_KEYS = new Set(["status", "code", "traceId", "durationMs"]);
 const REQUIRED_SCOPE_FIELDS = ["tenantId", "storeId", "supplierId"];
+const SAFE_CAPTURE_INPUT_KEYS = new Set([
+  "endpoint",
+  "scope",
+  "sourceRef",
+  "observedAt",
+  "response",
+]);
 
 function object(value) {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -85,6 +92,12 @@ function scopeSnapshot(scope) {
     throw new Erp07ResponseEvidenceError(
       "ERP07_RESPONSE_EVIDENCE_SCOPE_INVALID",
       "响应证据缺少租户、店铺和供应商范围",
+    );
+  }
+  if (Object.keys(source).some((key) => !REQUIRED_SCOPE_FIELDS.includes(key))) {
+    throw new Erp07ResponseEvidenceError(
+      "ERP07_RESPONSE_EVIDENCE_SCOPE_INVALID",
+      "响应证据范围只接受租户、店铺和供应商字段",
     );
   }
   const output = {};
@@ -210,12 +223,21 @@ export class Erp07ResponseEvidenceError extends Error {
 }
 
 export function buildErp07ResponseEvidenceSnapshot({
-  endpoint,
-  scope,
-  sourceRef,
-  observedAt,
-  response,
+  ...input
 } = {}) {
+  if (Object.keys(input).some((key) => !SAFE_CAPTURE_INPUT_KEYS.has(key))) {
+    throw new Erp07ResponseEvidenceError(
+      "ERP07_RESPONSE_EVIDENCE_INPUT_INVALID",
+      "响应证据输入禁止未知扩展字段",
+    );
+  }
+  const {
+    endpoint,
+    scope,
+    sourceRef,
+    observedAt,
+    response,
+  } = input;
   let schema;
   try {
     schema = getErp07EndpointSchema(endpoint);
