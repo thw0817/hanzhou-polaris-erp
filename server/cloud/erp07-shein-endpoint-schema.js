@@ -732,14 +732,13 @@ const SCHEMAS = {
       responseEvidence: {
         status: "internal_consumer_contract",
         fields: [
-          "info[].spu_name",
-          "info[].skc_name",
-          "info[].sku_list[].sku_code",
-          "info[].document_sn",
-          "info[].version",
-          "info[].audit_time",
-          "info[].audit_state",
-          "info[].failed_reason[]",
+          "info.data[].spuName",
+          "info.data[].version",
+          "info.data[].skcList[].skcName",
+          "info.data[].skcList[].documentSn",
+          "info.data[].skcList[].documentState",
+          "info.data[].skcList[].failedReason",
+          "info.meta.count",
         ],
         sourceFiles: [
           "server/cloud/document-state-projections.js",

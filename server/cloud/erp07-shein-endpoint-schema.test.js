@@ -278,14 +278,13 @@ test("source-pending endpoints expose honest response evidence and reject malfor
       "info.dataList[].dt",
     ],
     "review.document_state": [
-      "info[].spu_name",
-      "info[].skc_name",
-      "info[].sku_list[].sku_code",
-      "info[].document_sn",
-      "info[].version",
-      "info[].audit_time",
-      "info[].audit_state",
-      "info[].failed_reason[]",
+      "info.data[].spuName",
+      "info.data[].version",
+      "info.data[].skcList[].skcName",
+      "info.data[].skcList[].documentSn",
+      "info.data[].skcList[].documentState",
+      "info.data[].skcList[].failedReason",
+      "info.meta.count",
     ],
   };
   for (const [endpoint, fields] of Object.entries(expected)) {
@@ -475,14 +474,13 @@ test("source-pending response fields carry field-level provenance and cannot cla
     },
     "review.document_state": {
       fields: [
-        "info[].spu_name",
-        "info[].skc_name",
-        "info[].sku_list[].sku_code",
-        "info[].document_sn",
-        "info[].version",
-        "info[].audit_time",
-        "info[].audit_state",
-        "info[].failed_reason[]",
+        "info.data[].spuName",
+        "info.data[].version",
+        "info.data[].skcList[].skcName",
+        "info.data[].skcList[].documentSn",
+        "info.data[].skcList[].documentState",
+        "info.data[].skcList[].failedReason",
+        "info.meta.count",
       ],
       sourceFiles: [
         "server/cloud/document-state-projections.js",

@@ -76,30 +76,33 @@ runner 返回 `input_required`/依赖失败诊断。这是为避免把 SKC 当 S
 `failedReason`。同时存在 `info.meta.count`，本次 `failedReason` 的类型为 `null`。这证明了包装层和字段命名
 与当前内部投影层的兼容方向，但不证明 `documentState` 的业务枚举含义，也没有证明存在 SKU 明细或审核时间。
 
-因此，当前可作为候选映射的只有：`spuName`、`version`、`skcName`、`documentSn`、`documentState`；
-`sku_list[].sku_code`、`audit_time` 和 `failed_reason[]` 仍未获得可采信证据。`sales.sku` 本次返回
-`dmsWeb0003`，没有形成响应证据摘要。候选映射必须经过独立复核后才能进入 schema；在此之前不修改字段覆盖规则，
-也不把这次响应解释为商品通过或驳回。
+因此，当前可观察到的候选字段为：`spuName`、`version`、`skcName`、`documentSn`、`documentState`、
+`failedReason` 和 `info.meta.count`；本次没有观察到 SKU 明细或审核时间，且 `failedReason` 的值类型为 `null`。
+本地 source-pending 证据统计已将字段路径对齐为这 7 个实际嵌套路径，但仍只用于结构覆盖记录，不代表官方字段语义
+已经核验，也不把这次响应解释为商品通过或驳回。`sales.sku` 的候选字段仍沿用已通过的内部消费者契约。
 
 即使结构摘要发现可疑的新字段，`review.document_state` 仍保持
 `sourceEvidenceStatus=internal_consumer_contract`、`catalogUpgrade.status=blocked_source_pending` 和
 `eligible=false`。只有独立官方来源或经过单独人工审阅的完整授权店铺回执，才可以提出字段映射变更；本次
 结构摘要不能自动升级 schema，也不能解除 ERP-07 的部署或发布门禁。
 
-## 2026-08-30 修复后的真实只读重跑
+## 2026-08-30 官方额度接口修复后的真实只读重跑
 
-本次使用商品详情页核对后的正确 SPU 和既有 version 重新执行，结果为 `ok=true`、`readOnly=true`、
-`externalWrite=false`。`product.spu_info` 返回成功，随后 `sales.sku` 返回成功且当前内部销量字段
-结构覆盖为 `6/6`、无缺失；这确认 runner 已先从目标 SPU 的 SKC 关系中解析 SKU，再以 `skuCodeList`
-调用销量接口，未再把 SKC 直接当作 SKU 发送。前一次 `spu-info` 的 `0003` 是测试输入中的 SPU 与商品详情页
-实际 SPU 不一致造成的，不能归因于销量接口或生产系统故障。
+本次已切换到提交 `017f10b`，使用商品详情页核对后的正确 SPU 和既有 version 重新执行，结果为
+`ok=false`、`readOnly=true`、`externalWrite=false`。`product.spu_info` 返回成功，随后 `sales.sku` 返回成功且
+当前内部销量字段结构覆盖为 `6/6`、无缺失；这确认 runner 已先从目标 SPU 的 SKC 关系中解析 SKU，再以
+`skuCodeList` 调用销量接口，未再把 SKC 直接当作 SKU 发送。前一次 `spu-info` 的 `0003` 是测试输入中的 SPU
+与商品详情页实际 SPU 不一致造成的，不能归因于销量接口或生产系统故障。
 
-同一轮 `review.document_state` 也返回成功，结构仍为 `info.data[].skcList[]` 的真实包装；由于当前
-source-pending 字段目录仍是旧的内部路径，字段覆盖继续显示 `0/8`，不据此改变字段映射。该轮额度读取调用的
-是旧的 `/open-api/goods-publish-quotas/detail`，不能作为新官方额度接口的证据，原 `4/5` 摘要不复用。
-后续必须重新读取 `/open-api/goods/query-shelf-quota`，核对 `need`、`total_quota_count`、`on_shelf_count`、
-`remain_count`。以上均为脱敏结构和状态证据，不代表商品通过/驳回，不写数据库，不触碰生产，也不解除
+同一轮 `review.document_state` 也返回成功，真实包装仍为 `info.data[].skcList[]`；提交 `017f10b` 中的旧
+source-pending 字段目录因此显示 `0/8`，本地后续修复已将它对齐为 7 个实际嵌套路径，但尚未把它升级为官方字段
+契约。额度读取已经改为官方 `POST /open-api/goods/query-shelf-quota`，但该店铺返回 HTTP `403`、上游码
+`openapi00003`，所以没有形成额度成功回执；这更像是该 SHEIN 授权/应用对“获取店铺上架额度”能力未开放，不能
+通过重试或 COS 权限修复。以上均为脱敏结构和状态证据，不代表商品通过/驳回，不写数据库，不触碰生产，也不解除
 `blocked_source_pending`。
+
+后续分两条线处理：先在 SHEIN Open Platform 检查并补齐当前应用/店铺的“获取店铺上架额度”只读能力；权限变化后，
+在隔离 checkout 重跑同一 runner。额度仍不可读时，系统必须保持额度未知并 fail closed，不能伪造额度或放行发布。
 
 ## 结论
 

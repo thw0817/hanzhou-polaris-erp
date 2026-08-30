@@ -30,6 +30,10 @@
 - `sales.sku`
 - `review.document_state`
 
+本次隔离只读重跑还发现：官方额度接口 `/open-api/goods/query-shelf-quota` 返回 HTTP `403`、上游码
+`openapi00003`。这不是旧路径证据，也不能解释为额度为零；当前只记录为店铺/应用能力待确认，发布额度保持未知。
+COS 的对象存储授权与 SHEIN Open API 的接口授权是两套权限，不能用 COS 策略解决该 403。
+
 此前审计中记录的 `/open-api/goods-publish-quotas/detail` 没有可确认的独立官方响应字段；本次已将活动契约校正为官方 `/open-api/goods/query-shelf-quota`，两者不再视为同一接口。
 
 ## 结论
