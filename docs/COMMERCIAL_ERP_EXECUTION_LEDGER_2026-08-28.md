@@ -1,6 +1,6 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v71
+版本：2026-08-30-v72
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 生产接入门为 BLOCKED/NO-GO，隔离实现已完成但生产迁移、真实 SHEIN adapter/发布尚未批准；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界、字段级 response evidence 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata、状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正、3 项官方响应来源核验、剩余 3 项 source-pending 接口的脱敏 method/path 审阅摘要及 adapter 双重显式证据采集门禁、网页商品单据状态回读默认锁定，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
@@ -2147,7 +2147,7 @@
 - 实际修正：`WebBusinessService` 新增默认关闭的 `sourcePendingDocumentStateReadEnabled` 内存构造器开关；默认路径在 `#credential()`、传输、回执或审核投影写入之前稳定返回 `409 ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED`。该开关未接入云端配置、路由或生产环境，仅保留给隔离 synthetic 回归。
 - 失败回归：`web-business-service.test.js` 新增默认锁定测试，断言合法输入仍在零凭证读取、零网络传输、零 receipt/review 写入下拒绝；原有四项成功/失败/空响应/跨租户测试必须显式启用隔离开关，防止测试替生产默认行为背书。
 - 用户行为边界：该安全收口提交到运行环境后，V2 的远端“批量回读”不会伪造成功或绕过证据缺口，而会得到稳定 `409` 错误；它不改变本地已有审核投影，也不执行重发、回填、迁移、外部读取或写入。
-- 阶段验证：服务层回归 `30/30`、路由与 ERP-07 adapter 定向回归 `69/69`、V2 构建（1953 modules）通过；完整 `npm test`、工具链、密钥扫描、release audit、staging isolation、干净 revision manifest 与只读候选制品必须以最终提交结果为准。
+- 完整验证：服务层回归 `30/30`、路由与 ERP-07 adapter 定向回归 `69/69`、全量 `npm test` `1378/1378`、V2 构建（1953 modules）、工具链（Node `24.16.0`、npm `11.13.0`）、密钥扫描（`scannedFiles=651, findings=[]`）、静态 release audit（`READY`，15/15）、staging isolation（14/14）及干净 revision release manifest 均通过。候选包仅可在上述清洁 revision 上生成，且不构成部署授权。
 - 环境边界：只使用本地 fake credential reader、fake transport 与 synthetic response；未解析或打印真实凭证，未发送 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
 - 当前状态：`COMPLETE / LOCAL WEB SOURCE-PENDING GUARD`；ERP-07 仍为唯一 `IN_PROGRESS`，ERP-06 为 `BLOCKED/NO-GO`，ERP-08～ERP-23 未开始。
 - 下一执行单元：补齐 `review.document_state` 的独立官方完整 response 字段，或在单独授权下通过 adapter 双重门禁取得真实店铺只读证据；在此之前，不解除网页默认锁定，不接入线上 adapter，不执行外部写入。

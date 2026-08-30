@@ -1,6 +1,6 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v54
+版本：2026-08-30-v55
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
 当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 隔离实现已完成但生产接入前置审查为 `NO-GO/BLOCKED`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，按用户要求本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、source-pending method/path 审阅摘要与双重显式 adapter 证据采集门禁、网页商品单据状态回读默认锁定、diagnostics 敏感字段、未知 metadata、response evidence 状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正以及 3 项官方响应来源核验，其中 23 项可执行校验、10 项显式阻断；销售、发布额度、单据状态 3 项 source-pending 接口的字段仍明确标记为内部消费者契约，真实授权店铺只读证据尚未捕获；ERP-07 是当前唯一 `IN_PROGRESS` 步骤，当前 Run 为 `RUN-20260830-ERP07-WEB-DOCUMENT-STATE-GUARD-17`，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
@@ -663,4 +663,4 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 核验确认 V2 批量发布页的“批量回读”真实调用受保护网页路由 `POST /v1/web/stores/:storeId/publish/document-state`；该服务路径此前绕过 `Erp07SheinAdapter`，会直接取凭证和请求 `query-document-state`，不是可忽略的死代码。
 - 服务层现在默认在凭证读取、远端传输、receipt/review 投影写入之前返回 `409 ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED`。隔离测试若要模拟历史成功路径，必须显式传入未接入云端配置的构造器开关；默认网页运行不会借此开关恢复远端调用。
 - 这不是发布或生产修复：已部署旧环境不因本地提交自动改变。若未来通过完整门禁进入运行环境，网页批量回读会如实提示受控锁定，不会伪造成功、重发、回填或绕过待核验 response 字段。
-- 服务层 `30/30`、路由/adapter `69/69`、V2 构建通过；完整验证、干净 revision manifest、候选包或任何 deployment 必须以最终提交为准。未发送真实 SHEIN HTTP，未读取/打印真实凭证，未访问生产或现有 staging。
+- 服务层 `30/30`、路由/adapter `69/69`、全量测试 `1378/1378`、V2 构建（1953 modules）、工具链、密钥扫描（`scannedFiles=651, findings=[]`）、静态 release audit（15/15）、staging isolation（14/14）和干净 revision manifest 均已通过；候选包仍不构成 deployment。未发送真实 SHEIN HTTP，未读取/打印真实凭证，未访问生产或现有 staging。
