@@ -79,16 +79,19 @@ test("keeps official audit failure reasons in the read-only projection", () => {
 test("normalizes the current SHEIN spuList document-state response", () => {
   const result = normalizeProductDocumentState(
     {
-      data: [{
-        spuName: "SPU-CURRENT",
-        version: "VERSION-CURRENT",
-        skcList: [{
-          skcName: "SKC-CURRENT",
-          documentSn: "DOC-CURRENT",
-          documentState: 3,
-          failedReason: [{ language: "zh-cn", content: "主图文字不符合要求" }],
+      info: {
+        meta: { count: 1, customObj: null },
+        data: [{
+          spuName: "SPU-CURRENT",
+          version: "VERSION-CURRENT",
+          skcList: [{
+            skcName: "SKC-CURRENT",
+            documentSn: "DOC-CURRENT",
+            documentState: 3,
+            failedReason: null,
+          }],
         }],
-      }],
+      },
     },
     { requestedVersion: "VERSION-CURRENT" },
   );
@@ -104,7 +107,7 @@ test("normalizes the current SHEIN spuList document-state response", () => {
     auditState: 3,
     auditStateLabel: "failed",
     status: "failed",
-    failedReasons: [{ language: "zh-cn", content: "主图文字不符合要求" }],
+    failedReasons: [],
     occurredAt: null,
   });
 });

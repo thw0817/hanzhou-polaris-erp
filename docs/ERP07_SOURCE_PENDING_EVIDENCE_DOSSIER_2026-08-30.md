@@ -59,6 +59,16 @@
 结构摘要最多遍历 256 个节点，超出时仅标记 `truncated=true`。它只用于判断当前响应是包装层差异、字段改名、
 空数组还是结构缺失，不改变既定字段覆盖统计。
 
+本次授权店铺只读回执确认了 `review.document_state` 的结构轮廓为：`info.data[]` 是记录数组，记录包含
+`spuName`、`version`、`skcList[]`；`skcList[]` 包含 `skcName`、`documentSn`、`documentState` 和
+`failedReason`。同时存在 `info.meta.count`，本次 `failedReason` 的类型为 `null`。这证明了包装层和字段命名
+与当前内部投影层的兼容方向，但不证明 `documentState` 的业务枚举含义，也没有证明存在 SKU 明细或审核时间。
+
+因此，当前可作为候选映射的只有：`spuName`、`version`、`skcName`、`documentSn`、`documentState`；
+`sku_list[].sku_code`、`audit_time` 和 `failed_reason[]` 仍未获得可采信证据。`sales.sku` 本次返回
+`dmsWeb0003`，没有形成响应证据摘要。候选映射必须经过独立复核后才能进入 schema；在此之前不修改字段覆盖规则，
+也不把这次响应解释为商品通过或驳回。
+
 即使结构摘要发现可疑的新字段，`review.document_state` 仍保持
 `sourceEvidenceStatus=internal_consumer_contract`、`catalogUpgrade.status=blocked_source_pending` 和
 `eligible=false`。只有独立官方来源或经过单独人工审阅的完整授权店铺回执，才可以提出字段映射变更；本次
