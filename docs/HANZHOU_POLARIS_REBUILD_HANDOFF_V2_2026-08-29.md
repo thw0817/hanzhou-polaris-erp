@@ -1,6 +1,6 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v48
+版本：2026-08-30-v49
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
 当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 隔离实现已完成但生产接入前置审查为 `NO-GO/BLOCKED`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，按用户要求本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata、response evidence 状态一致性和来源引用完整性防回归，其中 23 项可执行校验、10 项显式阻断；6 项 source-pending 接口的字段仍明确标记为内部消费者契约，官方响应字段和真实授权店铺只读证据尚未捕获；ERP-07 是当前唯一 `IN_PROGRESS` 步骤，当前 Run 为 `RUN-20260830-ERP07-SOURCE-REFERENCE-INTEGRITY-12`，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
@@ -608,6 +608,8 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 审计结论：33 个 endpoint 的来源引用均指向仓库内实际文件；4 个带行号/行号范围引用均在有效文件边界内。该检查此前只是一次性审计，现已纳入持续回归，防止文件移动或行号漂移导致证据链接失效。
 - 实际变更：[erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js) 新增路径边界、文件存在性、文件类型、正行号、行号范围和越界校验；同时检查 `source.files` 与非空 `responseEvidence.sourceFiles`。
 - 证据语义：仅证明本地来源引用可读取，不升级官方 response evidence，不生成 `authorizedStoreRead`。6 项 source-pending 接口继续保持 `internal_consumer_contract`、`official_response_fields_not_captured`、`observed=false` 和 `authorizedStoreRead=not_observed`。
-- 本地定向验证：ERP-07 schema 回归 `17/17`；未执行真实 SHEIN HTTP、真实凭证解析、生产/现有 staging 访问、migration、部署或任何外部写入。
+- 本地验证：ERP-07 schema 回归 `17/17`；全量 `npm test` `1364/1364`；V2 构建（1953 modules）、工具链（Node `24.16.0`、npm `11.13.0`、lockfile `3`）、密钥扫描（`scannedFiles=649, findings=[]`）、静态 release audit（`READY`，15/15）、staging isolation（14/14）和当前 revision release manifest（`passed=true, sourceDirty=false`）均通过。来源引用检查覆盖 33 个 endpoint、56 条来源引用和 4 个带行号/行号范围引用。
+- 制品状态：上述旧提交的只读 staging 候选包已作废；文档提交完成后将重新生成与最终提交一致的只读候选包，最终路径、releaseId、SHA-256、大小和权限以最终完成报告为准，未部署。
+- 环境边界：上述验证仅为本地/静态/隔离检查；未执行真实 SHEIN HTTP、真实凭证解析、生产/现有 staging 访问、migration、部署或任何外部写入。
 - 当前状态：`COMPLETE / SOURCE REFERENCE INTEGRITY GUARD`；ERP-07 仍为唯一 `IN_PROGRESS`，ERP-06 为 `BLOCKED/NO-GO`，ERP-08～ERP-23 未开始。
 - 下一执行单元：继续补齐 6 项 source-pending 接口的官方完整 response 字段/版本与真实授权店铺只读 evidence；在 ERP-07 完成门、预发 canary/readback 和单独批准前，不接入线上 adapter，不执行外部写入。

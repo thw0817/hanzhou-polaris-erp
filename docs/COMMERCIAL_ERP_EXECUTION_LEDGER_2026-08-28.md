@@ -1,6 +1,6 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v64
+版本：2026-08-30-v65
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 生产接入门为 BLOCKED/NO-GO，隔离实现已完成但生产迁移、真实 SHEIN adapter/发布尚未批准；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界、字段级 response evidence 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata、状态一致性和来源引用完整性 fail-closed 修正，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
@@ -2075,6 +2075,8 @@
 - 启动依据：逐项审计 33 个 endpoint 后确认当前 `source.files` 与已有 `responseEvidence.sourceFiles` 均指向仓库内实际文件，4 个带行号/行号范围引用均在文件边界内；此前该检查只是一次性命令，后续文件移动或行号漂移可能使证据链接失效而不被发现。
 - 实际变更：[erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js) 新增来源引用完整性回归：拒绝仓库外路径、缺失文件、目录代替文件、非正行号、反向行号范围及越界行号；同时检查 `source.files` 和非空 `responseEvidence.sourceFiles`。
 - 证据语义：该门禁只证明本地引用仍可读取，不升级任何 endpoint 的官方 response evidence，也不把来源文件存在当成 `authorizedStoreRead`。6 项 source-pending 接口继续保持 `internal_consumer_contract`、`official_response_fields_not_captured` 和 `authorizedStoreRead=not_observed`。
-- 本地定向验证：ERP-07 schema 回归 `17/17`；来源引用检查覆盖 33 个 endpoint、全部来源文件引用和 4 个带行号引用。尚未执行真实 SHEIN HTTP、真实凭证解析、生产/现有 staging 访问或任何外部写入。
+- 本地验证：ERP-07 schema 回归 `17/17`；全量 `npm test` `1364/1364`；V2 构建（1953 modules）、工具链（Node `24.16.0`、npm `11.13.0`、lockfile `3`）、密钥扫描（`scannedFiles=649, findings=[]`）、静态 release audit（`READY`，15/15）、staging isolation（14/14）和当前 revision release manifest（`passed=true, sourceDirty=false`）均通过。来源引用检查覆盖 33 个 endpoint、56 条来源引用和 4 个带行号/行号范围引用。
+- 制品状态：上述旧提交的只读 staging 候选包已作废；文档提交完成后将重新生成与最终提交一致的只读候选包，最终路径、releaseId、SHA-256、大小和权限以最终完成报告为准；未部署。
+- 环境边界：上述验证仅为本地/静态/隔离检查；未执行真实 SHEIN HTTP、真实凭证解析、生产/现有 staging 访问或任何外部写入。
 - 当前状态：`COMPLETE / SOURCE REFERENCE INTEGRITY GUARD`；ERP-07 仍为唯一 `IN_PROGRESS`，ERP-06 为 `BLOCKED/NO-GO`，ERP-08～ERP-23 未开始。
 - 下一执行单元：继续补齐 6 项 source-pending 接口的官方完整 response 字段/版本与真实授权店铺只读 evidence；在 ERP-07 完成门、预发 canary/readback 和单独批准前，不接入线上 adapter，不执行外部写入。
