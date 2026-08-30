@@ -29,6 +29,17 @@ test("product publish worker refuses to start while the execution switch is off"
   );
 });
 
+test("product publish worker refuses to start without the durable outbox dispatcher", async () => {
+  await assert.rejects(
+    startProductPublishWorkerServer({
+      runtimeMode: "cloud",
+      productPublish: { executionEnabled: true },
+      outboxDispatcher: { enabled: false },
+    }),
+    /Outbox Dispatcher 总开关未启用/,
+  );
+});
+
 test("product publish worker requires database, Redis and credential decryption", async () => {
   await assert.rejects(
     startProductPublishWorkerServer({
@@ -37,6 +48,7 @@ test("product publish worker requires database, Redis and credential decryption"
       redisUrl: "",
       cloudEncryptionKey: "",
       productPublish: { executionEnabled: true, workerConcurrency: 1 },
+      outboxDispatcher: { enabled: true },
     }),
     /PostgreSQL、Redis 或店铺凭证解密配置/,
   );

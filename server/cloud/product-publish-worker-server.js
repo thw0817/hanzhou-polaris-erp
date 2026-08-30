@@ -25,6 +25,9 @@ export async function startProductPublishWorkerServer(
   if (config.productPublish?.executionEnabled !== true) {
     throw new Error("商品发布执行总开关未启用；Worker拒绝启动");
   }
+  if (config.outboxDispatcher?.enabled !== true) {
+    throw new Error("Outbox Dispatcher 总开关未启用；Worker拒绝启动");
+  }
   if (!config.databaseUrl || !config.redisUrl || !config.cloudEncryptionKey) {
     throw new Error("商品发布 Worker 缺少 PostgreSQL、Redis 或店铺凭证解密配置");
   }

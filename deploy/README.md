@@ -227,6 +227,7 @@ sudo docker compose \
 ```text
 SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED=true
 SHEIN_PRODUCT_PUBLISH_CONCURRENCY=1
+SHEIN_OUTBOX_DISPATCHER_ENABLED=true
 ```
 
 随后重建控制服务，并仅启动独立的 `publish` profile：
@@ -237,8 +238,12 @@ sudo docker compose \
   --env-file /opt/shein-console/shared/.env \
   -f deploy/docker-compose.cloud.yml \
   up -d --no-deps --force-recreate \
-  control product-publish-worker
+  control outbox-dispatcher product-publish-worker
 ```
+
+`outbox-dispatcher` 与 `product-publish-worker` 必须一起启动；只开启商品发布开关
+或只启动其中一个服务都会被门禁拒绝。两项开关默认都为 `false`，在 ERP-06
+完整生产门禁通过前不得修改为 `true`。
 
 不要先开启控制服务后再等待 Worker，也不要把并发直接调高。网页只有在控制服务门禁开启时才显示最终提交能力；用户仍需核对冻结载荷并消费一次性授权。Worker 只接收租户、店铺和执行 ID，从数据库读取精确冻结候选；成功响应后仍须等待平台回执、商品状态回读和合规复验，不能把请求已接受当成最终完成。
 

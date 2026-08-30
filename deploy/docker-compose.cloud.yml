@@ -261,6 +261,8 @@ services:
       DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
       REDIS_URL: redis://redis:6379
     depends_on:
+      outbox-dispatcher:
+        condition: service_started
       postgres:
         condition: service_healthy
       redis:
@@ -269,6 +271,34 @@ services:
       resources:
         limits:
           memory: 256M
+
+  # The publish worker is intentionally paired with the durable dispatcher.
+  # Both remain opt-in and default to disabled until the full ERP-06 gate passes.
+  outbox-dispatcher:
+    profiles: ["publish"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cloud-control
+    restart: unless-stopped
+    command: ["npm", "run", "outbox-dispatcher:cloud"]
+    environment:
+      SHEIN_RUNTIME_MODE: cloud
+      SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED: ${SHEIN_PRODUCT_PUBLISH_EXECUTION_ENABLED:-false}
+      SHEIN_OUTBOX_DISPATCHER_ENABLED: ${SHEIN_OUTBOX_DISPATCHER_ENABLED:-false}
+      SHEIN_OUTBOX_DISPATCHER_BATCH_SIZE: ${SHEIN_OUTBOX_DISPATCHER_BATCH_SIZE:-50}
+      SHEIN_OUTBOX_DISPATCHER_LEASE_SECONDS: ${SHEIN_OUTBOX_DISPATCHER_LEASE_SECONDS:-60}
+      SHEIN_OUTBOX_DISPATCHER_POLL_INTERVAL_MS: ${SHEIN_OUTBOX_DISPATCHER_POLL_INTERVAL_MS:-1000}
+      DATABASE_URL: ${SHEIN_RUNTIME_DATABASE_URL:?SHEIN_RUNTIME_DATABASE_URL is required}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 192M
 
   webhook:
     profiles: ["webhook"]

@@ -46,6 +46,35 @@ test("cloud deployment exposes separate runtime and migration database URLs", as
   assert.match(migrateSource, /config\.migrationDatabaseUrl/);
   assert.match(envExample, /^SHEIN_RUNTIME_DATABASE_URL=/m);
   assert.match(envExample, /^SHEIN_MIGRATION_DATABASE_URL=/m);
+  assert.match(envExample, /^SHEIN_OUTBOX_DISPATCHER_ENABLED=false$/m);
+});
+
+test("cloud publish profile declares the durable outbox dispatcher", async () => {
+  const root = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../..",
+  );
+  const compose = await fs.readFile(
+    path.join(root, "deploy/docker-compose.cloud.yml"),
+    "utf8",
+  );
+
+  assert.match(
+    compose,
+    /\n  outbox-dispatcher:\n    profiles: \["publish"\]/,
+  );
+  assert.match(
+    compose,
+    /\n  outbox-dispatcher:[\s\S]*?command: \["npm", "run", "outbox-dispatcher:cloud"\]/,
+  );
+  assert.match(
+    compose,
+    /\n      SHEIN_OUTBOX_DISPATCHER_ENABLED: \$\{SHEIN_OUTBOX_DISPATCHER_ENABLED:-false\}/,
+  );
+  assert.match(
+    compose,
+    /\n      outbox-dispatcher:\n        condition: service_started/,
+  );
 });
 
 test("runtime database role audit is read-only and checks the protected boundary", async () => {
