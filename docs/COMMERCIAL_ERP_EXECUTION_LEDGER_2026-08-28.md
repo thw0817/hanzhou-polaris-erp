@@ -1,8 +1,8 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v62
+版本：2026-08-30-v63
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界、字段级 response evidence 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段和未知 metadata fail-closed 修正，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 生产接入门为 BLOCKED/NO-GO，隔离实现已完成但生产迁移、真实 SHEIN adapter/发布尚未批准；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界、字段级 response evidence 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata 和状态一致性 fail-closed 修正，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
 当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-RESPONSE-EVIDENCE-STATUS-CONSISTENCY-10
@@ -31,8 +31,8 @@
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
-| ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、隔离 Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账、单阶段编排和发布-回读组合隔离验证均已完成；生产迁移、真实 SHEIN adapter/发布仍未完成 |
-| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-RESPONSE-EVIDENCE-DIAGNOSTICS-09 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter、字段级 response evidence、脱敏只读响应摘要、diagnostics 敏感字段与未知 metadata fail-closed；官方完整 response/店铺 evidence、canary/readback 和生产接入仍未完成 |
+| ERP-06 | 规范数据模型与事件账本 | BLOCKED | RUN-20260830-ERP06-RELEASE-READINESS-16 | ERP-05 | 隔离 foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账、单阶段编排和发布-回读组合验证均已完成；生产接入前置审查为 NO-GO，生产迁移、真实 SHEIN adapter/发布等待单独批准 |
+| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-RESPONSE-EVIDENCE-STATUS-CONSISTENCY-10 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter、字段级 response evidence、脱敏只读响应摘要、diagnostics 敏感字段、未知 metadata 和状态一致性 fail-closed；官方完整 response/店铺 evidence、canary/readback 和生产接入仍未完成 |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
 | ERP-10 | 官方审核回读与状态投影 | NOT_STARTED | — | ERP-09 | — |
@@ -2054,3 +2054,15 @@
 - 环境边界：只读审计归档文档与本地测试；只使用 synthetic evidence；未解析或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行正式 migration、部署、重启、配置切换、历史回填或自动重发。
 - 当前状态：`COMPLETE / LOCAL FAIL-CLOSED CORRECTION`；本 Run 完成，但 ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
 - 未完成门：6 项官方完整 response 字段、真实授权店铺只读 evidence、统一 adapter 受控线上接线、预发 canary/readback、ERP-07 完成门、干净 revision 制品验证和单独部署批准仍未完成；本 Run 不授权任何外部写入。
+
+## 49. 执行台账活动步骤一致性修正
+
+### RUN-20260830-LEDGER-STATE-CONSISTENCY-11
+
+- 类型：执行台账与交接文档一致性修正；不改变业务代码、数据库、COS、Redis、SHEIN adapter 或任何部署行为。
+- 失败基线：步骤总览同时把 ERP-06 与 ERP-07 标为 `IN_PROGRESS`，但顶层当前活动步骤只有 ERP-07，违反“同一时间只能一个步骤为 `IN_PROGRESS`”的硬规则。
+- 最小修正：ERP-06 的生产接入前置审查明确为 `BLOCKED/NO-GO`，其本地隔离实现完成但生产迁移、真实 sender/Worker、正式回读接线和部署仍等待单独批准；ERP-07 保持当前唯一 `IN_PROGRESS`，当前 Run 为 `RUN-20260830-ERP07-RESPONSE-EVIDENCE-STATUS-CONSISTENCY-10`。
+- 防回归：新增 `server/ci/erp-ledger-consistency.test.js`，强制校验恰好一个 `IN_PROGRESS`、步骤行与顶层 current run 一致，且 current run 必须指向最新 Run 记录。测试先以 `2 !== 1` 复现失败，文档修正后应通过。
+- 同步范围：执行台账、V2 交接文档和主执行计划同步记录 ERP-06/ERP-07 的真实状态边界，避免把“生产接入被阻断”与“本地隔离工作仍在进行”混成两个并行活动步骤。
+- 环境边界：只读文档审计与本地回归；未读取/打印真实凭证，未发送 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
+- 当前状态：`COMPLETE / DOCUMENTATION CONSISTENCY CORRECTION`；ERP-07 仍是唯一 `IN_PROGRESS`，ERP-06 为 `BLOCKED/NO-GO`，ERP-08～ERP-23 未开始。
