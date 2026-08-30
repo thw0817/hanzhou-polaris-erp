@@ -9,6 +9,7 @@ import {
   Erp07EndpointSchemaError,
   getErp07EndpointSchema,
   validateErp07EndpointPayload,
+  validateErp07EndpointQuery,
 } from "./erp07-shein-endpoint-schema.js";
 
 export const ERP07_SHEIN_ADAPTER_CONTRACT_VERSION =
@@ -80,6 +81,7 @@ function safeRequestMetadata(request, schema) {
     traceId: request.traceId,
     requiredHeaders: [...schema.headers],
     body: request.body,
+    ...(request.query ? { query: request.query } : {}),
   };
 }
 
@@ -166,6 +168,7 @@ export class Erp07SheinAdapter {
   async execute({
     endpoint,
     body = {},
+    query,
     scope,
     traceId,
     allowWrite = false,
@@ -188,6 +191,7 @@ export class Erp07SheinAdapter {
     const request = buildErp07EndpointRequest({
       endpoint,
       body,
+      query,
       scope,
       traceId,
       allowWrite,
@@ -209,6 +213,24 @@ export class Erp07SheinAdapter {
         );
       }
       throw error;
+    }
+    if (request.query) {
+      try {
+        validateErp07EndpointQuery({
+          endpoint: request.endpoint,
+          query: request.query,
+        });
+      } catch (error) {
+        if (error instanceof Erp07EndpointSchemaError) {
+          throw schemaError(
+            "ERP07_ADAPTER_QUERY_SCHEMA_INVALID",
+            "ERP-07 SHEIN 查询参数未通过版本化 schema 校验",
+            error,
+            { endpoint: request.endpoint, schemaVersion: ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION },
+          );
+        }
+        throw error;
+      }
     }
 
     if (request.mode === "read" ? !this.readEnabled : !this.writeEnabled) {
@@ -246,6 +268,7 @@ export class Erp07SheinAdapter {
       method: request.method,
       path: request.path,
       body: request.body,
+      ...(request.query ? { query: request.query } : {}),
       openKeyId: credentials.openKeyId,
       secretKey: credentials.secretKey,
       language: this.language,

@@ -1353,6 +1353,7 @@ export function createCloudControlRequestHandler({
             context,
             storeId,
             supplierSkuList: input.supplierSkuList,
+            brandCode: input.brandCode,
           }),
           corsHeaders,
         );

@@ -76,10 +76,14 @@ export async function runPublishPreflight({
     throw new TypeError("request is required");
   }
   const normalizedSkuList = normalizeSupplierSkuList(supplierSkuList);
-  const permissionResult = await request({
+  const permissionRequest = {
     method: "GET",
     path: PUBLISH_PERMISSION_PATH,
-  });
+    ...(String(brandCode || "").trim()
+      ? { query: { brandCode: String(brandCode).trim() } }
+      : {}),
+  };
+  const permissionResult = await request(permissionRequest);
   let quotaResult;
   let shelfQuotaUnavailableReason = "";
   try {

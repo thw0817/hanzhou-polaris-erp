@@ -77,3 +77,27 @@ test("preserves SHEIN code and traceId on business errors", async () => {
     },
   );
 });
+
+test("includes query parameters in the signed SHEIN request path", async () => {
+  let captured;
+  const fetchImpl = async (url, options) => {
+    captured = { url, options };
+    return new Response(JSON.stringify({ code: "0", info: {}, traceId: "trace-query" }), {
+      status: 200,
+    });
+  };
+  await requestShein({
+    baseUrl: "https://openapi.sheincorp.cn",
+    method: "GET",
+    path: "/open-api/goods/product/check-publish-permission",
+    query: { brandCode: "2tgt1" },
+    openKeyId: "OPEN_KEY",
+    secretKey: "SECRET_KEY",
+    randomKey: "abc12",
+    fetchImpl,
+  });
+  assert.equal(
+    captured.url,
+    "https://openapi.sheincorp.cn/open-api/goods/product/check-publish-permission?brandCode=2tgt1",
+  );
+});

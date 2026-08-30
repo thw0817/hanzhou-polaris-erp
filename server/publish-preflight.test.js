@@ -62,6 +62,26 @@ test("runs documented publish permission and supplier SKU checks", async () => {
   assert.equal(result.supplierSkuCheck.requestedCount, 2);
 });
 
+test("forwards an optional brand code to the publish permission query", async () => {
+  const calls = [];
+  await runPublishPreflight({
+    supplierSkuList: [],
+    brandCode: "  2tgt1  ",
+    request: async (options) => {
+      calls.push(options);
+      if (options.path === PUBLISH_PREFLIGHT_PATHS.permission) {
+        return { payload: { code: "0", info: { canPublishProduct: true } }, diagnostics: {} };
+      }
+      return { payload: { code: "0", info: { isControlled: false } }, diagnostics: {} };
+    },
+  });
+  assert.deepEqual(calls[0], {
+    method: "GET",
+    path: PUBLISH_PREFLIGHT_PATHS.permission,
+    query: { brandCode: "2tgt1" },
+  });
+});
+
 test("treats an explicitly unlimited SHEIN publish quota as passed", async () => {
   const result = await runPublishPreflight({
     supplierSkuList: ["RUG-40X60"],

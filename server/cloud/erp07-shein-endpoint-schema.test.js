@@ -12,6 +12,7 @@ import {
   getErp07EndpointFixture,
   getErp07EndpointSchema,
   listErp07EndpointSchemas,
+  validateErp07EndpointQuery,
   validateErp07EndpointPayload,
 } from "./erp07-shein-endpoint-schema.js";
 import {
@@ -58,6 +59,7 @@ test("key ERP-07 endpoints expose versioned source, schema and evidence state", 
     assert.equal(schema.schemaVersion, ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION);
     assert.ok(["read", "non_business_write", "business_write", "credential_write"].includes(schema.mode));
     assert.ok(schema.source.files.length > 0);
+    assert.ok(Array.isArray(schema.source.officialSourceUrls));
     assert.equal(schema.source.authorizedStoreRead, "not_observed");
     assert.ok(schema.request);
     assert.ok(schema.response);
@@ -71,6 +73,16 @@ test("key ERP-07 endpoints expose versioned source, schema and evidence state", 
     assert.ok(getErp07EndpointSchema(endpoint).headers.includes("language"));
   }
   assert.equal(getErp07EndpointSchema("POST /open-api/goods/searchProduct").id, "product.search");
+});
+
+test("official response sources stay on the SHEIN Open API host", () => {
+  for (const schema of listErp07EndpointSchemas()) {
+    for (const sourceUrl of schema.source.officialSourceUrls) {
+      const parsed = new URL(sourceUrl);
+      assert.equal(parsed.protocol, "https:", schema.id);
+      assert.equal(parsed.hostname, "open.sheincorp.com", schema.id);
+    }
+  }
 });
 
 test("every ERP-07 contract has explicit schema coverage with matching route and mode", () => {
@@ -209,6 +221,33 @@ test("officially documented request fields validate without exposing credentials
   assert.doesNotMatch(JSON.stringify(upload), /secret|token|password/i);
 });
 
+test("official preflight query and supplier SKU limits match the current request contract", () => {
+  assert.equal(validateErp07EndpointQuery({
+    endpoint: "preflight.publish_permission",
+    query: { brandCode: "2tgt1" },
+  }).valid, true);
+  assert.throws(
+    () => validateErp07EndpointQuery({
+      endpoint: "preflight.publish_permission",
+      query: { unsupported: "value" },
+    }),
+    /未识别字段/,
+  );
+  assert.equal(validateErp07EndpointPayload({
+    endpoint: "preflight.supplier_sku_duplicate",
+    direction: "request",
+    payload: { supplierSkuList: Array.from({ length: 200 }, (_, index) => `SKU-${index}`) },
+  }).valid, true);
+  assert.throws(
+    () => validateErp07EndpointPayload({
+      endpoint: "preflight.supplier_sku_duplicate",
+      direction: "request",
+      payload: { supplierSkuList: Array.from({ length: 201 }, (_, index) => `SKU-${index}`) },
+    }),
+    /最多允许 200 项/,
+  );
+});
+
 test("source-pending endpoints expose honest response evidence and reject malformed consumer fields", () => {
   const expected = {
     "sales.sku": [
@@ -219,22 +258,12 @@ test("source-pending endpoints expose honest response evidence and reject malfor
       "info.dataList[].c30dSaleCnt",
       "info.dataList[].dt",
     ],
-    "preflight.publish_permission": [
-      "info.canPublishProduct",
-      "info.can_publish_product",
-      "info.reason",
-    ],
     "preflight.publish_quota": [
       "info.isControlled",
       "info.availableQuota",
       "info.availableLimit",
       "info.totalQuota",
       "info.usedCount",
-    ],
-    "preflight.supplier_sku_duplicate": [
-      "info[].supplierSku",
-      "info[].supplier_sku",
-      "info[].repeated",
     ],
     "review.document_state": [
       "info[].spu_name",
@@ -246,7 +275,6 @@ test("source-pending endpoints expose honest response evidence and reject malfor
       "info[].audit_state",
       "info[].failed_reason[]",
     ],
-    "pricing.proof_upload": ["info.objectKey"],
   };
   for (const [endpoint, fields] of Object.entries(expected)) {
     const evidence = getErp07EndpointSchema(endpoint).source.responseEvidence;
@@ -316,6 +344,54 @@ test("source-pending endpoints expose honest response evidence and reject malfor
   );
 });
 
+test("official response evidence keeps source URLs, fields and live-read status separate", () => {
+  const expected = {
+    "preflight.publish_permission": {
+      fields: [
+        "code",
+        "msg",
+        "traceId",
+        "info.canPublishProduct",
+        "info.reason",
+      ],
+      sourceUrl: "https://open.sheincorp.com/zh/documents/apidoc/detail/3001589-1000001",
+    },
+    "preflight.supplier_sku_duplicate": {
+      fields: [
+        "code",
+        "msg",
+        "traceId",
+        "info[].supplierSku",
+        "info[].repeated",
+      ],
+      sourceUrl: "https://open.sheincorp.com/zh/documents/apidoc/detail/3001437",
+    },
+    "pricing.proof_upload": {
+      fields: [
+        "code",
+        "msg",
+        "traceId",
+        "info.objectKey",
+        "info.url",
+        "bbl",
+      ],
+      sourceUrl: "https://open.sheincorp.com/zh/documents/apidoc/detail/3001728",
+    },
+  };
+  for (const [endpoint, contract] of Object.entries(expected)) {
+    const schema = getErp07EndpointSchema(endpoint);
+    const evidence = schema.source.responseEvidence;
+    assert.equal(evidence.status, "official_response_contract", endpoint);
+    assert.deepEqual(evidence.fields, contract.fields, endpoint);
+    assert.deepEqual(schema.source.officialSourceUrls, [contract.sourceUrl], endpoint);
+    assert.deepEqual(evidence.gaps, [], endpoint);
+    assert.equal(evidence.authorizedStoreRead, "not_observed", endpoint);
+    assert.ok(evidence.fieldEvidence.every((entry) =>
+      entry.status === "official_response_field" && entry.observed === false,
+    ), endpoint);
+  }
+});
+
 test("source-pending response fields carry field-level provenance and cannot claim live evidence", () => {
   const expected = {
     "sales.sku": {
@@ -331,11 +407,14 @@ test("source-pending response fields carry field-level provenance and cannot cla
     },
     "preflight.publish_permission": {
       fields: [
+        "code",
+        "msg",
+        "traceId",
         "info.canPublishProduct",
-        "info.can_publish_product",
         "info.reason",
       ],
-      sourceFiles: ["docs/V2_SHEIN_API_CAPABILITY_MATRIX.md", "server/publish-preflight.js"],
+      sourceFiles: ["docs/ERP07_OFFICIAL_RESPONSE_SOURCE_AUDIT_2026-08-30.md"],
+      status: "official_response_field",
     },
     "preflight.publish_quota": {
       fields: [
@@ -349,11 +428,14 @@ test("source-pending response fields carry field-level provenance and cannot cla
     },
     "preflight.supplier_sku_duplicate": {
       fields: [
+        "code",
+        "msg",
+        "traceId",
         "info[].supplierSku",
-        "info[].supplier_sku",
         "info[].repeated",
       ],
-      sourceFiles: ["server/publish-preflight.js", "server/publish-preflight.test.js"],
+      sourceFiles: ["docs/ERP07_OFFICIAL_RESPONSE_SOURCE_AUDIT_2026-08-30.md"],
+      status: "official_response_field",
     },
     "review.document_state": {
       fields: [
@@ -372,8 +454,16 @@ test("source-pending response fields carry field-level provenance and cannot cla
       ],
     },
     "pricing.proof_upload": {
-      fields: ["info.objectKey"],
-      sourceFiles: ["server/shein-upload.js", "server/shein-upload.test.js"],
+      fields: [
+        "code",
+        "msg",
+        "traceId",
+        "info.objectKey",
+        "info.url",
+        "bbl",
+      ],
+      sourceFiles: ["docs/ERP07_OFFICIAL_RESPONSE_SOURCE_AUDIT_2026-08-30.md"],
+      status: "official_response_field",
     },
   };
 
@@ -385,7 +475,11 @@ test("source-pending response fields carry field-level provenance and cannot cla
       endpoint,
     );
     for (const entry of evidence.fieldEvidence) {
-      assert.equal(entry.status, "internal_consumer_contract", endpoint);
+      assert.equal(
+        entry.status,
+        contract.status || "internal_consumer_contract",
+        endpoint,
+      );
       assert.deepEqual(entry.sourceFiles, contract.sourceFiles, endpoint);
       assert.equal(entry.observed, false, endpoint);
     }

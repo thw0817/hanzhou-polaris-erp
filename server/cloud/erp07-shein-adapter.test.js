@@ -177,6 +177,40 @@ test("ERP-07 adapter keeps business writes disabled even when reads are enabled"
   assert.equal(transportCalls, 0);
 });
 
+test("ERP-07 adapter validates and forwards the permission query", async () => {
+  const requests = [];
+  const remote = adapter({
+    request: async (input) => {
+      requests.push(input);
+      return {
+        status: 200,
+        payload: {
+          code: "0",
+          msg: "OK",
+          traceId: "trace-permission-query",
+          info: { canPublishProduct: true, reason: null },
+        },
+        diagnostics: {
+          status: 200,
+          code: "0",
+          traceId: "trace-permission-query",
+        },
+      };
+    },
+  });
+
+  await remote.execute({
+    endpoint: "preflight.publish_permission",
+    query: { brandCode: "2tgt1" },
+    scope,
+    traceId: "trace-permission-query",
+  });
+
+  assert.equal(requests.length, 1);
+  assert.deepEqual(requests[0].query, { brandCode: "2tgt1" });
+  assert.equal(requests[0].path, "/open-api/goods/product/check-publish-permission");
+});
+
 test("ERP-07 adapter permits an explicitly enabled one-time write and still requires evidence", async () => {
   const remote = adapter({
     writeEnabled: true,

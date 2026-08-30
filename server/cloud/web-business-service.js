@@ -729,11 +729,12 @@ export class SheinWebReadService {
     const credential = await this.#credential(context, storeId);
     return syncStoreBusinessData({
       previousSnapshot,
-      request: ({ method, path, body }) =>
+      request: ({ method, path, query, body }) =>
         this.#requestShein(storeId, {
           baseUrl: this.apiBaseUrl,
           method,
           path,
+          ...(query ? { query } : {}),
           body,
           openKeyId: credential.openKeyId,
           secretKey: credential.secretKey,

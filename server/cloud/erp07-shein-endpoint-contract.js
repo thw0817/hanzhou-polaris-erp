@@ -490,6 +490,7 @@ export function listErp07EndpointContracts({ mode = null } = {}) {
 export function buildErp07EndpointRequest({
   endpoint,
   body = {},
+  query,
   scope,
   traceId,
   allowWrite = false,
@@ -507,6 +508,22 @@ export function buildErp07EndpointRequest({
     throw new Erp07EndpointContractError(
       "ERP07_ENDPOINT_SENSITIVE_BODY",
       `SHEIN 请求 body 不得携带凭证字段: ${sensitivePath}`,
+    );
+  }
+  const normalizedQuery = query === undefined ? null : object(query);
+  if (query !== undefined && !normalizedQuery) {
+    throw new Erp07EndpointContractError(
+      "ERP07_ENDPOINT_QUERY_INVALID",
+      "SHEIN 请求 query 必须是对象",
+    );
+  }
+  const sensitiveQueryPath = normalizedQuery
+    ? findSensitiveKey(normalizedQuery, "query")
+    : null;
+  if (sensitiveQueryPath) {
+    throw new Erp07EndpointContractError(
+      "ERP07_ENDPOINT_SENSITIVE_QUERY",
+      `SHEIN 请求 query 不得携带凭证字段: ${sensitiveQueryPath}`,
     );
   }
   if (
@@ -539,6 +556,7 @@ export function buildErp07EndpointRequest({
     scope: normalizeScope(scope),
     traceId: text(traceId, "traceId", 200),
     body: normalizedBody,
+    ...(normalizedQuery ? { query: normalizedQuery } : {}),
   });
 }
 

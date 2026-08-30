@@ -2726,7 +2726,10 @@ function ProductDraftEditor({ store, draft, onSaved, onClose }) {
           `/v1/web/stores/${encodeURIComponent(store.id)}/publish/preflight`,
           {
             method: "POST",
-            body: JSON.stringify({ supplierSkuList: skuValues }),
+            body: JSON.stringify({
+              supplierSkuList: skuValues,
+              brandCode: data.brandCode || data.brand_code || "",
+            }),
           },
         );
       }

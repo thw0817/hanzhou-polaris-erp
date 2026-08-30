@@ -1799,15 +1799,17 @@ export function createSheinProxy({
         const id = decodeURIComponent(publishPreflightMatch[1]);
         const store = activeRegistry.getStore(id);
         if (!store) return json(response, 404, { message: "未找到已连接店铺" });
-        const { supplierSkuList } = await readJson(request);
+        const { supplierSkuList, brandCode } = await readJson(request);
         const result = await runPublishPreflight({
           supplierSkuList,
-          request: ({ method, path, body }) =>
+          brandCode,
+          request: ({ method, path, query, body }) =>
             requestStoreShein({
               storeId: id,
               baseUrl: config.apiBaseUrl,
               method,
               path,
+              ...(query ? { query } : {}),
               body,
               openKeyId: store.openKeyId,
               secretKey: store.secretKey,

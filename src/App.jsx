@@ -7141,6 +7141,10 @@ function PublishDialog({
         (sku) => sku.supplier_sku,
       ),
     );
+    const brandCodes = Array.from(new Set(productDrafts
+      .map((draft) => draft.payload?.brand_code || draft.payload?.brandCode || "")
+      .map((value) => String(value).trim())
+      .filter(Boolean)));
     setPublishRuleNotice("");
     setPreflightResult(null);
     setStep("checking");
@@ -7151,7 +7155,10 @@ function PublishDialog({
         )}/publish/preflight`,
         {
           method: "POST",
-          body: JSON.stringify({ supplierSkuList }),
+          body: JSON.stringify({
+            supplierSkuList,
+            brandCode: brandCodes.length === 1 ? brandCodes[0] : "",
+          }),
         },
       );
       setPreflightResult(result);

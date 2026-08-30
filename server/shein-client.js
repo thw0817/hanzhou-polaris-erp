@@ -1,5 +1,23 @@
 import { generateSheinSignature } from "./shein-crypto.js";
 
+function requestPathWithQuery(path, query) {
+  if (!query || typeof query !== "object" || Array.isArray(query)) return path;
+  const url = new URL(path, "https://shein.invalid");
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === "") continue;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item !== undefined && item !== null && item !== "") {
+          url.searchParams.append(key, String(item));
+        }
+      }
+      continue;
+    }
+    url.searchParams.set(key, String(value));
+  }
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export class SheinApiError extends Error {
   constructor(message, details = {}) {
     super(message);
@@ -15,6 +33,7 @@ export async function requestShein({
   baseUrl,
   method = "POST",
   path,
+  query,
   body,
   openKeyId,
   secretKey,
@@ -31,10 +50,11 @@ export async function requestShein({
 
   const startedAt = now();
   const timestamp = startedAt.toString();
+  const requestPath = requestPathWithQuery(path, query);
   const signature = generateSheinSignature({
     openKeyId,
     secretKey,
-    path,
+    path: requestPath,
     timestamp,
     randomKey,
   });
@@ -48,7 +68,7 @@ export async function requestShein({
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(`${baseUrl}${path}`, {
+    const response = await fetchImpl(`${baseUrl}${requestPath}`, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),

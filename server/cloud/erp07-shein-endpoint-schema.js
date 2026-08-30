@@ -8,6 +8,9 @@ export const ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION =
 const SOURCE_CATALOG =
   "docs/HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md";
 const CAPABILITY_MATRIX = "docs/V2_SHEIN_API_CAPABILITY_MATRIX.md";
+const OFFICIAL_RESPONSE_SOURCE_AUDIT =
+  "docs/ERP07_OFFICIAL_RESPONSE_SOURCE_AUDIT_2026-08-30.md";
+const OFFICIAL_SHEIN_API_HOST = "open.sheincorp.com";
 const FIELD_EVIDENCE_STATUSES = Object.freeze([
   "not_captured",
   "internal_consumer_contract",
@@ -40,7 +43,10 @@ function createFieldEvidence(fields, status, sourceFiles = [], observed = false)
   }));
 }
 
-function envelope(info = field(["object", "array"], { additionalProperties: "preserve" })) {
+function envelope(
+  info = field(["object", "array"], { additionalProperties: "preserve" }),
+  extraFields = {},
+) {
   return {
     type: "object",
     required: ["code"],
@@ -49,6 +55,7 @@ function envelope(info = field(["object", "array"], { additionalProperties: "pre
       msg: field("string"),
       traceId: field("string"),
       info,
+      ...extraFields,
     },
     additionalProperties: "preserve",
   };
@@ -59,6 +66,7 @@ function source({
   officialUpdatedAt = null,
   evidenceStatus,
   responseEvidence = null,
+  officialSourceUrls = [],
 }) {
   const evidence = responseEvidence || {
     status: "not_captured",
@@ -72,6 +80,7 @@ function source({
   return {
     files,
     officialUpdatedAt,
+    officialSourceUrls,
     evidenceStatus,
     authorizedStoreRead: "not_observed",
     responseEvidence: {
@@ -281,8 +290,7 @@ const SALES_RESPONSE_INFO = field("object", {
 const PUBLISH_PERMISSION_RESPONSE_INFO = field("object", {
   fields: {
     canPublishProduct: field("boolean"),
-    can_publish_product: field("boolean"),
-    reason: field("string"),
+    reason: field(["string", "null"]),
   },
   additionalProperties: "preserve",
 });
@@ -301,7 +309,6 @@ const PUBLISH_QUOTA_RESPONSE_INFO = field("object", {
 const SUPPLIER_SKU_RESPONSE_ROW = field("object", {
   fields: {
     supplierSku: field("string"),
-    supplier_sku: field("string"),
     repeated: field("boolean"),
   },
   additionalProperties: "preserve",
@@ -519,24 +526,39 @@ const SCHEMAS = {
     mode: "read",
     method: "GET",
     path: "/open-api/goods/product/check-publish-permission",
-    schemaStatus: "fixture_ready_source_pending",
+    schemaStatus: "fixture_ready_official_response",
     source: source({
-      files: [CAPABILITY_MATRIX, "docs/shein-api-raw/53ae21b9-3852-4fae-996e-b7a6ceb777c5.txt"],
-      officialUpdatedAt: "2026-07-10 10:32:40",
-      evidenceStatus: "code_tested_official_method_only",
+      files: [
+        CAPABILITY_MATRIX,
+        OFFICIAL_RESPONSE_SOURCE_AUDIT,
+        "docs/shein-api-raw/53ae21b9-3852-4fae-996e-b7a6ceb777c5.txt",
+      ],
+      officialUpdatedAt: "2026-02-06 18:06:06",
+      officialSourceUrls: [
+        "https://open.sheincorp.com/zh/documents/apidoc/detail/3001589-1000001",
+      ],
+      evidenceStatus: "official_request_and_response_fields_code_tested",
       responseEvidence: {
-        status: "internal_consumer_contract",
+        status: "official_response_contract",
         fields: [
+          "code",
+          "msg",
+          "traceId",
           "info.canPublishProduct",
-          "info.can_publish_product",
           "info.reason",
         ],
-        sourceFiles: [CAPABILITY_MATRIX, "server/publish-preflight.js"],
-        gaps: ["official_response_fields_not_captured"],
+        sourceFiles: [OFFICIAL_RESPONSE_SOURCE_AUDIT],
       },
     }),
     headers: COMMON_REQUEST_HEADERS,
     request: { type: "object", fields: {}, additionalProperties: "fail" },
+    query: {
+      type: "object",
+      fields: {
+        brandCode: field("string"),
+      },
+      additionalProperties: "fail",
+    },
     response: envelope(PUBLISH_PERMISSION_RESPONSE_INFO),
     fixtures: readFixtures({ canPublishProduct: true }),
   },
@@ -570,32 +592,37 @@ const SCHEMAS = {
     mode: "read",
     method: "POST",
     path: "/open-api/goods/product/check-supplierSku-repeated",
-    schemaStatus: "fixture_ready_source_pending",
+    schemaStatus: "fixture_ready_official_response",
     source: source({
       files: [
         CAPABILITY_MATRIX,
+        OFFICIAL_RESPONSE_SOURCE_AUDIT,
         "docs/shein-api-raw/05562b51-1db4-4f91-88dd-384ffb9af2b7.txt:662",
         "server/publish-preflight.js",
       ],
-      officialUpdatedAt: "2026-06-12 13:55:48",
-      evidenceStatus: "code_tested_official_method_only",
+      officialUpdatedAt: "2025-10-22 20:45:14",
+      officialSourceUrls: [
+        "https://open.sheincorp.com/zh/documents/apidoc/detail/3001437",
+      ],
+      evidenceStatus: "official_request_and_response_fields_code_tested",
       responseEvidence: {
-        status: "internal_consumer_contract",
+        status: "official_response_contract",
         fields: [
+          "code",
+          "msg",
+          "traceId",
           "info[].supplierSku",
-          "info[].supplier_sku",
           "info[].repeated",
         ],
-        sourceFiles: ["server/publish-preflight.js", "server/publish-preflight.test.js"],
-        gaps: ["official_response_fields_not_captured"],
+        sourceFiles: [OFFICIAL_RESPONSE_SOURCE_AUDIT],
       },
     }),
     headers: COMMON_REQUEST_HEADERS,
     request: {
       type: "object",
       fields: {
-        supplierSkuList: arrayOf(field("string"), { minItems: 1, maxItems: 100 }),
-        supplier_sku_list: arrayOf(field("string"), { minItems: 1, maxItems: 100 }),
+        supplierSkuList: arrayOf(field("string"), { minItems: 1, maxItems: 200 }),
+        supplier_sku_list: arrayOf(field("string"), { minItems: 1, maxItems: 200 }),
       },
       additionalProperties: "preserve",
     },
@@ -816,15 +843,25 @@ const SCHEMAS = {
     mode: "non_business_write",
     method: "POST",
     path: "/open-api/goods/discuss/upload-discuss-file",
-    schemaStatus: "fixture_ready_source_pending",
+    schemaStatus: "fixture_ready_official_response",
     source: source({
-      files: [CAPABILITY_MATRIX, "server/shein-upload.js"],
-      evidenceStatus: "code_tested_official_method_only",
+      files: [CAPABILITY_MATRIX, OFFICIAL_RESPONSE_SOURCE_AUDIT, "server/shein-upload.js"],
+      officialUpdatedAt: "2026-05-22 11:58:16",
+      officialSourceUrls: [
+        "https://open.sheincorp.com/zh/documents/apidoc/detail/3001728",
+      ],
+      evidenceStatus: "official_request_and_response_fields_code_tested",
       responseEvidence: {
-        status: "internal_consumer_contract",
-        fields: ["info.objectKey"],
-        sourceFiles: ["server/shein-upload.js", "server/shein-upload.test.js"],
-        gaps: ["official_response_fields_not_captured"],
+        status: "official_response_contract",
+        fields: [
+          "code",
+          "msg",
+          "traceId",
+          "info.objectKey",
+          "info.url",
+          "bbl",
+        ],
+        sourceFiles: [OFFICIAL_RESPONSE_SOURCE_AUDIT],
       },
     }),
     headers: COMMON_REQUEST_HEADERS,
@@ -836,14 +873,23 @@ const SCHEMAS = {
     },
     response: envelope(field("object", {
       required: ["objectKey"],
-      fields: { objectKey: field("string") },
+      fields: {
+        objectKey: field("string"),
+        url: field("string"),
+      },
       additionalProperties: "preserve",
-    })),
+    }), {
+      bbl: field(["boolean", "integer", "string", "null"]),
+    }),
     fixtures: writeFixtures({
       code: "0",
       msg: "OK",
       traceId: "fixture-proof-upload-success",
-      info: { objectKey: "fixture/proof.pdf" },
+      info: {
+        objectKey: "fixture/proof.pdf",
+        url: "https://file.example/fixture/proof.pdf",
+      },
+      bbl: true,
     }, {
       code: "0",
       msg: "OK",
@@ -1406,6 +1452,33 @@ export function validateErp07EndpointPayload({
   });
 }
 
+export function validateErp07EndpointQuery({ endpoint, query = {} } = {}) {
+  const { id, schema } = resolveSchema(endpoint);
+  if (schema.validationStatus === "blocked") {
+    throw new Erp07EndpointSchemaError(
+      "ERP07_ENDPOINT_SCHEMA_BLOCKED",
+      `endpoint ${id} 当前不可执行: ${schema.blockReason}`,
+      id,
+    );
+  }
+  const targetSchema = schema.query || {
+    type: "object",
+    fields: {},
+    additionalProperties: "fail",
+  };
+  validateNode(query, targetSchema, `${id}.query`);
+  return Object.freeze({
+    valid: true,
+    endpoint: id,
+    direction: "query",
+    fixtureKind: null,
+    schemaVersion: ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION,
+    sourceEvidenceStatus: schema.source.evidenceStatus,
+    responseEvidence: schema.source.responseEvidence,
+    authorizedStoreRead: schema.source.authorizedStoreRead,
+  });
+}
+
 export function assertErp07EndpointEvidenceCatalog() {
   for (const [id, schema] of Object.entries(SCHEMAS)) {
     const evidence = schema.source?.responseEvidence;
@@ -1419,6 +1492,26 @@ export function assertErp07EndpointEvidenceCatalog() {
       throw new Erp07EndpointSchemaError(
         "ERP07_ENDPOINT_RESPONSE_EVIDENCE_STATUS_INVALID",
         `endpoint ${id} 的 response evidence 状态不可识别: ${evidence.status}`,
+      );
+    }
+    const officialSourceUrls = schema.source?.officialSourceUrls;
+    if (!Array.isArray(officialSourceUrls) || officialSourceUrls.some((url) => {
+      try {
+        const parsed = new URL(url);
+        return parsed.protocol !== "https:" || parsed.hostname !== OFFICIAL_SHEIN_API_HOST;
+      } catch {
+        return true;
+      }
+    })) {
+      throw new Erp07EndpointSchemaError(
+        "ERP07_ENDPOINT_OFFICIAL_SOURCE_URLS_INVALID",
+        `endpoint ${id} 的官方来源 URL 必须是 HTTPS ${OFFICIAL_SHEIN_API_HOST} 地址`,
+      );
+    }
+    if (evidence.status === "official_response_contract" && officialSourceUrls.length === 0) {
+      throw new Erp07EndpointSchemaError(
+        "ERP07_ENDPOINT_OFFICIAL_SOURCE_URLS_MISSING",
+        `endpoint ${id} 声明官方响应契约时必须保留官方来源 URL`,
       );
     }
     if (!Array.isArray(evidence.gaps) || evidence.gaps.some(
