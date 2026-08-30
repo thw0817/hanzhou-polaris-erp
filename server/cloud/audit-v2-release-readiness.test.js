@@ -145,6 +145,8 @@ async function createRelease() {
       "normalizeSpuInfo spu-readback-v1 skcInfoList skuInfoList",
     "server/cloud/compliance-revalidation-projections.js":
       "buildComplianceRevalidation compliance-revalidation-v1 OFFICIAL_CAPABILITIES unsupported_by_official_api",
+    "server/cloud/erp07-shein-adapter.js":
+      "ERP07_SHEIN_ADAPTER_CONTRACT_VERSION class Erp07SheinAdapter readEnabled = false writeEnabled = false validateErp07EndpointPayload classifyErp07Response ERP07_ADAPTER_RESPONSE_SCHEMA_INVALID",
     "server/cloud/webhook-worker-server.js":
       "createDefaultWebhookProductionHandlers PostgresPublishExecutionRepository publishExecutionRepository",
     "src-v2/lib/api.ts":
@@ -248,6 +250,30 @@ test("V2 artifact readiness checks the release without a database", async () => 
     /V2 release artifact readiness: READY/,
   );
   assert.equal(report.release.releaseMetadata.passed, true);
+});
+
+test("V2 artifact readiness blocks a release without the ERP-07 adapter boundary", async () => {
+  const root = await createRelease();
+  await fs.rm(path.join(root, "server/cloud/erp07-shein-adapter.js"));
+
+  const report = await auditV2ReleaseArtifact({ root });
+
+  assert.equal(report.ready, false);
+  assert.deepEqual(report.blockers, [
+    "release_contract:server/cloud/erp07-shein-adapter.js",
+  ]);
+  const contract = report.release.contracts.find(
+    (item) => item.filename === "server/cloud/erp07-shein-adapter.js",
+  );
+  assert.deepEqual(contract.missingMarkers, [
+    "ERP07_SHEIN_ADAPTER_CONTRACT_VERSION",
+    "class Erp07SheinAdapter",
+    "readEnabled = false",
+    "writeEnabled = false",
+    "validateErp07EndpointPayload",
+    "classifyErp07Response",
+    "ERP07_ADAPTER_RESPONSE_SCHEMA_INVALID",
+  ]);
 });
 
 test("V2 artifact readiness blocks a release without the category schema gate", async () => {

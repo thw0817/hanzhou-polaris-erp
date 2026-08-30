@@ -1,8 +1,8 @@
 # SHEIN 商业 ERP 主执行计划
 
-版本：2026-08-30-v43
+版本：2026-08-30-v44
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：执行路线；ERP-00～ERP-04 已完成，ERP-05 已按用户批准的历史映射冻结豁免完成范围收口，ERP-06 整体仍处于非生产接入前置阶段，ERP-07 已完成 33 项 endpoint 显式 schema 覆盖与失败 fixture 隔离回归（23 项可执行、10 项阻断），整体仍在进行，ERP-08～ERP-23 尚未开始
+状态：执行路线；ERP-00～ERP-04 已完成，ERP-05 已按用户批准的历史映射冻结豁免完成范围收口，ERP-06 整体仍处于非生产接入前置阶段，ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed 和唯一 server adapter 隔离边界回归（23 项可执行、10 项阻断），整体仍在进行，ERP-08～ERP-23 尚未开始
 适用项目：SHEIN 超级运营中心 / SHEIN 涵舟工作室  
 执行编号：ERP-00 至 ERP-23
 
@@ -623,7 +623,9 @@
 - 23 个读取或非业务边界进入本地可执行 request/response fixture 校验；已覆盖库存、类目、属性、发布字段、关联属性、合规要求、实拍图要求、证书规则/列表、代理公司和警示语规则的官方字段边界。
 - 10 个接口保持显式 `validationStatus=blocked`：未归档独立原文、COS-first 冻结旧链路、待复核议价、合规业务写入和凭证交换；阻断优先于 payload 解析，避免猜测调用。
 - 远程请求构建器另外拒绝 `archived_frozen`/`archived_requires_revalidation` 接口和所有 `credential_write` 通用构建；类目树、属性模板、发布字段规范的官方必需 `language` 请求头已进入契约元数据。
-- 本进度不等于 ERP-07 完成门：尚缺每项完整官方来源版本、真实授权店铺只读 evidence、全部 response 字段/状态映射、唯一 server adapter 接线、预发 canary/readback 和完成门审查；ERP-08～ERP-23 不得提前启动。
+- `RUN-20260830-ERP07-ADAPTER-BOUNDARY-04` 已在本地隔离边界实现唯一 `Erp07SheinAdapter`：请求先过 endpoint schema，默认不允许远端读取或任何写入；启用时凭证只进入底层签名传输，不进入 adapter 结果；响应先过 response schema，再统一输出 `read_success`、`accepted`、`known_failed` 或 `result_unknown`。写入成功缺少完整证据、发送后超时/429/5xx/网络异常均保持 `result_unknown/readback_only`，不自动重发。
+- release/readiness 静态门禁已把 `server/cloud/erp07-shein-adapter.js` 纳入必要契约；缺少该文件或关键 fail-closed 标记时阻断候选包。该 adapter 目前只完成隔离实现与门禁接入，尚未接入现有线上路由、Worker、生产配置或真实 SHEIN HTTP。
+- 本进度不等于 ERP-07 完成门：尚缺每项完整官方来源版本、真实授权店铺只读 evidence、全部 response 字段/状态映射、现有线上业务路径的受控 adapter 接线、预发 canary/readback 和完成门审查；ERP-08～ERP-23 不得提前启动。
 
 ### 必做清单
 

@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v52
+版本：2026-08-30-v53
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离与状态 fail-closed 增量，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed 和唯一 server adapter 边界隔离回归，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-ENDPOINT-SCHEMA-COVERAGE-03
+当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-ADAPTER-BOUNDARY-04
 
 ## 0. 台账用途
 
@@ -32,7 +32,7 @@
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
 | ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、隔离 Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账、单阶段编排和发布-回读组合隔离验证均已完成；生产迁移、真实 SHEIN adapter/发布仍未完成 |
-| ERP-07 | SHEIN 适配器契约硬化 | NOT_STARTED | — | ERP-06 | — |
+| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-ADAPTER-BOUNDARY-04 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter 隔离边界与回归通过；官方完整 response/店铺 evidence、canary/readback 和生产接入仍未完成 |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
 | ERP-10 | 官方审核回读与状态投影 | NOT_STARTED | — | ERP-09 | — |
@@ -1954,3 +1954,17 @@
 - 环境边界：只读取本地源码和已归档 API 文档，使用 synthetic fixture；未解析或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行正式 migration、部署、重启、配置切换、历史回填或自动重发。
 - 当前状态：`COMPLETE / PARTIAL SLICE`。33 个 endpoint 已有显式登记，23 个进入本地可执行 schema 校验，10 个保持明确阻断；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入门仍为 `NO-GO`，ERP-08～ERP-23 未开始。
 - 下一执行单元：继续补齐剩余接口的官方来源版本、真实授权店铺只读 evidence、response 字段完整性和唯一 server adapter 接线；完成 ERP-07 完成门、预发 canary/readback 和单独批准前，不执行任何外部写入。
+
+## 42. ERP-07 唯一 SHEIN server adapter 隔离边界
+
+### RUN-20260830-ERP07-ADAPTER-BOUNDARY-04
+
+- 类型：ERP-07 第四段本地隔离实现；在不接入线上路由、Worker、生产配置或真实 HTTP 的前提下，建立唯一 `Erp07SheinAdapter` 边界和失败回归。
+- 实际文件：[erp07-shein-adapter.js](../server/cloud/erp07-shein-adapter.js)、[erp07-shein-adapter.test.js](../server/cloud/erp07-shein-adapter.test.js)，并更新 release/readiness 静态门禁及其测试，把 adapter 纳入候选制品必要契约。
+- 边界顺序：endpoint allowlist/作用域/敏感 body 先由既有契约构建器校验；再由版本化 request schema 校验；只有显式启用对应 read/write 开关后才解析凭证并调用注入的底层 SHEIN transport；返回结果再次经过 response schema，再统一输出 `read_success`、`accepted`、`known_failed` 或 `result_unknown`。
+- 安全语义：read 和 write 默认关闭；业务写入仍保持关闭；凭证只传给底层签名传输，不进入 adapter 结果；不自动重试；写入缺少完整成功证据，或发送后发生超时、网络异常、429、5xx，均为 `result_unknown/readback_only`；响应 schema 不通过时不返回原始响应内容。
+- 本地验证：adapter 定向回归 `12/12`；adapter + release readiness 回归 `22/22`；项目全量 `npm test` `1351/1351`；`npm run build:v2` 通过；`ci:toolchain` 通过（Node `24.16.0`、npm `11.13.0`、lockfile `3`）；密钥扫描 `scannedFiles=644, findings=[]`；静态 release audit 为 `READY`，release contracts `15/15`；staging isolation `14/14`；变更 JS `node --check` 与 `git diff --check` 通过。
+- 制品状态：工作树尚未形成干净 revision 时，`node server/ci/release-manifest.js --check` 按预期仅报告 `source_dirty`；这不是发布通过证据。提交后必须重新构建并重跑 release manifest 与候选包校验。
+- 环境边界：仅使用本地 fake credentials/transport 和 synthetic response fixture；未读取或打印真实密钥，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
+- 当前状态：`COMPLETE / ISOLATED ADAPTER BOUNDARY`。本 Run 完成，但 ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
+- 未完成门：逐 endpoint 官方来源版本与完整 response 字段映射、真实授权店铺只读 evidence、现有线上业务路径的受控 adapter 接线、预发 canary/readback、完成门审查和单独部署批准仍未完成；本 Run 不得被解释为已上线。

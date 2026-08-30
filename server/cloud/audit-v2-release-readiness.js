@@ -221,6 +221,18 @@ const releaseContracts = Object.freeze([
     ],
   },
   {
+    filename: "server/cloud/erp07-shein-adapter.js",
+    markers: [
+      "ERP07_SHEIN_ADAPTER_CONTRACT_VERSION",
+      "class Erp07SheinAdapter",
+      "readEnabled = false",
+      "writeEnabled = false",
+      "validateErp07EndpointPayload",
+      "classifyErp07Response",
+      "ERP07_ADAPTER_RESPONSE_SCHEMA_INVALID",
+    ],
+  },
+  {
     filename: "server/cloud/webhook-worker-server.js",
     markers: [
       "createDefaultWebhookProductionHandlers",

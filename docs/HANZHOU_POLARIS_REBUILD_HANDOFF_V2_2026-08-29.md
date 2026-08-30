@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v36
+版本：2026-08-30-v37
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖和失败 fixture 隔离回归，其中 23 项可执行校验、10 项显式阻断；ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed 和唯一 server adapter 隔离边界回归，其中 23 项可执行校验、10 项显式阻断；ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -119,7 +119,7 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - ERP 步骤总数：24。
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
 - `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11、Run 13 的 S3/AWS4 兼容列表请求返回 HTTP 403，但 Run 14 的 COS 原生 HMAC-SHA1 列表成功并完成归属对账：633 个对象匹配，187 条历史媒体记录无远端对象且均无引用；目标关系孤儿为 0，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
-- `IN_PROGRESS`：ERP-06 整体生产接入门仍为 `NO-GO`；ERP-07 整体仍在进行，当前活动开发单元为 `RUN-20260830-ERP07-ENDPOINT-SCHEMA-COVERAGE-03`。
+- `IN_PROGRESS`：ERP-06 整体生产接入门仍为 `NO-GO`；ERP-07 整体仍在进行，当前活动开发单元为 `RUN-20260830-ERP07-ADAPTER-BOUNDARY-04`。
 - `NOT_STARTED`：ERP-08～ERP-23；不得因 ERP-07 局部 schema 覆盖完成而提前进入后续步骤。
 - ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口；Run 14 的历史证据缺口继续保留为只读 legacy，不阻断 ERP-06 新链路，但不允许历史自动回填。
 
@@ -511,3 +511,17 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 验证结果：ERP-07 定向回归 `27/27`；全量 `npm test` `1338/1338`；V2 构建通过；工具链、密钥扫描（`scannedFiles=644, findings=[]`）、静态 release audit（`READY`，14/14）、staging isolation（14/14）和 `git diff --check` 均通过。
 - 当前状态：`COMPLETE / PARTIAL SLICE`；33 项契约均有 schema，23 项可执行本地校验，10 项显式阻断。ERP-07 整体仍 `IN_PROGRESS`，ERP-06 生产接入仍 `NO-GO`，ERP-08～ERP-23 未开始。
 - 环境边界：未解析或打印真实凭证，未发送 SHEIN HTTP，未访问或写入生产/现有 staging 数据库、COS、Redis、队列，未执行 migration、部署、重启、配置切换或历史回填。
+
+## 18. ERP-07 唯一 SHEIN server adapter 隔离边界（2026-08-30）
+
+### RUN-20260830-ERP07-ADAPTER-BOUNDARY-04
+
+- 类型：ERP-07 第四段本地隔离实现；在不接入线上路由、Worker、生产配置或真实 HTTP 的前提下，建立唯一 `Erp07SheinAdapter` 边界和失败回归。
+- 实际文件：[server/cloud/erp07-shein-adapter.js](../server/cloud/erp07-shein-adapter.js)、[server/cloud/erp07-shein-adapter.test.js](../server/cloud/erp07-shein-adapter.test.js)，并更新 [server/cloud/audit-v2-release-readiness.js](../server/cloud/audit-v2-release-readiness.js) 及其回归测试，把 adapter 纳入候选制品必要契约。
+- 边界顺序：endpoint allowlist/作用域/敏感 body 先由既有契约构建器校验；再由版本化 request schema 校验；只有显式启用对应 read/write 开关后才解析凭证并调用注入的底层 SHEIN transport；返回结果再次经过 response schema，再统一输出 `read_success`、`accepted`、`known_failed` 或 `result_unknown`。
+- 安全语义：read 和 write 默认关闭；业务写入仍保持关闭；凭证只传给底层签名传输，不进入 adapter 结果；不自动重试；写入缺少完整成功证据，或发送后发生超时、网络异常、429、5xx，均为 `result_unknown/readback_only`；响应 schema 不通过时不返回原始响应内容。
+- 本地验证：adapter 定向回归 `12/12`；adapter + release readiness 回归 `22/22`；项目全量 `npm test` `1351/1351`；`npm run build:v2` 通过；`ci:toolchain` 通过（Node `24.16.0`、npm `11.13.0`、lockfile `3`）；密钥扫描 `scannedFiles=644, findings=[]`；静态 release audit 为 `READY`，release contracts `15/15`；staging isolation `14/14`；变更 JS `node --check` 与 `git diff --check` 通过。
+- 制品状态：工作树尚未形成干净 revision 时，`node server/ci/release-manifest.js --check` 按预期仅报告 `source_dirty`；这不是发布通过证据。提交后必须重新构建并重跑 release manifest 与候选包校验。
+- 环境边界：仅使用本地 fake credentials/transport 和 synthetic response fixture；未读取或打印真实密钥，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
+- 当前状态：`COMPLETE / ISOLATED ADAPTER BOUNDARY`。本 Run 完成，但 ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
+- 未完成门：逐 endpoint 官方来源版本与完整 response 字段映射、真实授权店铺只读 evidence、现有线上业务路径的受控 adapter 接线、预发 canary/readback、完成门审查和单独部署批准仍未完成；本 Run 不得被解释为已上线。
