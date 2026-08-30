@@ -1,8 +1,8 @@
 # SHEIN 商业 ERP 主执行计划
 
-版本：2026-08-30-v59
+版本：2026-08-30-v60
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：执行路线；ERP-00～ERP-05 已完成，ERP-06 隔离实现已完成但生产接入门为 BLOCKED/NO-GO，ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata、response evidence 状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正以及 3 项官方响应来源核验（23 项可执行、10 项阻断），ERP-07 整体仍在进行且是当前唯一 IN_PROGRESS 步骤，ERP-08～ERP-23 尚未开始
+状态：执行路线；ERP-00～ERP-05 已完成，ERP-06 隔离实现已完成但生产接入门为 BLOCKED/NO-GO，ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、source-pending method/path 审阅摘要、diagnostics 敏感字段、未知 metadata、response evidence 状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正以及 3 项官方响应来源核验（23 项可执行、10 项阻断），ERP-07 整体仍在进行且是当前唯一 IN_PROGRESS 步骤，ERP-08～ERP-23 尚未开始
 适用项目：SHEIN 超级运营中心 / SHEIN 涵舟工作室  
 执行编号：ERP-00 至 ERP-23
 

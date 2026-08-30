@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v68
+版本：2026-08-30-v69
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 生产接入门为 BLOCKED/NO-GO，隔离实现已完成但生产迁移、真实 SHEIN adapter/发布尚未批准；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界、字段级 response evidence 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata、状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正以及 3 项官方响应来源核验，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 生产接入门为 BLOCKED/NO-GO，隔离实现已完成但生产迁移、真实 SHEIN adapter/发布尚未批准；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界、字段级 response evidence 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata、状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正、3 项官方响应来源核验及剩余 3 项 source-pending 接口的脱敏 method/path 审阅摘要，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-OFFICIAL-RESPONSE-SOURCES-14
+当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-SOURCE-PENDING-DOSSIER-15
 
 ## 0. 台账用途
 
@@ -32,7 +32,7 @@
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
 | ERP-06 | 规范数据模型与事件账本 | BLOCKED | RUN-20260830-ERP06-RELEASE-READINESS-16 | ERP-05 | 隔离 foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账、单阶段编排和发布-回读组合验证均已完成；生产接入前置审查为 NO-GO，生产迁移、真实 SHEIN adapter/发布等待单独批准 |
-| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-OFFICIAL-RESPONSE-SOURCES-14 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter、字段级 response evidence、脱敏只读响应摘要、diagnostics 敏感字段、未知 metadata、状态一致性、来源引用、证据入口/范围未知字段 fail-closed 和 3 项官方响应来源核验；剩余官方字段/店铺 evidence、canary/readback 和生产接入仍未完成 |
+| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-SOURCE-PENDING-DOSSIER-15 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter、字段级 response evidence、脱敏只读响应摘要、source-pending 的 method/path 审阅摘要、diagnostics 敏感字段、未知 metadata、状态一致性、来源引用、证据入口/范围未知字段 fail-closed 和 3 项官方响应来源核验；剩余官方字段/店铺 evidence、canary/readback 和生产接入仍未完成 |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
 | ERP-10 | 官方审核回读与状态投影 | NOT_STARTED | — | ERP-09 | — |
@@ -2109,3 +2109,17 @@
 - 本地验证：ERP-07 schema 定向回归、全量 `npm test`、V2 构建、工具链、密钥扫描、静态 release audit、staging isolation、release manifest 和只读 staging 候选包必须以最终提交为准，不能把工作树结果冒充制品证据。
 - 当前状态：`COMPLETE / OFFICIAL RESPONSE SOURCE RECONCILIATION`；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 为 `BLOCKED/NO-GO`，ERP-08～ERP-23 未开始。
 - 未完成门：剩余 3 项官方完整 response 字段、6 项真实授权店铺只读 evidence、统一 adapter 受控线上接线、预发 canary/readback、ERP-07 完成门和单独部署批准仍未完成。
+
+## 53. ERP-07 source-pending 响应证据审阅摘要
+
+### RUN-20260830-ERP07-SOURCE-PENDING-DOSSIER-15
+
+- 类型：ERP-07 本地脱敏证据审阅边界；为 `sales.sku`、`preflight.publish_quota`、`review.document_state` 三项仍待核验的只读接口固定 endpoint 身份，不触碰生产。
+- 失败基线：既有证据快照只保存 endpoint 名称和字段出现性；审核人无法只根据摘要复核调用对应的精确 method/path，存在把另一接口结构相近响应误作本接口候选证据的风险。
+- 实际变更：[erp07-response-evidence.js](../server/cloud/erp07-response-evidence.js)、[erp07-response-evidence.test.js](../server/cloud/erp07-response-evidence.test.js) 与 [ERP07_SOURCE_PENDING_EVIDENCE_DOSSIER_2026-08-30.md](./ERP07_SOURCE_PENDING_EVIDENCE_DOSSIER_2026-08-30.md)。新 `buildErp07ResponseEvidenceReviewDossier()` 只接受既有脱敏快照，按当前 schema 重新派生 `method/path`，只输出 scope SHA-256、响应 SHA-256、字段覆盖与固定拒绝结论。
+- Fail-closed：非 source-pending 只读接口、非待人工审核快照、contract/schema 版本漂移、端点与字段清单不一致、观测次数/类型摘要自相矛盾、未知 dossier 字段均稳定拒绝。调用方不能传入或覆盖 method/path；方法路径只能由已注册 schema 派生。
+- 证据语义：无论候选响应是否覆盖全部字段，摘要一律输出 `catalogUpgrade.status=blocked_source_pending` 与 `eligible=false`；它不保存原始 payload、字段值、scope 原值、请求、headers、凭证、签名 URL、文件或图片，不改变 response evidence catalog 或 `authorizedStoreRead`。
+- 本地验证：证据捕获/审阅摘要及 ERP-07 相邻定向回归 `60/60` 通过。尚未执行全量测试、构建、候选制品或 deployment；它们必须在干净最终 revision 上重新运行，不能把该定向结果冒充 release 证据。
+- 环境边界：仅使用 synthetic payload/diagnostics；未读取或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
+- 当前状态：`COMPLETE / LOCAL SOURCE-PENDING DOSSIER`；ERP-07 仍为唯一 `IN_PROGRESS`，ERP-06 仍为 `BLOCKED/NO-GO`，ERP-08～ERP-23 未开始。
+- 下一执行单元：继续补齐剩余 3 项的独立官方完整 response 字段或在单独授权下取得真实店铺只读回执；没有人工来源核验、预发 canary/readback 和单独部署批准前，禁止升级证据目录、接入线上 adapter 或执行外部写入。

@@ -7,6 +7,8 @@ import {
 
 export const ERP07_RESPONSE_EVIDENCE_CAPTURE_VERSION =
   "erp07-response-evidence-capture-v1";
+export const ERP07_RESPONSE_EVIDENCE_DOSSIER_VERSION =
+  "erp07-response-evidence-dossier-v1";
 
 const AUTHORIZED_READ_SOURCE = /^authorized-store-read:[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/;
 const SENSITIVE_KEY = /(?:authorization|cookie|password|passwd|secret|token|api[_-]?key|access[_-]?key|credential|signature|headers?|request|response|raw|body|payload|bytes?|file)/i;
@@ -20,6 +22,33 @@ const SAFE_CAPTURE_INPUT_KEYS = new Set([
   "sourceRef",
   "observedAt",
   "response",
+]);
+const SAFE_DOSSIER_INPUT_KEYS = new Set(["snapshot"]);
+const SAFE_SNAPSHOT_KEYS = new Set([
+  "captureVersion",
+  "endpoint",
+  "contractVersion",
+  "schemaVersion",
+  "sourceRef",
+  "scope",
+  "observedAt",
+  "httpStatus",
+  "upstreamCode",
+  "traceId",
+  "payloadSha256",
+  "fieldObservations",
+  "reviewStatus",
+  "eligibleForCatalogUpgrade",
+]);
+const SAFE_OBSERVATION_TYPES = new Set([
+  "null",
+  "array",
+  "integer",
+  "number",
+  "string",
+  "boolean",
+  "object",
+  "unknown",
 ]);
 
 function object(value) {
@@ -213,6 +242,91 @@ function fieldObservations(schema, payload) {
   });
 }
 
+function invalidDossier(message) {
+  throw new Erp07ResponseEvidenceError(
+    "ERP07_RESPONSE_EVIDENCE_DOSSIER_INVALID",
+    message,
+  );
+}
+
+function snapshotForDossier(snapshot) {
+  const value = object(snapshot);
+  if (!value || Object.keys(value).some((key) => !SAFE_SNAPSHOT_KEYS.has(key))) {
+    invalidDossier("响应证据审阅摘要格式无效");
+  }
+  if (value.captureVersion !== ERP07_RESPONSE_EVIDENCE_CAPTURE_VERSION ||
+      value.reviewStatus !== "pending_manual_acceptance" ||
+      value.eligibleForCatalogUpgrade !== false) {
+    invalidDossier("响应证据审阅摘要不具备待人工审核的固定状态");
+  }
+  const endpoint = safeText(value.endpoint, 160);
+  let schema;
+  try {
+    schema = getErp07EndpointSchema(endpoint);
+  } catch {
+    invalidDossier("响应证据审阅摘要绑定的 endpoint 无效");
+  }
+  if (schema.mode !== "read") {
+    invalidDossier("响应证据审阅摘要只允许只读 endpoint");
+  }
+  if (schema.source.responseEvidence.status !== "internal_consumer_contract" ||
+      !schema.source.responseEvidence.gaps.includes("official_response_fields_not_captured")) {
+    invalidDossier("响应证据审阅摘要只适用于官方响应字段待核验的 endpoint");
+  }
+  if (value.contractVersion !== schema.contractVersion || value.schemaVersion !== schema.schemaVersion) {
+    invalidDossier("响应证据审阅摘要版本与当前 endpoint 契约不一致");
+  }
+  const sourceRef = sourceRefSnapshot(value.sourceRef);
+  const scope = scopeSnapshot(value.scope);
+  const observedAt = observedAtSnapshot(value.observedAt);
+  const traceId = safeText(value.traceId, 200);
+  const payloadSha256 = safeText(value.payloadSha256, 64);
+  if (!traceId || !payloadSha256 || !/^[a-f0-9]{64}$/.test(payloadSha256) ||
+      value.httpStatus !== 200 || String(value.upstreamCode) !== "0") {
+    invalidDossier("响应证据审阅摘要缺少成功回执的固定标识");
+  }
+  const observations = value.fieldObservations;
+  const expectedFields = schema.source.responseEvidence.fields;
+  if (!Array.isArray(observations) || observations.length !== expectedFields.length) {
+    invalidDossier("响应证据审阅摘要字段覆盖范围与 endpoint 不一致");
+  }
+  const normalizedObservations = observations.map((observation, index) => {
+    const entry = object(observation);
+    if (!entry || Object.keys(entry).some((key) => ![
+      "field",
+      "observed",
+      "occurrences",
+      "valueTypes",
+    ].includes(key)) || entry.field !== expectedFields[index] ||
+        typeof entry.observed !== "boolean" ||
+        !Number.isInteger(entry.occurrences) || entry.occurrences < 0 ||
+        entry.observed !== (entry.occurrences > 0) ||
+        !Array.isArray(entry.valueTypes) ||
+        entry.valueTypes.some((type) => !SAFE_OBSERVATION_TYPES.has(type)) ||
+        new Set(entry.valueTypes).size !== entry.valueTypes.length ||
+        (entry.observed && entry.valueTypes.length === 0) ||
+        (!entry.observed && entry.valueTypes.length !== 0)) {
+      invalidDossier("响应证据审阅摘要字段观测结果无效");
+    }
+    return Object.freeze({
+      field: entry.field,
+      observed: entry.observed,
+      occurrences: entry.occurrences,
+      valueTypes: Object.freeze([...entry.valueTypes]),
+    });
+  });
+  return {
+    schema,
+    endpoint: schema.id,
+    sourceRef,
+    scope,
+    observedAt,
+    traceId,
+    payloadSha256,
+    observations: normalizedObservations,
+  };
+}
+
 export class Erp07ResponseEvidenceError extends Error {
   constructor(code, message, status = 422) {
     super(message);
@@ -295,5 +409,43 @@ export function buildErp07ResponseEvidenceSnapshot({
     ),
     reviewStatus: "pending_manual_acceptance",
     eligibleForCatalogUpgrade: false,
+  });
+}
+
+export function buildErp07ResponseEvidenceReviewDossier({ ...input } = {}) {
+  if (Object.keys(input).some((key) => !SAFE_DOSSIER_INPUT_KEYS.has(key))) {
+    invalidDossier("响应证据审阅摘要输入禁止未知扩展字段");
+  }
+  const normalized = snapshotForDossier(input.snapshot);
+  const missing = normalized.observations
+    .filter((observation) => !observation.observed)
+    .map((observation) => observation.field);
+
+  return Object.freeze({
+    dossierVersion: ERP07_RESPONSE_EVIDENCE_DOSSIER_VERSION,
+    endpoint: normalized.endpoint,
+    method: normalized.schema.method,
+    path: normalized.schema.path,
+    contractVersion: normalized.schema.contractVersion,
+    schemaVersion: normalized.schema.schemaVersion,
+    sourceEvidenceStatus: normalized.schema.source.responseEvidence.status,
+    sourceRefDigestSha256: digest(normalized.sourceRef),
+    scopeDigestSha256: digest(normalized.scope),
+    observedAt: normalized.observedAt,
+    traceId: normalized.traceId,
+    responseDigestSha256: normalized.payloadSha256,
+    fieldCoverage: Object.freeze({
+      expected: normalized.observations.length,
+      observed: normalized.observations.length - missing.length,
+      missing: Object.freeze(missing),
+    }),
+    catalogUpgrade: Object.freeze({
+      status: "blocked_source_pending",
+      eligible: false,
+      reasons: Object.freeze([
+        "official_response_fields_not_captured",
+        "authorized_store_read_requires_independent_review",
+      ]),
+    }),
   });
 }

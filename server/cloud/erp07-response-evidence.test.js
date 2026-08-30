@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   ERP07_RESPONSE_EVIDENCE_CAPTURE_VERSION,
   Erp07ResponseEvidenceError,
+  buildErp07ResponseEvidenceReviewDossier,
   buildErp07ResponseEvidenceSnapshot,
 } from "./erp07-response-evidence.js";
 import { getErp07EndpointSchema } from "./erp07-shein-endpoint-schema.js";
@@ -90,6 +91,150 @@ test("ERP-07 response evidence snapshot does not mutate the catalog or claim liv
   assert.equal(after.status, "internal_consumer_contract");
   assert.equal(after.authorizedStoreRead, "not_observed");
   assert.deepEqual(after, before);
+});
+
+test("ERP-07 source-pending read dossier fixes endpoint identity and stays fail-closed", () => {
+  const snapshot = buildErp07ResponseEvidenceSnapshot({
+    endpoint: "sales.sku",
+    scope,
+    sourceRef: "authorized-store-read:erp07-sales-20260830-dossier",
+    observedAt: "2026-08-30T03:00:00.000Z",
+    response: response({
+      code: "0",
+      traceId: "trace-sales-dossier",
+      info: {
+        dataList: [{
+          skuCode: "SKU-1",
+          realTimeSaleCnt: 3,
+          cydSaleCnt: 4,
+          c7dSaleCnt: 7,
+          c30dSaleCnt: 30,
+          dt: "20260830",
+        }],
+      },
+    }),
+  });
+
+  const dossier = buildErp07ResponseEvidenceReviewDossier({ snapshot });
+
+  assert.equal(dossier.endpoint, "sales.sku");
+  assert.equal(dossier.method, "POST");
+  assert.equal(dossier.path, "/open-api/goods/query-sku-sales");
+  assert.equal(dossier.sourceEvidenceStatus, "internal_consumer_contract");
+  assert.equal(dossier.catalogUpgrade.status, "blocked_source_pending");
+  assert.equal(dossier.catalogUpgrade.eligible, false);
+  assert.deepEqual(dossier.catalogUpgrade.reasons, [
+    "official_response_fields_not_captured",
+    "authorized_store_read_requires_independent_review",
+  ]);
+  assert.deepEqual(dossier.fieldCoverage, {
+    expected: 6,
+    observed: 6,
+    missing: [],
+  });
+  assert.doesNotMatch(
+    JSON.stringify(dossier),
+    /SKU-1|tenant-1|store-1|supplier-1|erp07-sales-20260830-dossier|payload|headers|secret/i,
+  );
+  assert.throws(() => {
+    dossier.catalogUpgrade.eligible = true;
+  }, TypeError);
+});
+
+test("ERP-07 source-pending dossier coverage includes sales, quota and document state", () => {
+  const cases = [
+    {
+      endpoint: "sales.sku",
+      method: "POST",
+      path: "/open-api/goods/query-sku-sales",
+      sourceRef: "authorized-store-read:erp07-sales-20260830-coverage",
+      info: { dataList: [] },
+    },
+    {
+      endpoint: "preflight.publish_quota",
+      method: "POST",
+      path: "/open-api/goods-publish-quotas/detail",
+      sourceRef: "authorized-store-read:erp07-quota-20260830-coverage",
+      info: { availableLimit: 3 },
+    },
+    {
+      endpoint: "review.document_state",
+      method: "POST",
+      path: "/open-api/goods/query-document-state",
+      sourceRef: "authorized-store-read:erp07-document-20260830-coverage",
+      info: [{
+        spu_name: "SPU-1",
+        skc_name: "SKC-1",
+        sku_list: [{ sku_code: "SKU-1" }],
+        document_sn: "DOC-1",
+        version: "1",
+        audit_time: "2026-08-30T03:02:00.000Z",
+        audit_state: 1,
+        failed_reason: [],
+      }],
+    },
+  ];
+
+  for (const item of cases) {
+    const snapshot = buildErp07ResponseEvidenceSnapshot({
+      endpoint: item.endpoint,
+      scope,
+      sourceRef: item.sourceRef,
+      observedAt: "2026-08-30T03:02:00.000Z",
+      response: response({ code: "0", traceId: `trace-${item.endpoint}`, info: item.info }),
+    });
+    const dossier = buildErp07ResponseEvidenceReviewDossier({ snapshot });
+    assert.equal(dossier.method, item.method, item.endpoint);
+    assert.equal(dossier.path, item.path, item.endpoint);
+    assert.equal(dossier.catalogUpgrade.eligible, false, item.endpoint);
+    assert.equal(dossier.catalogUpgrade.status, "blocked_source_pending", item.endpoint);
+  }
+});
+
+test("ERP-07 source-pending review dossier rejects altered snapshot endpoint identity", () => {
+  const snapshot = buildErp07ResponseEvidenceSnapshot({
+    endpoint: "preflight.publish_quota",
+    scope,
+    sourceRef: "authorized-store-read:erp07-quota-20260830-dossier",
+    observedAt: "2026-08-30T03:01:00.000Z",
+    response: response({
+      code: "0",
+      traceId: "trace-quota-dossier",
+      info: { availableLimit: 3 },
+    }),
+  });
+
+  assert.throws(
+    () => buildErp07ResponseEvidenceReviewDossier({
+      snapshot: { ...snapshot, endpoint: "review.document_state" },
+    }),
+    (error) => error.code === "ERP07_RESPONSE_EVIDENCE_DOSSIER_INVALID",
+  );
+});
+
+test("ERP-07 source-pending review dossier rejects inconsistent field observation summaries", () => {
+  const snapshot = buildErp07ResponseEvidenceSnapshot({
+    endpoint: "sales.sku",
+    scope,
+    sourceRef: "authorized-store-read:erp07-sales-20260830-observation",
+    observedAt: "2026-08-30T03:03:00.000Z",
+    response: response({ code: "0", traceId: "trace-sales-observation", info: { dataList: [] } }),
+  });
+
+  assert.throws(
+    () => buildErp07ResponseEvidenceReviewDossier({
+      snapshot: {
+        ...snapshot,
+        fieldObservations: [{
+          ...snapshot.fieldObservations[0],
+          observed: false,
+          occurrences: 0,
+          valueTypes: ["string"],
+        }, ...snapshot.fieldObservations.slice(1)],
+      },
+    }),
+    (error) => error.code === "ERP07_RESPONSE_EVIDENCE_DOSSIER_INVALID",
+  );
 });
 
 test("ERP-07 response evidence snapshot rejects non-success and invalid payloads", () => {
