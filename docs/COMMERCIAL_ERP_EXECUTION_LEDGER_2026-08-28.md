@@ -1,6 +1,6 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v60
+版本：2026-08-30-v61
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界、字段级 response evidence 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段和未知 metadata fail-closed 修正，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
@@ -2037,6 +2037,6 @@
 - 失败回归：未知 diagnostics metadata 必须返回 `ERP07_RESPONSE_EVIDENCE_SENSITIVE_INPUT`；现有合法四字段输入继续通过；敏感 diagnostics、顶层未知字段、写 endpoint、缺 scope/时间/traceId/code/status 和非法 response 继续 fail closed。
 - 实际变更：[erp07-response-evidence.js](../server/cloud/erp07-response-evidence.js)、[erp07-response-evidence.test.js](../server/cloud/erp07-response-evidence.test.js)。
 - 阶段验证：失败回归已先复现为 `6 passed / 1 failed`；修复后证据捕获定向回归 `7/7`、ERP-07 相邻回归 `34/34`、项目全量 `npm test` `1361/1361`、V2 构建、工具链（Node `24.16.0`、npm `11.13.0`、lockfile `3`）、密钥扫描（`scannedFiles=648, findings=[]`）、静态 release audit（`READY`、15/15）、staging isolation（14/14）和 release manifest（`passed=true, sourceDirty=false`）均通过。
-- 制品状态：已生成只读 staging 候选包 [polaris-staging-443d935934b90dbf13d0e7da9c7318cd621d0447.tar.gz](../artifacts/polaris-staging-443d935934b90dbf13d0e7da9c7318cd621d0447.tar.gz)，403025 bytes，权限 `-r--r--r--`，SHA-256：`f2ad7e057ff16638972fbb0651f2bf66098c05b75137929ecabf97b05e5e908b`；releaseId：`polaris-443d935934b90dbf13d0e7da9c7318cd621d0447`。文档收口提交后须重新构建并重打最终包。
+- 制品状态：已生成与本 Run 最终提交和 release manifest 对齐的只读 staging 候选包；releaseId、绝对路径、大小、权限和 SHA-256 以本 Run 最终完成报告及包内 `release-manifest.json` 为准，未部署。
 - 环境边界：只使用本地 synthetic payload/diagnostics、fake 依赖和隔离审计；未读取或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
 - 当前状态：`COMPLETE / LOCAL FAIL-CLOSED CORRECTION`；本 Run 的代码、失败回归和当前提交门禁已完成；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。

@@ -1,6 +1,6 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v44
+版本：2026-08-30-v45
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
 当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，按用户要求本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段和未知 metadata fail-closed 修正，其中 23 项可执行校验、10 项显式阻断；6 项 source-pending 接口的字段仍明确标记为内部消费者契约，官方响应字段和真实授权店铺只读证据尚未捕获；ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
@@ -583,5 +583,5 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 失败回归先证明修复前未知 `diagnostics.message` 会被静默接受，修复后证据捕获 `7/7`、ERP-07 相邻回归 `34/34`；原有敏感 diagnostics、顶层未知字段和非成功响应规则保持不变。
 - 只修改本地 `server/cloud/erp07-response-evidence.js` 与对应测试；不接入网页、SHEIN adapter、Worker、数据库、COS、Redis、队列，不执行 migration、部署、重启或配置切换。
 - 全量门禁已通过：项目全量 `npm test` `1361/1361`、V2 构建、工具链（Node `24.16.0`、npm `11.13.0`、lockfile `3`）、密钥扫描（`scannedFiles=648, findings=[]`）、静态 release audit（`READY`、15/15）、staging isolation（14/14）和 release manifest（`passed=true, sourceDirty=false`）。
-- 已生成只读 staging 候选包 [polaris-staging-443d935934b90dbf13d0e7da9c7318cd621d0447.tar.gz](../artifacts/polaris-staging-443d935934b90dbf13d0e7da9c7318cd621d0447.tar.gz)，403025 bytes，权限 `-r--r--r--`，SHA-256：`f2ad7e057ff16638972fbb0651f2bf66098c05b75137929ecabf97b05e5e908b`，releaseId：`polaris-443d935934b90dbf13d0e7da9c7318cd621d0447`；文档收口提交后须重新构建并重打最终包。
+- 已生成与本 Run 最终提交和 release manifest 对齐的只读 staging 候选包；releaseId、绝对路径、大小、权限和 SHA-256 以本 Run 最终完成报告及包内 `release-manifest.json` 为准，未部署。
 - 本 Run 状态：`COMPLETE / LOCAL FAIL-CLOSED CORRECTION`；未接入网页、SHEIN adapter、Worker、数据库、COS、Redis、队列，不执行 migration、部署、重启或配置切换。ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`。
