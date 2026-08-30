@@ -86,6 +86,19 @@ runner 返回 `input_required`/依赖失败诊断。这是为避免把 SKC 当 S
 `eligible=false`。只有独立官方来源或经过单独人工审阅的完整授权店铺回执，才可以提出字段映射变更；本次
 结构摘要不能自动升级 schema，也不能解除 ERP-07 的部署或发布门禁。
 
+## 2026-08-30 修复后的真实只读重跑
+
+本次使用商品详情页核对后的正确 SPU 和既有 version 重新执行，结果为 `ok=true`、`readOnly=true`、
+`externalWrite=false`。`product.spu_info` 返回成功，随后 `sales.sku` 返回成功且当前内部销量字段
+结构覆盖为 `6/6`、无缺失；这确认 runner 已先从目标 SPU 的 SKC 关系中解析 SKU，再以 `skuCodeList`
+调用销量接口，未再把 SKC 直接当作 SKU 发送。前一次 `spu-info` 的 `0003` 是测试输入中的 SPU 与商品详情页
+实际 SPU 不一致造成的，不能归因于销量接口或生产系统故障。
+
+同一轮 `review.document_state` 也返回成功，结构仍为 `info.data[].skcList[]` 的真实包装；由于当前
+source-pending 字段目录仍是旧的内部路径，字段覆盖继续显示 `0/8`，不据此改变字段映射。额度读取仍为
+成功但 `4/5`，缺失 `info.availableLimit`。以上均为脱敏结构和状态证据，不代表商品通过/驳回，不写数据库，
+不触碰生产，也不解除 `blocked_source_pending`。
+
 ## 结论
 
 ERP-07 仍在进行。此文档与本地代码只降低“错误来源被误审为正确接口”的风险；它不形成真实授权店铺读取、不会解除 ERP-06 `BLOCKED/NO-GO`，也不授权 staging 或生产部署。
