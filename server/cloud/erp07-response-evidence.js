@@ -12,6 +12,7 @@ const AUTHORIZED_READ_SOURCE = /^authorized-store-read:[A-Za-z0-9][A-Za-z0-9._:-
 const SENSITIVE_KEY = /(?:authorization|cookie|password|passwd|secret|token|api[_-]?key|access[_-]?key|credential|signature|headers?|request|response|raw|body|payload|bytes?|file)/i;
 const SENSITIVE_SOURCE_VALUE = /(?:[?&](?:token|sig|signature|x-amz-[^=&]+|authorization|password|secret)=|(?:bearer\s+|(?:secret|token|password|signature|access[_-]?key)\s*[:=]))/i;
 const SAFE_INPUT_KEYS = new Set(["payload", "diagnostics", "status"]);
+const SAFE_DIAGNOSTIC_KEYS = new Set(["status", "code", "traceId", "durationMs"]);
 const REQUIRED_SCOPE_FIELDS = ["tenantId", "storeId", "supplierId"];
 
 function object(value) {
@@ -64,6 +65,18 @@ function assertNoSensitiveKeys(value, seen = new Set()) {
     }
     assertNoSensitiveKeys(child, seen);
   }
+}
+
+function assertSafeDiagnostics(value) {
+  const diagnostics = object(value);
+  if (!diagnostics) return;
+  if (Object.keys(diagnostics).some((key) => !SAFE_DIAGNOSTIC_KEYS.has(key))) {
+    throw new Erp07ResponseEvidenceError(
+      "ERP07_RESPONSE_EVIDENCE_SENSITIVE_INPUT",
+      "响应证据的 diagnostics 只接受状态、错误码、traceId 和耗时字段",
+    );
+  }
+  assertNoSensitiveKeys(diagnostics);
 }
 
 function scopeSnapshot(scope) {
@@ -128,7 +141,7 @@ function responseInput(response) {
   }
   assertNoSensitiveKeys(payload);
   const diagnostics = object(source.diagnostics) || {};
-  assertNoSensitiveKeys(diagnostics);
+  assertSafeDiagnostics(diagnostics);
   const status = Number(source.status ?? diagnostics.status);
   const httpStatus = Number.isInteger(status) ? status : null;
   const traceId = safeText(diagnostics.traceId || payload.traceId, 200);

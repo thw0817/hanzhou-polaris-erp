@@ -168,6 +168,28 @@ test("ERP-07 response evidence snapshot rejects sensitive diagnostics", () => {
   );
 });
 
+test("ERP-07 response evidence snapshot rejects unknown diagnostics metadata", () => {
+  assert.throws(
+    () => buildErp07ResponseEvidenceSnapshot({
+      endpoint: "sales.sku",
+      scope,
+      sourceRef: "authorized-store-read:erp07-sales-20260830-008",
+      observedAt: "2026-08-30T02:05:45.000Z",
+      response: {
+        ...response({ code: "0", traceId: "trace-diagnostics-metadata", info: { dataList: [] } }),
+        diagnostics: {
+          status: 200,
+          code: "0",
+          traceId: "trace-diagnostics-metadata",
+          durationMs: 18,
+          message: "Bearer should-not-enter-evidence",
+        },
+      },
+    }),
+    (error) => error.code === "ERP07_RESPONSE_EVIDENCE_SENSITIVE_INPUT",
+  );
+});
+
 test("ERP-07 response evidence snapshot requires a scoped read receipt", () => {
   assert.throws(
     () => buildErp07ResponseEvidenceSnapshot({
