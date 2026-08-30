@@ -1,0 +1,247 @@
+import assert from "node:assert/strict";
+import crypto from "node:crypto";
+import test from "node:test";
+
+import {
+  AUTHORIZED_STORE_LOOKUP_SQL,
+  ERP07_READ_ONLY_EVIDENCE_RUNNER_VERSION,
+  ERP07_READ_ONLY_CONFIRMATION,
+  ERP07_SOURCE_PENDING_CONFIRMATION,
+  resolveAuthorizedStoreFromDatabase,
+  runErp07ReadOnlyEvidence,
+  runErp07ReadOnlyEvidenceCli,
+} from "./erp07-read-only-evidence-runner.js";
+import { CloudCredentialCipher } from "./credential-cipher.js";
+
+const scope = {
+  tenantId: "tenant-1",
+  storeId: "store-1",
+  supplierId: "14152389",
+};
+
+function successfulPayload(path) {
+  if (path === "/open-api/goods/query-sku-sales") {
+    return {
+      code: "0",
+      msg: "OK",
+      traceId: "trace-sales",
+      info: {
+        dataList: [{
+          skuCode: "SKU-PRIVATE",
+          realTimeSaleCnt: 1,
+          cydSaleCnt: 2,
+          c7dSaleCnt: 7,
+          c30dSaleCnt: 30,
+          dt: "20260830",
+        }],
+      },
+    };
+  }
+  if (path === "/open-api/goods-publish-quotas/detail") {
+    return {
+      code: "0",
+      msg: "OK",
+      traceId: "trace-quota",
+      info: { availableLimit: 3 },
+    };
+  }
+  return {
+    code: "0",
+    msg: "OK",
+    traceId: "trace-document",
+    info: [{
+      spu_name: "SPU-PRIVATE",
+      skc_name: "SKC-PRIVATE",
+      sku_list: [{ sku_code: "SKU-PRIVATE" }],
+      document_sn: "DOC-PRIVATE",
+      version: "1",
+      audit_time: "2026-08-30T00:00:00Z",
+      audit_state: 1,
+      failed_reason: [],
+    }],
+  };
+}
+
+function runnerOptions(overrides = {}) {
+  const requests = [];
+  return {
+    supplierId: "14152389",
+    skc: "sf260512004051439215577",
+    apiBaseUrl: "https://openapi.sheincorp.cn",
+    now: () => new Date("2026-08-30T12:00:00.000Z"),
+    resolveAuthorization: async () => ({
+      scope,
+      credentials: {
+        openKeyId: "OPEN-PRIVATE",
+        secretKey: "SECRET-PRIVATE",
+      },
+    }),
+    request: async (input) => {
+      requests.push(input);
+      return {
+        status: 200,
+        payload: successfulPayload(input.path),
+      };
+    },
+    ...overrides,
+    requests,
+  };
+}
+
+test("ERP-07 evidence runner performs exactly three scoped read requests", async () => {
+  const options = runnerOptions();
+  const result = await runErp07ReadOnlyEvidence(options);
+
+  assert.equal(result.runnerVersion, ERP07_READ_ONLY_EVIDENCE_RUNNER_VERSION);
+  assert.equal(result.ok, true);
+  assert.equal(result.readOnly, true);
+  assert.equal(result.externalWrite, false);
+  assert.equal(result.target.supplierIdDigestSha256.length, 64);
+  assert.equal(result.target.skcDigestSha256.length, 64);
+  assert.deepEqual(
+    options.requests.map(({ method, path, body }) => ({ method, path, body })),
+    [
+      {
+        method: "POST",
+        path: "/open-api/goods/query-sku-sales",
+        body: { skcNameList: ["sf260512004051439215577"] },
+      },
+      {
+        method: "POST",
+        path: "/open-api/goods-publish-quotas/detail",
+        body: {},
+      },
+      {
+        method: "POST",
+        path: "/open-api/goods/query-document-state",
+        body: { skc_name: "sf260512004051439215577" },
+      },
+    ],
+  );
+  assert.deepEqual(
+    result.endpoints.map(({ endpoint, outcome }) => ({ endpoint, outcome })),
+    [
+      { endpoint: "sales.sku", outcome: "read_success" },
+      { endpoint: "preflight.publish_quota", outcome: "read_success" },
+      { endpoint: "review.document_state", outcome: "read_success" },
+    ],
+  );
+});
+
+test("ERP-07 evidence runner never returns credentials, scope, request body, or raw payload", async () => {
+  const options = runnerOptions();
+  const result = await runErp07ReadOnlyEvidence(options);
+  const serialized = JSON.stringify(result);
+
+  assert.doesNotMatch(serialized, /OPEN-PRIVATE|SECRET-PRIVATE|tenant-1|store-1/);
+  assert.doesNotMatch(serialized, /SKU-PRIVATE|SPU-PRIVATE|SKC-PRIVATE|DOC-PRIVATE/);
+  assert.doesNotMatch(serialized, /skcNameList|skc_name/);
+  assert.match(serialized, /responseDigestSha256/);
+  assert.match(serialized, /sourceRefDigestSha256/);
+  assert.match(serialized, /scopeDigestSha256/);
+  assert.match(serialized, /fieldCoverage/);
+});
+
+test("ERP-07 evidence runner fails closed for an incomplete authorization scope", async () => {
+  await assert.rejects(
+    runErp07ReadOnlyEvidence(runnerOptions({
+      resolveAuthorization: async () => ({
+        scope: { ...scope, storeId: "" },
+        credentials: { openKeyId: "OPEN-PRIVATE", secretKey: "SECRET-PRIVATE" },
+      }),
+    })),
+    (error) => error.code === "ERP07_EVIDENCE_SCOPE_MISMATCH",
+  );
+});
+
+test("ERP-07 evidence runner never constructs a writable endpoint", async () => {
+  const options = runnerOptions({
+    request: async (input) => {
+      assert.equal(input.method, "POST");
+      assert.match(
+        input.path,
+        /^\/open-api\/(goods\/query-sku-sales|goods-publish-quotas\/detail|goods\/query-document-state)$/,
+      );
+      return { status: 200, payload: successfulPayload(input.path) };
+    },
+  });
+
+  await runErp07ReadOnlyEvidence(options);
+});
+
+test("ERP-07 database resolver performs one read-only scoped lookup and decrypts in process", async () => {
+  const cipher = new CloudCredentialCipher({
+    base64Key: crypto.randomBytes(32).toString("base64"),
+  });
+  const encrypted = cipher.encrypt("SECRET-PRIVATE", {
+    storeId: "store-1",
+    openKeyId: "OPEN-PRIVATE",
+  });
+  const queries = [];
+  const pool = {
+    query: async (sql, params) => {
+      queries.push({ sql, params });
+      return {
+        rowCount: 1,
+        rows: [{
+          id: "store-1",
+          tenant_id: "tenant-1",
+          supplier_id: "14152389",
+          open_key_id: "OPEN-PRIVATE",
+          status: "active",
+          ciphertext: encrypted.ciphertext,
+          iv: encrypted.iv,
+          auth_tag: encrypted.authTag,
+          key_version: encrypted.keyVersion,
+        }],
+      };
+    },
+  };
+
+  const authorization = await resolveAuthorizedStoreFromDatabase({
+    pool,
+    cipher,
+    supplierId: "14152389",
+    apiBaseUrl: "https://openapi.sheincorp.cn",
+  });
+
+  assert.equal(queries.length, 1);
+  assert.deepEqual(queries[0].params, ["14152389"]);
+  assert.match(queries[0].sql, /^\s*SELECT\b/i);
+  assert.doesNotMatch(queries[0].sql, /\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE)\b/i);
+  assert.deepEqual(authorization.scope, scope);
+  assert.equal(authorization.credentials.openKeyId, "OPEN-PRIVATE");
+  assert.equal(authorization.credentials.secretKey, "SECRET-PRIVATE");
+});
+
+test("ERP-07 database resolver fails closed when Supplier ID is ambiguous", async () => {
+  const cipher = new CloudCredentialCipher({
+    base64Key: crypto.randomBytes(32).toString("base64"),
+  });
+  await assert.rejects(
+    resolveAuthorizedStoreFromDatabase({
+      pool: {
+        query: async () => ({ rowCount: 2, rows: [{}, {}] }),
+      },
+      cipher,
+      supplierId: "14152389",
+      apiBaseUrl: "https://openapi.sheincorp.cn",
+    }),
+    (error) => error.code === "ERP07_EVIDENCE_STORE_AMBIGUOUS",
+  );
+});
+
+test("ERP-07 CLI requires both exact read-only confirmations before runtime access", async () => {
+  await assert.rejects(
+    runErp07ReadOnlyEvidenceCli({
+      env: {
+        ERP07_EVIDENCE_SUPPLIER_ID: "14152389",
+        ERP07_EVIDENCE_SKC: "sf260512004051439215577",
+      },
+    }),
+    (error) => error.code === "ERP07_EVIDENCE_CONFIRMATION_REQUIRED",
+  );
+  assert.equal(ERP07_READ_ONLY_CONFIRMATION, "I_UNDERSTAND_READ_ONLY");
+  assert.equal(ERP07_SOURCE_PENDING_CONFIRMATION, "I_UNDERSTAND_EVIDENCE");
+  assert.match(AUTHORIZED_STORE_LOOKUP_SQL, /^\s*SELECT\b/i);
+});

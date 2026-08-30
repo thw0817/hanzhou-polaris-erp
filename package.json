@@ -20,6 +20,7 @@
     "cloud:control": "node --env-file-if-exists=.env server/cloud/control-server.js",
     "cloud:provision-device": "node --env-file-if-exists=.env server/cloud/provision-device.js",
     "cloud:provision-web-user": "node --env-file-if-exists=.env server/cloud/provision-web-user.js",
+    "erp07:evidence:read-only": "node --env-file-if-exists=.env server/cloud/erp07-read-only-evidence-runner.js",
     "demo:web-api": "node server/cloud/web-demo-server.js",
     "media-cleanup:cloud": "node --env-file-if-exists=.env server/cloud/media-cleanup-worker-server.js",
     "store-business-refresh-worker:cloud": "node --env-file-if-exists=.env server/cloud/store-business-refresh-worker-server.js",
