@@ -32,10 +32,20 @@ const PLATFORM_IDENTITY_PATTERN = /^[A-Za-z0-9._:-]+$/;
 
 const EVIDENCE_ENDPOINTS = Object.freeze([
   Object.freeze({
+    endpoint: "product.spu_info",
+    method: "POST",
+    path: "/open-api/goods/spu-info",
+    body: ({ documentStateIdentity }) => ({
+      languageList: ["zh-cn"],
+      spuName: documentStateIdentity.spuName,
+    }),
+    sourceKey: "spu-info",
+  }),
+  Object.freeze({
     endpoint: "sales.sku",
     method: "POST",
     path: "/open-api/goods/query-sku-sales",
-    body: ({ skc }) => ({ skcNameList: [skc] }),
+    body: ({ skuCodes }) => ({ skuCodeList: skuCodes }),
     sourceKey: "sales",
   }),
   Object.freeze({
@@ -187,6 +197,45 @@ function normalizeAuthorization(value, supplierId) {
       { optional: true },
     ),
   };
+}
+
+function extractSkuCodesForSkc(payload, targetSkc) {
+  const root = object(payload);
+  const info = object(root?.info);
+  const skcInfoList = Array.isArray(info?.skcInfoList)
+    ? info.skcInfoList
+    : Array.isArray(info?.skc_info_list)
+      ? info.skc_info_list
+      : null;
+  if (!skcInfoList) {
+    return { status: "missing" };
+  }
+  const matches = skcInfoList.filter((entry) => {
+    const source = object(entry);
+    return text(source?.skcName ?? source?.skc_name, 160) === targetSkc;
+  });
+  if (matches.length !== 1) {
+    return { status: matches.length === 0 ? "missing" : "ambiguous" };
+  }
+  const skuInfoList = Array.isArray(matches[0].skuInfoList)
+    ? matches[0].skuInfoList
+    : Array.isArray(matches[0].sku_info_list)
+      ? matches[0].sku_info_list
+      : null;
+  if (!skuInfoList) {
+    return { status: "missing" };
+  }
+  const skuCodes = Array.from(new Set(
+    skuInfoList
+      .map((entry) => {
+        const source = object(entry);
+        return text(source?.skuCode ?? source?.sku_code, 160);
+      })
+      .filter(Boolean),
+  ));
+  if (!skuCodes.length) return { status: "missing" };
+  if (skuCodes.length > 100) return { status: "too_many" };
+  return { status: "resolved", skuCodes };
 }
 
 function sourceRefFor(sourceKey, supplierId) {
@@ -466,10 +515,13 @@ export async function runErp07ReadOnlyEvidence({
     timeoutMs: 15_000,
   });
   const endpoints = [];
+  let resolvedSkuCodes = null;
+  let skuResolutionFailure = null;
 
   for (const definition of EVIDENCE_ENDPOINTS) {
-    if (definition.endpoint === "review.document_state" &&
-        !normalizedDocumentStateIdentity) {
+    if (!normalizedDocumentStateIdentity &&
+        (definition.endpoint === "product.spu_info" ||
+          definition.endpoint === "review.document_state")) {
       endpoints.push(safeEndpointResult(definition, {
         outcome: "input_required",
         retryClass: "terminal",
@@ -481,11 +533,38 @@ export async function runErp07ReadOnlyEvidence({
       }));
       continue;
     }
+    if (definition.endpoint === "sales.sku") {
+      if (!normalizedDocumentStateIdentity) {
+        endpoints.push(safeEndpointResult(definition, {
+          outcome: "input_required",
+          retryClass: "terminal",
+          diagnostics: {
+            status: null,
+            code: "ERP07_EVIDENCE_PLATFORM_IDENTITY_REQUIRED",
+            traceId: null,
+          },
+        }));
+        continue;
+      }
+      if (!resolvedSkuCodes) {
+        endpoints.push(safeEndpointResult(definition, {
+          outcome: "input_required",
+          retryClass: "terminal",
+          diagnostics: {
+            status: null,
+            code: skuResolutionFailure || "ERP07_EVIDENCE_SKU_CODES_REQUIRED",
+            traceId: null,
+          },
+        }));
+        continue;
+      }
+    }
     const traceId = `erp07-evidence-${definition.sourceKey}-${Date.parse(observedAt)}`;
     const result = await adapter.execute({
       endpoint: definition.endpoint,
       body: definition.body({
         skc: normalizedSkc,
+        skuCodes: resolvedSkuCodes,
         documentStateIdentity: normalizedDocumentStateIdentity,
       }),
       scope: authorization.scope,
@@ -497,6 +576,22 @@ export async function runErp07ReadOnlyEvidence({
       },
     });
     endpoints.push(safeEndpointResult(definition, result));
+    if (definition.endpoint === "product.spu_info") {
+      if (result.outcome !== "read_success") {
+        skuResolutionFailure = "ERP07_EVIDENCE_SKU_LOOKUP_FAILED";
+        continue;
+      }
+      const resolution = extractSkuCodesForSkc(result.payload, normalizedSkc);
+      if (resolution.status === "resolved") {
+        resolvedSkuCodes = resolution.skuCodes;
+      } else if (resolution.status === "ambiguous") {
+        skuResolutionFailure = "ERP07_EVIDENCE_SKU_MAPPING_AMBIGUOUS";
+      } else if (resolution.status === "too_many") {
+        skuResolutionFailure = "ERP07_EVIDENCE_SKU_CODE_LIMIT_EXCEEDED";
+      } else {
+        skuResolutionFailure = "ERP07_EVIDENCE_SKU_CODES_REQUIRED";
+      }
+    }
   }
 
   const allReadSuccess = endpoints.every(

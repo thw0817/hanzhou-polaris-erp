@@ -41,6 +41,18 @@
 
 因此，接口返回的业务码 `20003` 在缺少 SPU/version 的错误请求场景下只能记录为请求失败证据，不能解释为商品审核失败、未找到或已驳回。
 
+## 销量读取的 SKU 前置解析
+
+`sales.sku` 的远端请求现在不再把目标 SKC 直接作为 `skcNameList` 发送。证据 runner 在已有唯一
+`SPU + version` 身份时，先通过官方已记录的只读 `product.spu_info`（`POST /open-api/goods/spu-info`）读取
+SPU 详情，从 `info.skcInfoList[]` 精确匹配目标 SKC，再把该 SKC 下的 `skuInfoList[].skuCode` 作为
+`skuCodeList` 发送到销量接口。
+
+匹配不到唯一 SKC、SKU 列表缺失、SKU 数量超过接口上限，或 `spu-info` 读取失败时，销量接口不会被调用，
+runner 返回 `input_required`/依赖失败诊断。这是为避免把 SKC 当 SKU 导致 `dmsWeb0003`，也避免在映射不确定时
+误记录销量证据。SKU 原值只存在于本次受控的上游请求和下游只读请求边界，不进入最终证据摘要；本变更不写入
+数据库、不改变网页路由、不触碰生产。
+
 ## 回归门禁
 
 - 销量、额度、单据状态三项均有 method/path 固定与 `eligible=false` 回归。

@@ -21,6 +21,29 @@ const scope = {
 };
 
 function successfulPayload(path) {
+  if (path === "/open-api/goods/spu-info") {
+    return {
+      code: "0",
+      msg: "OK",
+      traceId: "trace-spu-info",
+      info: {
+        spuName: "SPU-PRIVATE",
+        skcInfoList: [
+          {
+            skcName: "sf260512004051439215577",
+            skuInfoList: [
+              { skuCode: "SKU-TARGET-1" },
+              { skuCode: "SKU-TARGET-2" },
+            ],
+          },
+          {
+            skcName: "SKC-OTHER",
+            skuInfoList: [{ skuCode: "SKU-OTHER" }],
+          },
+        ],
+      },
+    };
+  }
   if (path === "/open-api/goods/query-sku-sales") {
     return {
       code: "0",
@@ -93,7 +116,46 @@ function runnerOptions(overrides = {}) {
   };
 }
 
-test("ERP-07 evidence runner performs exactly three scoped read requests", async () => {
+test("ERP-07 evidence runner resolves target SKC SKU codes before sales read", async () => {
+  const options = runnerOptions();
+  await runErp07ReadOnlyEvidence(options);
+
+  assert.deepEqual(
+    options.requests.map(({ method, path, body }) => ({ method, path, body })),
+    [
+      {
+        method: "POST",
+        path: "/open-api/goods/spu-info",
+        body: {
+          languageList: ["zh-cn"],
+          spuName: "SPU-PRIVATE",
+        },
+      },
+      {
+        method: "POST",
+        path: "/open-api/goods/query-sku-sales",
+        body: {
+          skuCodeList: ["SKU-TARGET-1", "SKU-TARGET-2"],
+        },
+      },
+      {
+        method: "POST",
+        path: "/open-api/goods-publish-quotas/detail",
+        body: {},
+      },
+      {
+        method: "POST",
+        path: "/open-api/goods/query-document-state",
+        body: {
+          version: "VERSION-PRIVATE",
+          spuList: [{ spuName: "SPU-PRIVATE" }],
+        },
+      },
+    ],
+  );
+});
+
+test("ERP-07 evidence runner performs scoped SKU, quota, and document reads", async () => {
   const options = runnerOptions();
   const result = await runErp07ReadOnlyEvidence(options);
 
@@ -108,8 +170,16 @@ test("ERP-07 evidence runner performs exactly three scoped read requests", async
     [
       {
         method: "POST",
+        path: "/open-api/goods/spu-info",
+        body: {
+          languageList: ["zh-cn"],
+          spuName: "SPU-PRIVATE",
+        },
+      },
+      {
+        method: "POST",
         path: "/open-api/goods/query-sku-sales",
-        body: { skcNameList: ["sf260512004051439215577"] },
+        body: { skuCodeList: ["SKU-TARGET-1", "SKU-TARGET-2"] },
       },
       {
         method: "POST",
@@ -129,6 +199,7 @@ test("ERP-07 evidence runner performs exactly three scoped read requests", async
   assert.deepEqual(
     result.endpoints.map(({ endpoint, outcome }) => ({ endpoint, outcome })),
     [
+      { endpoint: "product.spu_info", outcome: "read_success" },
       { endpoint: "sales.sku", outcome: "read_success" },
       { endpoint: "preflight.publish_quota", outcome: "read_success" },
       { endpoint: "review.document_state", outcome: "read_success" },
@@ -157,9 +228,21 @@ test("ERP-07 evidence runner does not send document-state without SPU and versio
   assert.deepEqual(
     options.requests.map(({ path }) => path),
     [
-      "/open-api/goods/query-sku-sales",
       "/open-api/goods-publish-quotas/detail",
     ],
+  );
+  assert.equal(
+    result.endpoints.find((endpoint) => endpoint.endpoint === "product.spu_info").outcome,
+    "input_required",
+  );
+  assert.equal(
+    result.endpoints.find((endpoint) => endpoint.endpoint === "sales.sku").outcome,
+    "input_required",
+  );
+  assert.equal(
+    result.endpoints.find((endpoint) => endpoint.endpoint === "sales.sku")
+      .diagnostics.code,
+    "ERP07_EVIDENCE_PLATFORM_IDENTITY_REQUIRED",
   );
   assert.equal(
     result.endpoints.find((endpoint) => endpoint.endpoint === "review.document_state").outcome,
@@ -169,6 +252,81 @@ test("ERP-07 evidence runner does not send document-state without SPU and versio
     result.endpoints.find((endpoint) => endpoint.endpoint === "review.document_state")
       .diagnostics.code,
     "ERP07_EVIDENCE_PLATFORM_IDENTITY_REQUIRED",
+  );
+});
+
+test("ERP-07 evidence runner blocks sales when SPU detail cannot map the target SKC", async () => {
+  const options = runnerOptions({
+    request: async (input) => {
+      options.requests.push(input);
+      if (input.path === "/open-api/goods/spu-info") {
+        return {
+          status: 200,
+          payload: {
+            code: "0",
+            msg: "OK",
+            traceId: "trace-spu-info-no-target",
+            info: {
+              spuName: "SPU-PRIVATE",
+              skcInfoList: [{
+                skcName: "SKC-OTHER",
+                skuInfoList: [{ skuCode: "SKU-OTHER" }],
+              }],
+            },
+          },
+        };
+      }
+      return { status: 200, payload: successfulPayload(input.path) };
+    },
+  });
+  const result = await runErp07ReadOnlyEvidence(options);
+
+  assert.deepEqual(
+    options.requests.map(({ path }) => path),
+    [
+      "/open-api/goods/spu-info",
+      "/open-api/goods-publish-quotas/detail",
+      "/open-api/goods/query-document-state",
+    ],
+  );
+  assert.equal(
+    result.endpoints.find((endpoint) => endpoint.endpoint === "sales.sku").outcome,
+    "input_required",
+  );
+  assert.equal(
+    result.endpoints.find((endpoint) => endpoint.endpoint === "sales.sku")
+      .diagnostics.code,
+    "ERP07_EVIDENCE_SKU_CODES_REQUIRED",
+  );
+});
+
+test("ERP-07 evidence runner blocks sales when SPU detail read fails", async () => {
+  const options = runnerOptions({
+    request: async (input) => {
+      options.requests.push(input);
+      if (input.path === "/open-api/goods/spu-info") {
+        return {
+          status: 403,
+          payload: {
+            code: "openapi00001",
+            msg: "无权限",
+            traceId: "trace-spu-info-auth-failure",
+          },
+        };
+      }
+      return { status: 200, payload: successfulPayload(input.path) };
+    },
+  });
+  const result = await runErp07ReadOnlyEvidence(options);
+
+  assert.equal(
+    options.requests.some(({ path }) => path === "/open-api/goods/query-sku-sales"),
+    false,
+  );
+  assert.equal(
+    result.endpoints.find((endpoint) => endpoint.endpoint === "sales.sku")
+      .diagnostics.code,
+    "ERP07_EVIDENCE_SKU_LOOKUP_FAILED",
   );
 });
 
@@ -190,7 +348,7 @@ test("ERP-07 evidence runner never constructs a writable endpoint", async () => 
       assert.equal(input.method, "POST");
       assert.match(
         input.path,
-        /^\/open-api\/(goods\/query-sku-sales|goods-publish-quotas\/detail|goods\/query-document-state)$/,
+        /^\/open-api\/(goods\/spu-info|goods\/query-sku-sales|goods-publish-quotas\/detail|goods\/query-document-state)$/,
       );
       return { status: 200, payload: successfulPayload(input.path) };
     },
