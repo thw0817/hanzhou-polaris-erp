@@ -47,6 +47,23 @@
 - 修改 snapshot endpoint、字段覆盖范围、字段出现次数或字段类型摘要，审阅摘要均拒绝。
 - 任何 payload 值、scope 原值、body、query、headers 或凭证不得进入最终摘要或 source-pending adapter 的成功/失败结果。
 
+## 2026-08-30 结构复核增量
+
+为复核真实授权店铺返回的 `review.document_state` 结构，证据摘要版本已增量为：
+
+- `erp07-response-evidence-capture-v2`
+- `erp07-response-evidence-dossier-v2`
+
+新增的 `responseShape` 只记录脱敏的路径和类型，例如
+`info.data[].documentNo` + `string`；不记录任何字段值、请求体、请求头、凭证、原始响应或对象存储信息。
+结构摘要最多遍历 256 个节点，超出时仅标记 `truncated=true`。它只用于判断当前响应是包装层差异、字段改名、
+空数组还是结构缺失，不改变既定字段覆盖统计。
+
+即使结构摘要发现可疑的新字段，`review.document_state` 仍保持
+`sourceEvidenceStatus=internal_consumer_contract`、`catalogUpgrade.status=blocked_source_pending` 和
+`eligible=false`。只有独立官方来源或经过单独人工审阅的完整授权店铺回执，才可以提出字段映射变更；本次
+结构摘要不能自动升级 schema，也不能解除 ERP-07 的部署或发布门禁。
+
 ## 结论
 
 ERP-07 仍在进行。此文档与本地代码只降低“错误来源被误审为正确接口”的风险；它不形成真实授权店铺读取、不会解除 ERP-06 `BLOCKED/NO-GO`，也不授权 staging 或生产部署。

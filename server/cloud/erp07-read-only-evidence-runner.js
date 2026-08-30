@@ -234,6 +234,47 @@ function safeCatalogUpgrade(value) {
   };
 }
 
+const RESPONSE_SHAPE_PATH_PATTERN = /^(?:[A-Za-z0-9_-]+|<invalid-key>)(?:\[\])?(?:\.(?:[A-Za-z0-9_-]+|<invalid-key>)(?:\[\])?)*$/;
+const SAFE_RESPONSE_SHAPE_TYPES = new Set([
+  "null",
+  "array",
+  "integer",
+  "number",
+  "string",
+  "boolean",
+  "object",
+  "unknown",
+]);
+
+function safeResponseShape(value) {
+  const source = object(value);
+  if (!source || typeof source.truncated !== "boolean" ||
+      !Array.isArray(source.fields)) {
+    return null;
+  }
+  const fields = source.fields
+    .map((field) => {
+      const entry = object(field);
+      const fieldPath = text(entry?.path, 240);
+      if (!fieldPath || !RESPONSE_SHAPE_PATH_PATTERN.test(fieldPath) ||
+          !Array.isArray(entry.valueTypes) || entry.valueTypes.length === 0 ||
+          new Set(entry.valueTypes).size !== entry.valueTypes.length ||
+          entry.valueTypes.some((type) => !SAFE_RESPONSE_SHAPE_TYPES.has(type))) {
+        return null;
+      }
+      return {
+        path: fieldPath,
+        valueTypes: entry.valueTypes.map((type) => type),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 256);
+  return {
+    fields,
+    truncated: source.truncated,
+  };
+}
+
 function safeDossier(dossier) {
   const source = object(dossier);
   if (!source) return null;
@@ -250,6 +291,7 @@ function safeDossier(dossier) {
     observedAt: text(source.observedAt, 80),
     traceId: text(source.traceId, 200),
     responseDigestSha256: safeDigest(source.responseDigestSha256),
+    responseShape: safeResponseShape(source.responseShape),
     fieldCoverage: safeFieldCoverage(source.fieldCoverage),
     catalogUpgrade: safeCatalogUpgrade(source.catalogUpgrade),
   };

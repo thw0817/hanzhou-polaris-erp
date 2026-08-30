@@ -6,9 +6,9 @@ import {
 } from "./erp07-shein-endpoint-schema.js";
 
 export const ERP07_RESPONSE_EVIDENCE_CAPTURE_VERSION =
-  "erp07-response-evidence-capture-v1";
+  "erp07-response-evidence-capture-v2";
 export const ERP07_RESPONSE_EVIDENCE_DOSSIER_VERSION =
-  "erp07-response-evidence-dossier-v1";
+  "erp07-response-evidence-dossier-v2";
 
 const AUTHORIZED_READ_SOURCE = /^authorized-store-read:[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/;
 const SENSITIVE_KEY = /(?:authorization|cookie|password|passwd|secret|token|api[_-]?key|access[_-]?key|credential|signature|headers?|request|response|raw|body|payload|bytes?|file)/i;
@@ -38,6 +38,7 @@ const SAFE_SNAPSHOT_KEYS = new Set([
   "traceId",
   "payloadSha256",
   "fieldObservations",
+  "responseShape",
   "reviewStatus",
   "eligibleForCatalogUpgrade",
 ]);
@@ -231,6 +232,60 @@ function valueType(value) {
   return "unknown";
 }
 
+const MAX_RESPONSE_SHAPE_NODES = 256;
+const RESPONSE_SHAPE_KEY_PATTERN = /^[A-Za-z0-9_-]{1,80}$/;
+const RESPONSE_SHAPE_PATH_PATTERN = /^(?:[A-Za-z0-9_-]+|<invalid-key>)(?:\[\])?(?:\.(?:[A-Za-z0-9_-]+|<invalid-key>)(?:\[\])?)*$/;
+
+function buildResponseShape(payload) {
+  const typesByPath = new Map();
+  let visitedNodes = 0;
+  let truncated = false;
+
+  function visit(value, currentPath) {
+    if (visitedNodes >= MAX_RESPONSE_SHAPE_NODES) {
+      truncated = true;
+      return;
+    }
+    visitedNodes += 1;
+    const types = typesByPath.get(currentPath) || new Set();
+    types.add(valueType(value));
+    typesByPath.set(currentPath, types);
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        visit(item, `${currentPath}[]`);
+        if (truncated) break;
+      }
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+
+    for (const key of Object.keys(value).sort()) {
+      const safeKey = RESPONSE_SHAPE_KEY_PATTERN.test(key)
+        ? key
+        : "<invalid-key>";
+      visit(
+        value[key],
+        currentPath ? `${currentPath}.${safeKey}` : safeKey,
+      );
+      if (truncated) break;
+    }
+  }
+
+  visit(payload, "");
+  const fields = [...typesByPath.entries()]
+    .filter(([path]) => path)
+    .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+    .map(([path, types]) => Object.freeze({
+      path,
+      valueTypes: Object.freeze([...types].sort()),
+    }));
+  return Object.freeze({
+    fields: Object.freeze(fields),
+    truncated,
+  });
+}
+
 function fieldObservations(schema, payload) {
   return schema.source.responseEvidence.fields.map((field) => {
     const values = resolveFieldValues(payload, pathSegments(field));
@@ -248,6 +303,38 @@ function invalidDossier(message) {
     "ERP07_RESPONSE_EVIDENCE_DOSSIER_INVALID",
     message,
   );
+}
+
+function normalizeResponseShape(value) {
+  const source = object(value);
+  if (!source || Object.keys(source).some((key) => !["fields", "truncated"].includes(key)) ||
+      typeof source.truncated !== "boolean" || !Array.isArray(source.fields) ||
+      source.fields.length > MAX_RESPONSE_SHAPE_NODES) {
+    invalidDossier("响应证据结构摘要格式无效");
+  }
+  let previousPath = "";
+  const paths = new Set();
+  const fields = source.fields.map((field) => {
+    const entry = object(field);
+    const fieldPath = safeText(entry?.path, 240);
+    if (!fieldPath || !RESPONSE_SHAPE_PATH_PATTERN.test(fieldPath) ||
+        paths.has(fieldPath) || fieldPath < previousPath ||
+        !Array.isArray(entry.valueTypes) || entry.valueTypes.length === 0 ||
+        new Set(entry.valueTypes).size !== entry.valueTypes.length ||
+        entry.valueTypes.some((type) => !SAFE_OBSERVATION_TYPES.has(type))) {
+      invalidDossier("响应证据结构摘要字段无效");
+    }
+    previousPath = fieldPath;
+    paths.add(fieldPath);
+    return Object.freeze({
+      path: fieldPath,
+      valueTypes: Object.freeze([...entry.valueTypes]),
+    });
+  });
+  return Object.freeze({
+    fields: Object.freeze(fields),
+    truncated: source.truncated,
+  });
 }
 
 function snapshotForDossier(snapshot) {
@@ -316,6 +403,7 @@ function snapshotForDossier(snapshot) {
       valueTypes: Object.freeze([...entry.valueTypes]),
     });
   });
+  const responseShape = normalizeResponseShape(value.responseShape);
   return {
     schema,
     endpoint: schema.id,
@@ -325,6 +413,7 @@ function snapshotForDossier(snapshot) {
     traceId,
     payloadSha256,
     observations: normalizedObservations,
+    responseShape,
   };
 }
 
@@ -425,6 +514,7 @@ export function buildErp07ResponseEvidenceSnapshot({
       fieldObservations(schema, normalizedResponse.payload)
         .map((observation) => Object.freeze(observation)),
     ),
+    responseShape: buildResponseShape(normalizedResponse.payload),
     reviewStatus: "pending_manual_acceptance",
     eligibleForCatalogUpgrade: false,
   });
@@ -452,6 +542,7 @@ export function buildErp07ResponseEvidenceReviewDossier({ ...input } = {}) {
     observedAt: normalized.observedAt,
     traceId: normalized.traceId,
     responseDigestSha256: normalized.payloadSha256,
+    responseShape: normalized.responseShape,
     fieldCoverage: Object.freeze({
       expected: normalized.observations.length,
       observed: normalized.observations.length - missing.length,

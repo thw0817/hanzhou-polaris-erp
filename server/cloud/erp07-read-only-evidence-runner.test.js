@@ -143,7 +143,7 @@ test("ERP-07 evidence runner never returns credentials, scope, request body, or 
 
   assert.doesNotMatch(serialized, /OPEN-PRIVATE|SECRET-PRIVATE|tenant-1|store-1/);
   assert.doesNotMatch(serialized, /SKU-PRIVATE|SPU-PRIVATE|SKC-PRIVATE|DOC-PRIVATE/);
-  assert.doesNotMatch(serialized, /skcNameList|skc_name/);
+  assert.doesNotMatch(serialized, /skcNameList/);
   assert.match(serialized, /responseDigestSha256/);
   assert.match(serialized, /sourceRefDigestSha256/);
   assert.match(serialized, /scopeDigestSha256/);

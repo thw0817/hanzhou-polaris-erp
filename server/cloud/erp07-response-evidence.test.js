@@ -191,6 +191,62 @@ test("ERP-07 source-pending dossier coverage includes sales, quota and document 
   }
 });
 
+test("ERP-07 document-state dossier records safe response shape when expected fields are absent", () => {
+  const snapshot = buildErp07ResponseEvidenceSnapshot({
+    endpoint: "review.document_state",
+    scope,
+    sourceRef: "authorized-store-read:erp07-document-20260830-shape",
+    observedAt: "2026-08-30T03:04:00.000Z",
+    response: response({
+      code: "0",
+      msg: "OK",
+      traceId: "trace-document-shape",
+      info: {
+        data: [{
+          documentNo: "DOC-PRIVATE",
+          status: "PENDING",
+          metadata: { source: "platform" },
+        }],
+      },
+    }),
+  });
+
+  const dossier = buildErp07ResponseEvidenceReviewDossier({ snapshot });
+
+  assert.deepEqual(dossier.fieldCoverage, {
+    expected: 8,
+    observed: 0,
+    missing: [
+      "info[].spu_name",
+      "info[].skc_name",
+      "info[].sku_list[].sku_code",
+      "info[].document_sn",
+      "info[].version",
+      "info[].audit_time",
+      "info[].audit_state",
+      "info[].failed_reason[]",
+    ],
+  });
+  assert.deepEqual(dossier.responseShape, {
+    fields: [
+      { path: "code", valueTypes: ["string"] },
+      { path: "info", valueTypes: ["object"] },
+      { path: "info.data", valueTypes: ["array"] },
+      { path: "info.data[]", valueTypes: ["object"] },
+      { path: "info.data[].documentNo", valueTypes: ["string"] },
+      { path: "info.data[].metadata", valueTypes: ["object"] },
+      { path: "info.data[].metadata.source", valueTypes: ["string"] },
+      { path: "info.data[].status", valueTypes: ["string"] },
+      { path: "msg", valueTypes: ["string"] },
+      { path: "traceId", valueTypes: ["string"] },
+    ],
+    truncated: false,
+  });
+  assert.equal(dossier.catalogUpgrade.status, "blocked_source_pending");
+  assert.equal(dossier.catalogUpgrade.eligible, false);
+  assert.doesNotMatch(JSON.stringify(dossier), /DOC-PRIVATE|PENDING|platform/);
+});
+
 test("ERP-07 source-pending review dossier rejects altered snapshot endpoint identity", () => {
   const snapshot = buildErp07ResponseEvidenceSnapshot({
     endpoint: "preflight.publish_quota",
