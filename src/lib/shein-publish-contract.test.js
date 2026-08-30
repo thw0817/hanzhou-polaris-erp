@@ -21,6 +21,11 @@ test("publishing endpoint paths match the supplied SHEIN documentation", () => {
     SHEIN_PUBLISH_ENDPOINTS.associatedAttributeRules.path,
     "/open-api/goods/get-associated-attribute-rules",
   );
+  assert.equal(
+    SHEIN_PUBLISH_ENDPOINTS.publishQuota.path,
+    "/open-api/goods-publish-quotas/detail",
+  );
+  assert.equal(Object.hasOwn(SHEIN_PUBLISH_ENDPOINTS, "shelfQuota"), false);
 });
 
 test("fill standard response becomes a dynamic field rule map", () => {
@@ -102,11 +107,12 @@ test("preflight plan keeps final publish behind permission and rule checks", () 
   });
 
   assert.equal(plan[0].endpoint, "publishPermission");
+  assert.equal(plan[1].endpoint, "publishQuota");
   assert.equal(plan.at(-1).endpoint, "publishOrEdit");
   assert.ok(
     plan.findIndex((step) => step.endpoint === "supplierSkuRepeated") <
       plan.findIndex((step) => step.endpoint === "publishOrEdit"),
   );
   assert.equal(plan.some((step) => step.endpoint === "siteList"), false);
+  assert.equal(plan.some((step) => step.endpoint === "shelfQuota"), false);
 });
-

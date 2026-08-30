@@ -4,10 +4,10 @@ export const SHEIN_PUBLISH_ENDPOINTS = Object.freeze({
     path: "/open-api/goods/product/check-publish-permission",
     label: "确认店铺是否可发品",
   },
-  shelfQuota: {
+  publishQuota: {
     method: "POST",
-    path: "/open-api/goods/query-shelf-quota",
-    label: "获取店铺上架额度",
+    path: "/open-api/goods-publish-quotas/detail",
+    label: "查询商家发品额度",
   },
   categoryTree: {
     method: "POST",
@@ -285,6 +285,7 @@ export function createPublishPreflightPlan({
 } = {}) {
   const steps = [
     { endpoint: "publishPermission", state: "pending", blocksSubmit: true },
+    { endpoint: "publishQuota", state: "pending", blocksSubmit: true },
     { endpoint: "categoryTree", state: hasCategory ? "ready" : "pending", blocksSubmit: true },
     { endpoint: "publishStandard", state: "pending", blocksSubmit: true },
     { endpoint: "attributeTemplate", state: hasAttributes ? "ready" : "pending", blocksSubmit: true },
@@ -293,13 +294,6 @@ export function createPublishPreflightPlan({
     { endpoint: "supplierSkuRepeated", state: "pending", blocksSubmit: true },
   ];
 
-  if (businessMode !== "full") {
-    steps.splice(1, 0, {
-      endpoint: "shelfQuota",
-      state: "pending",
-      blocksSubmit: true,
-    });
-  }
   if (businessMode !== "full") {
     steps.splice(6, 0, { endpoint: "siteList", state: "pending", blocksSubmit: true });
   }

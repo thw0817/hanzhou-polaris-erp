@@ -7610,7 +7610,7 @@ function PublishDialog({
 
             <div className="publish-api-checks">
               <strong>下一步按接口读取</strong>
-              <span><Database size={15} /> 店铺发品权限与上架额度</span>
+              <span><Database size={15} /> 店铺可发品权限与商家发品额度</span>
               <span><Database size={15} /> 末级类目、字段规范与默认语种</span>
               <span><Database size={15} /> 商品属性、销售属性与关联规则</span>
               <span><Database size={15} /> 商家 SKU 唯一性与图片上传</span>
@@ -7768,7 +7768,7 @@ function PublishDialog({
           <div className="recognition-loading">
             <LoaderCircle size={30} className="spin" />
             <strong>正在执行 SHEIN 真实发品预检</strong>
-            <span>校验店铺发品权限与商家SKU唯一性...</span>
+            <span>校验店铺发品权限、商家发品额度与商家SKU唯一性...</span>
           </div>
         )}
         {step === "ready" && (
@@ -7782,7 +7782,7 @@ function PublishDialog({
                     : "SHEIN 真实预检发现阻断项"}
                 </strong>
                 <small>
-                  已检查 {products.length} 个商品文件夹和 {totalImages} 张图片；本轮只调用可发品权限和商家SKU重复校验。
+                  已检查 {products.length} 个商品文件夹和 {totalImages} 张图片；本轮只调用可发品权限、商家发品额度和商家SKU重复校验。
                 </small>
               </div>
               <StatusChip
@@ -7800,6 +7800,21 @@ function PublishDialog({
                 <small>
                   TraceId{" "}
                   {preflightResult?.permission?.diagnostics?.traceId || "未返回"}
+                </small>
+              </div>
+              <div>
+                <span>商家发品额度</span>
+                <strong>
+                  {preflightResult?.publishQuota?.availability === "unlimited" ||
+                  (preflightResult?.publishQuota?.availability === "available" &&
+                    Number(preflightResult?.publishQuota?.availableQuota) > 0)
+                    ? "可发布"
+                    : "已阻断"}
+                </strong>
+                <small>
+                  {preflightResult?.publishQuota?.availability === "unlimited"
+                    ? "当前商家不受发品额度管控"
+                    : `剩余 ${preflightResult?.publishQuota?.availableQuota ?? "待同步"}`}
                 </small>
               </div>
               <div>
@@ -7838,6 +7853,12 @@ function PublishDialog({
                           ? preflightResult?.permission?.canPublishProduct === true
                             ? "已通过"
                             : "已阻断"
+                        : item.endpoint === "publishQuota"
+                          ? preflightResult?.publishQuota?.availability === "unlimited" ||
+                            (preflightResult?.publishQuota?.availability === "available" &&
+                              Number(preflightResult?.publishQuota?.availableQuota) > 0)
+                            ? "已通过"
+                            : "已阻断"
                         : item.endpoint === "supplierSkuRepeated"
                           ? preflightResult?.supplierSkuCheck?.repeatedSkus
                               ?.length === 0
@@ -7857,7 +7878,7 @@ function PublishDialog({
               <AlertCircle size={17} />
               <span>
                 <strong>正式发布仍保持关闭</strong>
-                本轮已向SHEIN发出两项只读校验请求；关联属性规则、图片上传和发布接口尚未执行。
+                本轮已向SHEIN发出三项只读校验请求；关联属性规则、图片上传和发布接口尚未执行。
               </span>
             </div>
           </div>
