@@ -44,6 +44,7 @@ async function fixtureRoot({ withOutbox = true } = {}) {
       artifact: { outputDir: "dist-v2" },
     }),
   );
+  await fs.cp(path.join(root, "dist-v2"), path.join(root, "dist-web"), { recursive: true });
   return root;
 }
 
@@ -85,6 +86,22 @@ test("manifest audit catches component and migration drift", async () => {
   assert.equal(report.passed, false);
   assert.ok(report.errors.includes("component:control:hash"));
   assert.ok(report.errors.includes("schema_migration_inventory_drift"));
+});
+
+test("manifest audit catches a stale Nginx compatibility frontend", async () => {
+  const root = await fixtureRoot();
+  const manifest = await createPolarisReleaseManifest({
+    root,
+    environment: {
+      POLARIS_SOURCE_REVISION: "revision-1",
+      POLARIS_BUILD_ID: "build-1",
+      POLARIS_BUILD_TIME: "2026-08-29T00:00:00.000Z",
+    },
+  });
+  await fs.writeFile(path.join(root, "dist-web/index.html"), "<html>old frontend</html>\n");
+  const report = await auditPolarisReleaseManifest({ root, manifest, requireCleanSource: false });
+  assert.equal(report.passed, false);
+  assert.ok(report.errors.includes("dist_web_compatibility_drift"));
 });
 
 test("missing Outbox Dispatcher stays declared but blocks publishing", async () => {

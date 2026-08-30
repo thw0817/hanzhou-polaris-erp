@@ -32,13 +32,16 @@ async function main() {
   const temporaryDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "polaris-release-package-"));
   try {
     await fs.cp(webRoot, path.join(temporaryDirectory, "dist-v2"), { recursive: true });
+    // The production Nginx site currently serves the compatibility path
+    // `dist-web`; keep it byte-for-byte aligned with the V2 artifact.
+    await fs.cp(webRoot, path.join(temporaryDirectory, "dist-web"), { recursive: true });
     await fs.writeFile(
       path.join(temporaryDirectory, "release-manifest.json"),
       `${JSON.stringify(manifest, null, 2)}\n`,
       "utf8",
     );
     await fs.mkdir(path.dirname(output), { recursive: true });
-    execFileSync("tar", ["-czf", output, "-C", temporaryDirectory, "dist-v2", "release-manifest.json"], {
+    execFileSync("tar", ["-czf", output, "-C", temporaryDirectory, "dist-v2", "dist-web", "release-manifest.json"], {
       stdio: "inherit",
     });
     await fs.chmod(output, 0o444);

@@ -109,6 +109,41 @@ async function fileInfo(root, relative) {
   }
 }
 
+async function listFiles(directory, prefix = "") {
+  const entries = await fs.readdir(directory, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const relative = prefix ? path.join(prefix, entry.name) : entry.name;
+    const absolute = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await listFiles(absolute, relative)));
+    } else if (entry.isFile()) {
+      files.push(relative);
+    }
+  }
+  return files.sort((left, right) => left.localeCompare(right));
+}
+
+async function frontendCompatibilityCopyDrift(root, webRoot) {
+  const compatibilityRoot = safePath(root, "dist-web");
+  try {
+    await fs.access(compatibilityRoot);
+  } catch {
+    return false;
+  }
+  const sourceFiles = await listFiles(webRoot);
+  const compatibilityFiles = await listFiles(compatibilityRoot);
+  if (JSON.stringify(sourceFiles) !== JSON.stringify(compatibilityFiles)) return true;
+  for (const relative of sourceFiles) {
+    const source = await fileInfo(webRoot, relative);
+    const compatibility = await fileInfo(root, path.join("dist-web", relative));
+    if (!source.exists || !compatibility.exists || source.bytes !== compatibility.bytes || source.sha256 !== compatibility.sha256) {
+      return true;
+    }
+  }
+  return false;
+}
+
 async function migrationInventory(root) {
   const directory = safePath(root, "server/cloud/migrations");
   let filenames = [];
@@ -266,6 +301,9 @@ export async function auditPolarisReleaseManifest({
   if (currentRevision && manifest?.source?.revision !== currentRevision) errors.push("source_revision_drift");
   const frontend = await readFrontendManifest(root, webRoot);
   if (!frontend) errors.push("v2_release_manifest_missing");
+  if (await frontendCompatibilityCopyDrift(root, webRoot)) {
+    errors.push("dist_web_compatibility_drift");
+  }
   if (frontend && manifest?.ui?.sourceRevision !== frontend.sourceRevision) errors.push("ui_source_revision_drift");
   if (frontend && manifest?.ui?.buildId !== frontend.buildId) errors.push("ui_build_id_drift");
   if (frontend && manifest?.source?.revision !== frontend.sourceRevision) errors.push("ui_not_built_from_current_source");
