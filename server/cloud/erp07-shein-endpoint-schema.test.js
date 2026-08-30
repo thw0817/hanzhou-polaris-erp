@@ -230,6 +230,83 @@ test("source-pending endpoints expose honest response evidence and reject malfor
   );
 });
 
+test("source-pending response fields carry field-level provenance and cannot claim live evidence", () => {
+  const expected = {
+    "sales.sku": {
+      fields: [
+        "info.dataList[].skuCode",
+        "info.dataList[].realTimeSaleCnt",
+        "info.dataList[].cydSaleCnt",
+        "info.dataList[].c7dSaleCnt",
+        "info.dataList[].c30dSaleCnt",
+        "info.dataList[].dt",
+      ],
+      sourceFiles: ["server/store-data-sync.js", "server/store-data-sync.test.js"],
+    },
+    "preflight.publish_permission": {
+      fields: [
+        "info.canPublishProduct",
+        "info.can_publish_product",
+        "info.reason",
+      ],
+      sourceFiles: ["docs/V2_SHEIN_API_CAPABILITY_MATRIX.md", "server/publish-preflight.js"],
+    },
+    "preflight.publish_quota": {
+      fields: [
+        "info.isControlled",
+        "info.availableQuota",
+        "info.availableLimit",
+        "info.totalQuota",
+        "info.usedCount",
+      ],
+      sourceFiles: ["docs/V2_SHEIN_API_CAPABILITY_MATRIX.md", "server/publish-preflight.js"],
+    },
+    "preflight.supplier_sku_duplicate": {
+      fields: [
+        "info[].supplierSku",
+        "info[].supplier_sku",
+        "info[].repeated",
+      ],
+      sourceFiles: ["server/publish-preflight.js", "server/publish-preflight.test.js"],
+    },
+    "review.document_state": {
+      fields: [
+        "info[].spu_name",
+        "info[].skc_name",
+        "info[].sku_list[].sku_code",
+        "info[].document_sn",
+        "info[].version",
+        "info[].audit_time",
+        "info[].audit_state",
+        "info[].failed_reason[]",
+      ],
+      sourceFiles: [
+        "server/cloud/document-state-projections.js",
+        "server/cloud/erp06-shein-publish-adapter-contract.js",
+      ],
+    },
+    "pricing.proof_upload": {
+      fields: ["info.objectKey"],
+      sourceFiles: ["server/shein-upload.js", "server/shein-upload.test.js"],
+    },
+  };
+
+  for (const [endpoint, contract] of Object.entries(expected)) {
+    const evidence = getErp07EndpointSchema(endpoint).source.responseEvidence;
+    assert.deepEqual(
+      evidence.fieldEvidence.map((entry) => entry.field),
+      contract.fields,
+      endpoint,
+    );
+    for (const entry of evidence.fieldEvidence) {
+      assert.equal(entry.status, "internal_consumer_contract", endpoint);
+      assert.deepEqual(entry.sourceFiles, contract.sourceFiles, endpoint);
+      assert.equal(entry.observed, false, endpoint);
+    }
+    assert.equal(evidence.authorizedStoreRead, "not_observed", endpoint);
+  }
+});
+
 test("official read schemas enforce the documented cardinality and paging limits", () => {
   assert.equal(validateErp07EndpointPayload({
     endpoint: "inventory.stock_query",

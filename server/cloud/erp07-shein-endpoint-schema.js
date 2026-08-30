@@ -8,6 +8,12 @@ export const ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION =
 const SOURCE_CATALOG =
   "docs/HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md";
 const CAPABILITY_MATRIX = "docs/V2_SHEIN_API_CAPABILITY_MATRIX.md";
+const FIELD_EVIDENCE_STATUSES = Object.freeze([
+  "not_captured",
+  "internal_consumer_contract",
+  "official_response_field",
+  "authorized_store_read",
+]);
 
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) {
@@ -23,6 +29,15 @@ function field(type, options = {}) {
 
 function arrayOf(items, options = {}) {
   return field("array", { items, ...options });
+}
+
+function createFieldEvidence(fields, status, sourceFiles = [], observed = false) {
+  return fields.map((fieldName) => ({
+    field: fieldName,
+    status,
+    sourceFiles,
+    observed,
+  }));
 }
 
 function envelope(info = field(["object", "array"], { additionalProperties: "preserve" })) {
@@ -51,6 +66,9 @@ function source({
     sourceFiles: [],
     gaps: ["official_response_fields_not_captured"],
   };
+  const fieldEvidenceStatus = evidence.status === "official_response_contract"
+    ? "official_response_field"
+    : evidence.status;
   return {
     files,
     officialUpdatedAt,
@@ -62,6 +80,12 @@ function source({
       sourceFiles: evidence.sourceFiles || [],
       gaps: evidence.gaps || [],
       authorizedStoreRead: "not_observed",
+      fieldEvidence: evidence.fieldEvidence || createFieldEvidence(
+        evidence.fields,
+        fieldEvidenceStatus,
+        evidence.sourceFiles || [],
+        evidence.status === "authorized_store_read",
+      ),
     },
   };
 }
@@ -1375,6 +1399,65 @@ export function assertErp07EndpointEvidenceCatalog() {
       throw new Erp07EndpointSchemaError(
         "ERP07_ENDPOINT_RESPONSE_EVIDENCE_SOURCES_INVALID",
         `endpoint ${id} 的 response evidence 来源清单无效`,
+      );
+    }
+    if (!Array.isArray(evidence.fieldEvidence) ||
+        evidence.fieldEvidence.length !== evidence.fields.length) {
+      throw new Erp07EndpointSchemaError(
+        "ERP07_ENDPOINT_RESPONSE_FIELD_EVIDENCE_INVALID",
+        `endpoint ${id} 的逐字段 response evidence 清单必须与字段清单一一对应`,
+      );
+    }
+    const fieldNames = new Set(evidence.fields);
+    const fieldEvidenceNames = new Set();
+    for (const entry of evidence.fieldEvidence) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry) ||
+          typeof entry.field !== "string" || !entry.field.trim() ||
+          !fieldNames.has(entry.field) || fieldEvidenceNames.has(entry.field)) {
+        throw new Erp07EndpointSchemaError(
+          "ERP07_ENDPOINT_RESPONSE_FIELD_EVIDENCE_INVALID",
+          `endpoint ${id} 的逐字段 response evidence 字段名无效或重复`,
+        );
+      }
+      fieldEvidenceNames.add(entry.field);
+      if (!FIELD_EVIDENCE_STATUSES.includes(entry.status) ||
+          typeof entry.observed !== "boolean" ||
+          !Array.isArray(entry.sourceFiles) ||
+          entry.sourceFiles.some((sourceFile) =>
+            typeof sourceFile !== "string" || !sourceFile.trim())) {
+        throw new Erp07EndpointSchemaError(
+          "ERP07_ENDPOINT_RESPONSE_FIELD_EVIDENCE_INVALID",
+          `endpoint ${id} 的逐字段 response evidence 属性无效`,
+        );
+      }
+      if (entry.status === "not_captured" || entry.status === "internal_consumer_contract") {
+        if (entry.observed) {
+          throw new Erp07EndpointSchemaError(
+            "ERP07_ENDPOINT_RESPONSE_FIELD_EVIDENCE_INVALID",
+            `endpoint ${id} 的未捕获/内部字段证据不能标记为已观测`,
+          );
+        }
+      }
+      if (entry.status === "official_response_field" && entry.observed) {
+        throw new Erp07EndpointSchemaError(
+          "ERP07_ENDPOINT_RESPONSE_FIELD_EVIDENCE_INVALID",
+          `endpoint ${id} 的官方字段原文证据不能冒充授权店铺实测`,
+        );
+      }
+      if (entry.status === "authorized_store_read" &&
+          (!entry.observed || entry.sourceFiles.length === 0)) {
+        throw new Erp07EndpointSchemaError(
+          "ERP07_ENDPOINT_RESPONSE_FIELD_EVIDENCE_INVALID",
+          `endpoint ${id} 的授权店铺字段证据必须包含实测来源并标记已观测`,
+        );
+      }
+    }
+    if (fieldEvidenceNames.size !== fieldNames.size ||
+        evidence.fields.some((fieldName, index) =>
+          evidence.fieldEvidence[index].field !== fieldName)) {
+      throw new Erp07EndpointSchemaError(
+        "ERP07_ENDPOINT_RESPONSE_FIELD_EVIDENCE_INVALID",
+        `endpoint ${id} 的逐字段 response evidence 顺序或覆盖范围不一致`,
       );
     }
     if (evidence.authorizedStoreRead !== schema.source.authorizedStoreRead) {

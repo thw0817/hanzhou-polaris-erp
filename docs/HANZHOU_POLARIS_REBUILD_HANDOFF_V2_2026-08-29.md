@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v38
+版本：2026-08-30-v39
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界和 response evidence 完整性/消费者字段失败回归，其中 23 项可执行校验、10 项显式阻断；6 项 source-pending 接口仍明确标记为内部消费者契约，官方响应字段和真实授权店铺只读证据尚未捕获；ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter、response evidence 完整性和字段级 provenance 回归，其中 23 项可执行校验、10 项显式阻断；6 项 source-pending 接口的字段仍明确标记为内部消费者契约，官方响应字段和真实授权店铺只读证据尚未捕获；ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -119,7 +119,7 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - ERP 步骤总数：24。
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
 - `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11、Run 13 的 S3/AWS4 兼容列表请求返回 HTTP 403，但 Run 14 的 COS 原生 HMAC-SHA1 列表成功并完成归属对账：633 个对象匹配，187 条历史媒体记录无远端对象且均无引用；目标关系孤儿为 0，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
-- `IN_PROGRESS`：ERP-06 整体生产接入门仍为 `NO-GO`；ERP-07 整体仍在进行，当前活动开发单元为 `RUN-20260830-ERP07-ADAPTER-BOUNDARY-04`。
+- `IN_PROGRESS`：ERP-06 整体生产接入门仍为 `NO-GO`；ERP-07 整体仍在进行，当前活动开发单元为 `RUN-20260830-ERP07-FIELD-PROVENANCE-06`。
 - `NOT_STARTED`：ERP-08～ERP-23；不得因 ERP-07 局部 schema 覆盖完成而提前进入后续步骤。
 - ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口；Run 14 的历史证据缺口继续保留为只读 legacy，不阻断 ERP-06 新链路，但不允许历史自动回填。
 
@@ -536,3 +536,15 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 变更文件：[erp07-shein-endpoint-schema.js](../server/cloud/erp07-shein-endpoint-schema.js)、[erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js)、[erp07-shein-adapter.js](../server/cloud/erp07-shein-adapter.js)。本轮未接入线上路由、Worker、生产配置或真实 SHEIN HTTP。
 - 本地验证已完成：定向回归 `41/41`；项目全量 `npm test` `1353/1353`；V2 构建、工具链、密钥扫描（`scannedFiles=646, findings=[]`）、静态 release audit（`READY`，15/15）、staging isolation（14/14）和干净 revision release manifest（`passed=true, sourceDirty=false`）均通过。已生成 staging 候选包，SHA-256：`5b99da9f146a80cb229e1b2b7f85a359aad6ab2dcab5fd6a8d6b09f7045bef94`。
 - 当前状态：`COMPLETE / RESPONSE EVIDENCE HARDENED`。本 Run 的代码、回归和制品验证已完成；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`，ERP-08～ERP-23 未开始。
+
+## 20. ERP-07 字段级 response evidence 来源账本（2026-08-30）
+
+### RUN-20260830-ERP07-FIELD-PROVENANCE-06
+
+- 本地隔离复核为 33 个 endpoint 的每个 response evidence 字段补齐 `field/status/sourceFiles/observed` 记录；字段清单必须一一对应，不能只依赖 endpoint 级摘要。
+- 复核确认：SKU 销量、发布权限、发布额度、商家 SKU 查重、单据状态和价格证明上传共 6 项 source-pending 接口，当前仍没有足以支持完整响应字段的官方原文，也没有授权店铺真实只读回执；全部字段保持 `internal_consumer_contract`、`observed=false`，并继续保留 `official_response_fields_not_captured`。
+- Fail-closed 规则：字段缺失、重复、顺序或覆盖范围不一致、非法证据状态、来源格式错误、未捕获字段声称已观测、官方字段原文声称为店铺实测，均阻断 evidence catalog；当前 `authorizedStoreRead` 仍为 `not_observed`。
+- 实际变更：[erp07-shein-endpoint-schema.js](../server/cloud/erp07-shein-endpoint-schema.js)、[erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js)。本轮没有接入线上路由、Worker、生产配置、真实 SHEIN HTTP、生产/现有 staging 数据库、COS、Redis、队列或 migration。
+- 定向字段级回归 `15/15`；项目全量 `npm test` 当前 `1354/1354`。完成本 Run 仍需在干净提交后重跑构建、工具链、密钥扫描、release audit、staging isolation、release manifest 和只读 staging 候选包。
+- 当前状态：`IN_PROGRESS / LOCAL FIELD PROVENANCE HARDENING`。这一步已完成代码与定向回归，尚未把未执行的制品/门禁写成已完成证据。
+- 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、现有线上业务路径的受控 adapter 接线、预发 canary/readback、ERP-07 完成门和单独部署批准仍未完成。

@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v54
+版本：2026-08-30-v55
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed 和唯一 server adapter 边界隔离回归，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界和字段级 response evidence 回归，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-RESPONSE-EVIDENCE-05
+当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-FIELD-PROVENANCE-06
 
 ## 0. 台账用途
 
@@ -32,7 +32,7 @@
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
 | ERP-06 | 规范数据模型与事件账本 | IN_PROGRESS | RUN-20260830-ERP06-PUBLISH-READBACK-COMPOSITION-17 | ERP-05 | foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、隔离 Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账、单阶段编排和发布-回读组合隔离验证均已完成；生产迁移、真实 SHEIN adapter/发布仍未完成 |
-| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-ADAPTER-BOUNDARY-04 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter 隔离边界与回归通过；官方完整 response/店铺 evidence、canary/readback 和生产接入仍未完成 |
+| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-FIELD-PROVENANCE-06 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter、字段级 response evidence 与回归通过；官方完整 response/店铺 evidence、canary/readback 和生产接入仍未完成 |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
 | ERP-10 | 官方审核回读与状态投影 | NOT_STARTED | — | ERP-09 | — |
@@ -1979,7 +1979,7 @@
 - 来源诚实性：上述 6 项全部标记 `responseEvidence.status=internal_consumer_contract`，来源只指向本地消费者/测试及可确认的官方方法上下文，统一保留 `official_response_fields_not_captured`；没有把内部字段推断写成官方完整响应，也没有伪造 `authorizedStoreRead`。
 - Fail-closed：上述字段不接受明显错误类型（例如对象冒充数字、字符串冒充布尔、数字冒充 objectKey）；响应不通过 schema 时不得进入 adapter 成功结果，也不返回原始响应内容。全量 evidence catalog 检查缺项、非法状态、空字段、无效来源和店铺读取状态不一致时直接失败。
 - 本地验证：ERP-07 schema、adapter、endpoint contract 回归 `41/41`；项目全量 `npm test` `1353/1353`；`npm run build:v2`、`ci:toolchain`、`ci:secret-scan`（`scannedFiles=646, findings=[]`）、静态 release audit（`READY`，15/15 release contracts）、staging isolation（14/14）和干净 revision release manifest（`passed=true, sourceDirty=false`）均通过。response evidence 与 6 个消费者字段失败边界已覆盖。
-- 制品状态：已生成只读 staging 候选包 [polaris-staging-fbd28068ce888b6e9986c9b0f79d77ae34195f08.tar.gz](../artifacts/polaris-staging-fbd28068ce888b6e9986c9b0f79d77ae34195f08.tar.gz)，SHA-256：`5b99da9f146a80cb229e1b2b7f85a359aad6ab2dcab5fd6a8d6b09f7045bef94`；releaseId：`polaris-fbd28068ce888b6e9986c9b0f79d77ae34195f08`。
+- 制品状态：已生成只读 staging 候选包 [polaris-staging-6160fa36324c9c14fa3e5fe037ce8141bc883813.tar.gz](../artifacts/polaris-staging-6160fa36324c9c14fa3e5fe037ce8141bc883813.tar.gz)，SHA-256：`3cc83cb0d3aeb46bf75eb3d4ec95104fdefa0fbe09ce48cd2e1d30a803a40b09`；releaseId：`polaris-6160fa36324c9c14fa3e5fe037ce8141bc883813`。该制品已取代上一轮 `fbd2806` 候选包记录。
 - 环境边界：未解析或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
 - 当前状态：`COMPLETE / RESPONSE EVIDENCE HARDENED`。本 Run 的代码、回归、干净 revision manifest 和候选包验证已完成；ERP-07 整体仍 `IN_PROGRESS`，ERP-06 生产接入仍 `NO-GO`，ERP-08～ERP-23 未开始。
 - 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、统一 adapter 线上接线、预发 canary/readback、ERP-07 完成门和单独部署批准仍未完成。
