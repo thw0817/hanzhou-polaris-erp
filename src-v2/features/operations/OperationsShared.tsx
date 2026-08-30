@@ -82,7 +82,7 @@ export function PublishQuotaNotice({
           <p className="text-xs font-medium text-[var(--text-muted)]">本月剩余发品额度</p>
           <p className="mt-0.5 text-xs text-[var(--text-subtle)]">
             {loading
-              ? "正在读取店铺额度…"
+              ? "正在读取商家发品额度…"
               : quota?.localQuotaUpdatedAt
                 ? "已包含最近成功提交的商品扣减"
                 : "以 SHEIN 官方额度回读为准"}
@@ -94,7 +94,7 @@ export function PublishQuotaNotice({
           {loading ? "…" : hasValue ? formatNumber(available) : "待同步"}
         </p>
         {!loading && !hasValue ? (
-          <p className="mt-0.5 text-[11px] text-[var(--text-subtle)]">暂未收到店铺额度事件</p>
+          <p className="mt-0.5 text-[11px] text-[var(--text-subtle)]">暂未收到商家发品额度事件</p>
         ) : null}
       </div>
     </section>

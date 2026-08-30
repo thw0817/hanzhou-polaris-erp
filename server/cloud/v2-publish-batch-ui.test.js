@@ -174,7 +174,8 @@ test("price discussions show one readable size row with unit economics and both 
 
 test("SHEIN failures stay attached to the product and link back to editing", () => {
   assert.match(pageSource, /function visibleError/);
-  assert.match(pageSource, /历史额度检查记录已失效，请重新发布/);
+  assert.match(pageSource, /商家可用发品额度/);
+  assert.doesNotMatch(pageSource, /query-shelf-quota|shelfQuota|上架额度/);
   assert.match(pageSource, /需处理/);
   assert.match(pageSource, /products\/new\?draft=/);
   assert.match(pageSource, /已驳回且关联草稿的商品可直接重新发起/);

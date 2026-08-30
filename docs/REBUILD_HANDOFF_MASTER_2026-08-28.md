@@ -300,7 +300,7 @@ language（按官方要求）
 - 图片上传：`POST /open-api/goods/upload-pic`
 - 图片转换：`POST /open-api/goods/transform-pic`（只有原始规则明确需要时使用）
 - 发品权限：`POST /open-api/goods/product/check-publish-permission`
-- 发品额度：`POST /open-api/goods/query-shelf-quota`
+- 发品额度：`POST /open-api/goods-publish-quotas/detail`
 - 商家 SKU 查重：`POST /open-api/goods/product/check-supplierSku-repeated`
 - 商品发布/编辑：`POST /open-api/goods/product/publishOrEdit`
 - 商品部分编辑：`POST /open-api/goods/product/partialEdit`

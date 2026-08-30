@@ -386,7 +386,7 @@ test("direct publish performs the real read-only preflight and blocks exhausted 
         return row({
           id: created.id,
           state: "failed",
-          items: [{ ...created.items[0], state: "failed", last_error: "当前店铺没有可用上架额度" }],
+          items: [{ ...created.items[0], state: "failed", last_error: "当前商家没有可用发品额度" }],
         });
       },
     },
@@ -394,7 +394,7 @@ test("direct publish performs the real read-only preflight and blocks exhausted 
       preflightInput = input;
       return {
         passed: false,
-        blockers: ["当前店铺没有可用上架额度"],
+        blockers: ["当前商家没有可用发品额度"],
         permission: { canPublishProduct: true },
         publishQuota: { availability: "available", availableQuota: 0 },
         supplierSkuCheck: { requestedCount: 2, checkedCount: 2, results: [] },
@@ -545,7 +545,7 @@ test("lists tenant-scoped readback status with explicit audit failure reasons on
             code: "20100",
             message: "剩余可发品额度为0，禁止发品",
             traceId: "TRACE-READBACK-1",
-            details: [{ location: "店铺额度", messages: ["当前额度为0"] }],
+            details: [{ location: "商家发品额度", messages: ["当前额度为0"] }],
           },
           trace_id: "TRACE-READBACK-1",
           readback: { spu: "completed", skcCount: 2, skuCount: 4 },
@@ -654,7 +654,7 @@ test("lists tenant-scoped readback status with explicit audit failure reasons on
         code: "20100",
         message: "剩余可发品额度为0，禁止发品",
         traceId: "TRACE-READBACK-1",
-        details: [{ location: "店铺额度", messages: ["当前额度为0"] }],
+        details: [{ location: "商家发品额度", messages: ["当前额度为0"] }],
       },
       updatedAt: "2026-08-07T00:00:00.000Z",
     }],

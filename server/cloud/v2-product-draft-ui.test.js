@@ -145,6 +145,10 @@ test("product creation surfaces the current store monthly publish quota", () => 
   assert.match(publishBatchesSource, /PublishQuotaNotice/);
   assert.match(apiSource, /platformAvailableLimit/);
   assert.match(apiSource, /localConsumedThisMonth/);
+  assert.match(apiSource, /publishQuota/);
+  assert.doesNotMatch(apiSource, /shelfQuota/);
+  assert.doesNotMatch(publishBatchesSource, /query-shelf-quota|shelfQuota|上架额度/);
+  assert.match(publishBatchesSource, /商家可用发品额度/);
 });
 
 test("store switching remounts scoped workspaces and keeps publish caches isolated", () => {

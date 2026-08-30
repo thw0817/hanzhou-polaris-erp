@@ -124,8 +124,8 @@ function actionablePublishMessage(value: unknown, fallback = "请求失败") {
   if (code === "REQUEST_TIMEOUT" || code === "SERVICE_UNAVAILABLE") {
     return `${message}；商品结果不能确认，请先刷新状态，不要重复发布`;
   }
-  if (code === "20100" || /没有可用上架额度|额度为0|额度不足/.test(message)) {
-    return "SHEIN拒绝发布：当前店铺可用上架额度为0，请先处理额度后再发布";
+  if (code === "20100" || /额度为0|额度不足/.test(message)) {
+    return "SHEIN拒绝发布：当前商家可用发品额度为0，请先处理发品额度后再发布";
   }
   if (/保证金|保证金任务/.test(message)) {
     return "SHEIN拒绝发布：店铺保证金任务未完成，请先处理店铺任务";
@@ -173,9 +173,6 @@ function visibleError(item?: PublishBatchItem) {
   const rawError = preflight.publishError || item?.lastError;
   const raw = publishErrorMessage(rawError);
   if (!raw) return "";
-  if (raw.includes("/open-api/goods/query-shelf-quota")) {
-    return "历史额度检查记录已失效，请重新发布";
-  }
   return publishErrorLabel(rawError, raw);
 }
 

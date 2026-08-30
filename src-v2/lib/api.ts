@@ -1208,7 +1208,17 @@ export interface RemotePublishCandidate {
   blockers: Array<{ code?: string; message: string }>;
   checks?: {
     permission?: { state?: string };
-    shelfQuota?: { state?: string; availableLimit?: number | null };
+    publishQuota?: {
+      endpoint?: string;
+      state?: string;
+      availability?: string;
+      isControlled?: boolean | null;
+      totalQuota?: number | null;
+      availableQuota?: number | null;
+      usedCount?: number | null;
+      reason?: string;
+      traceId?: string;
+    };
     supplierSkuRepeated?: {
       state?: string;
       checkedCount?: number;
