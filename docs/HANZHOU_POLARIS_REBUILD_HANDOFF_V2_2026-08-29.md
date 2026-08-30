@@ -571,5 +571,6 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 本地失败回归发现：响应证据捕获器原先只对 `payload` 做敏感键递归检查，`diagnostics` 内部的 `authorization`、签名或请求字段虽不会输出到摘要，但仍可能被接受，违反“捕获器不接收敏感输入”的边界。
 - 已以最小变更修正：`diagnostics` 结构在读取 `status/code/traceId` 前复用同一递归敏感键检查；正常诊断字段 `status/code/traceId/durationMs` 不受影响，敏感 diagnostics 稳定返回 `ERP07_RESPONSE_EVIDENCE_SENSITIVE_INPUT`。
 - 实际文件：[erp07-response-evidence.js](../server/cloud/erp07-response-evidence.js)、[erp07-response-evidence.test.js](../server/cloud/erp07-response-evidence.test.js)。本 Run 未接入线上路由、Worker、数据库、COS 或 SHEIN 网络。
-- 当前验证：证据捕获 `6/6`、ERP-07 相邻定向回归 `33/33` 已通过；全量测试、构建、密钥扫描、release audit、release manifest 和候选制品将在提交当前 revision 后重新验证。
-- 状态边界：`pending_manual_acceptance`、`eligibleForCatalogUpgrade=false`、`authorizedStoreRead=not_observed` 和 ERP-07 整体 `IN_PROGRESS` 保持不变；本 Run 不授权生产部署，不把本地回归转成真实店铺证据。
+- 当前验证：证据捕获 `6/6`、ERP-07 相邻定向回归 `33/33`、项目全量 `npm test` `1360/1360` 已通过；V2 构建、工具链、密钥扫描（`scannedFiles=648, findings=[]`）、静态 release audit（`READY`、15/15）、staging isolation（14/14）和当前 revision release manifest（`passed=true, sourceDirty=false`）均通过。
+- 制品状态：已生成当前文档 revision 对应的只读 staging 候选包；releaseId、绝对路径和 SHA-256 以本 Run 完成报告为准，未部署。
+- 状态边界：`pending_manual_acceptance`、`eligibleForCatalogUpgrade=false`、`authorizedStoreRead=not_observed` 和 ERP-07 整体 `IN_PROGRESS` 保持不变；本 Run 标记为 `COMPLETE / LOCAL FAIL-CLOSED CORRECTION`，不授权生产部署，不把本地回归转成真实店铺证据。

@@ -2020,7 +2020,8 @@
 - 失败基线：`diagnostics` 会参与提取 HTTP 状态、上游 code 和 traceId；修复前其内部 `authorization`、`signature`、`request` 等敏感字段未执行递归拒绝，即使不进入摘要也不应被捕获器接受。
 - 实际变更：`responseInput` 在读取 `status/code/traceId` 前对结构化 `diagnostics` 递归执行既有 `assertNoSensitiveKeys`；新增回归证明 `authorization` 等敏感 diagnostics 返回 `ERP07_RESPONSE_EVIDENCE_SENSITIVE_INPUT`，正常 `status/code/traceId/durationMs` 仍可生成摘要。未接入网页、adapter、Worker、路由、数据库或 COS。
 - 安全边界：仍只接受 `payload`、`diagnostics`、`status` 三类顶层输入；请求头、凭证、签名、原始请求/响应、body、文件和图片等敏感字段在 payload 与 diagnostics 两个结构内均递归 fail closed；不记录原始响应或敏感值，不改变 `pending_manual_acceptance` 和 `eligibleForCatalogUpgrade=false` 语义。
-- 本地验证：证据捕获定向回归 `6/6`；ERP-07 schema、adapter、endpoint contract 与证据捕获相邻回归 `33/33`；其余全量、构建、工具链、密钥扫描、静态 release audit、staging isolation 和干净 revision release manifest 将在提交后重跑并记录最终结果。
+- 本地验证：证据捕获定向回归 `6/6`；ERP-07 schema、adapter、endpoint contract 与证据捕获相邻回归 `33/33`；项目全量 `npm test` `1360/1360`；V2 构建通过；工具链通过（Node `24.16.0`、npm `11.13.0`、lockfile `3`）；密钥扫描 `scannedFiles=648, findings=[]`；静态 release audit 为 `READY`、release contracts `15/15`；staging isolation `14/14`；当前 revision 的 release manifest `passed=true, sourceDirty=false`。
 - 环境证据：仅使用本地 synthetic payload/diagnostics 和 fake 依赖；未读取或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging，未执行 migration、部署、重启、配置切换或历史回填。
-- 当前状态：`IN_PROGRESS / LOCAL FAIL-CLOSED CORRECTION`；本 Run 的代码与失败回归已完成，待全量门禁、提交、当前 revision 制品重建及审计完成后关闭本 Run；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`。
+- 制品状态：已生成当前文档 revision 对应的只读 staging 候选包；releaseId、绝对路径和 SHA-256 以本 Run 完成报告为准，权限为只读，未部署。
+- 当前状态：`COMPLETE / LOCAL FAIL-CLOSED CORRECTION`；本 Run 的代码、失败回归、全量门禁、当前 revision 制品和审计已完成；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入仍为 `NO-GO`。
 - 未完成门：官方完整 response 字段、真实授权店铺只读 evidence、统一 adapter 受控接线、预发 canary/readback、ERP-07 完成门和单独部署批准仍未完成。
