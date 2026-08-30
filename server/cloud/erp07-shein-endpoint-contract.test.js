@@ -106,6 +106,33 @@ test("all writes fail closed until an explicit one-time upper-layer grant", () =
   );
 });
 
+test("revalidation-gated reads and credential exchange never build remote requests", () => {
+  for (const endpoint of ["inventory.stock_query", "pricing.discussion_list"]) {
+    assert.throws(
+      () => buildErp07EndpointRequest({
+        endpoint,
+        scope,
+        traceId: `trace-blocked-${endpoint}`,
+        body: {},
+      }),
+      (error) => error instanceof Erp07EndpointContractError &&
+        error.code === "ERP07_ENDPOINT_STATUS_BLOCKED",
+    );
+  }
+
+  assert.throws(
+    () => buildErp07EndpointRequest({
+      endpoint: "auth.token_exchange",
+      scope,
+      traceId: "trace-credential-exchange",
+      allowWrite: true,
+      body: {},
+    }),
+    (error) => error instanceof Erp07EndpointContractError &&
+      error.code === "ERP07_ENDPOINT_CREDENTIAL_EXCHANGE_DISABLED",
+  );
+});
+
 test("credentials never enter an endpoint body", () => {
   assert.throws(
     () => buildErp07EndpointRequest({

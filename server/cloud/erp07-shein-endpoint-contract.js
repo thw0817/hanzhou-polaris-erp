@@ -399,6 +399,10 @@ const CONTRACT_BY_PATH = new Map(
 );
 const SENSITIVE_KEY =
   /(?:secret(?:id|key)?|token|password|credential|authorization|signature|private[_-]?key|access[_-]?key|open[_-]?key[_-]?id|cookie)/i;
+const REMOTE_EXECUTION_BLOCKED_STATUSES = new Set([
+  "archived_frozen",
+  "archived_requires_revalidation",
+]);
 
 function object(value) {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -512,6 +516,18 @@ export function buildErp07EndpointRequest({
     throw new Erp07EndpointContractError(
       "ERP07_ENDPOINT_WRITE_DISABLED",
       "SHEIN 非读取 endpoint 默认关闭，必须由上层一次性授权",
+    );
+  }
+  if (REMOTE_EXECUTION_BLOCKED_STATUSES.has(contractItem.status)) {
+    throw new Erp07EndpointContractError(
+      "ERP07_ENDPOINT_STATUS_BLOCKED",
+      `SHEIN endpoint ${contractItem.id} 当前状态 ${contractItem.status}，完成重新验证前禁止远程请求`,
+    );
+  }
+  if (contractItem.mode === "credential_write") {
+    throw new Erp07EndpointContractError(
+      "ERP07_ENDPOINT_CREDENTIAL_EXCHANGE_DISABLED",
+      "SHEIN 凭证交换 endpoint 禁止由 ERP-07 请求构建器执行",
     );
   }
   return Object.freeze({

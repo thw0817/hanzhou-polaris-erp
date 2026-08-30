@@ -1,8 +1,8 @@
 # 涵舟 Polaris 商业 ERP 升级主交接文档（V2 修正版）
 
-版本：2026-08-30-v34
+版本：2026-08-30-v36
 状态：**当前唯一有效的新对话入口；执行状态以执行台账最新版本为准**
-当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，本轮不继续扩展。ERP-07 已完成适配器契约目录隔离基础并进入关键接口 schema/fixture 隔离验证，ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
+当前执行：用户已批准 COS-first 与 ERP-05 历史映射冻结豁免；ERP-05 已完成范围收口，ERP-06 已完成规范数据模型、版本冻结、原子发布交接、Outbox claim/lease、SHEIN adapter boundary、发布结果持久化、Worker 编排、真实 sender/readback 边界、官方回读事实落账、单阶段官方回读编排和发布-回读组合隔离验证；预发/生产接入前置审查已取得真实服务器只读证据，但结果为 `NO-GO`：生产仍运行旧 release/旧 Worker，未执行 ERP-06 正式 migration，发布开关处于开启状态但没有 ERP-06 Outbox/官方回读闭环。全站诊断日志保持已实现但未部署，本轮不继续扩展。ERP-07 已完成 33 项 endpoint 契约目录、版本化 schema 覆盖和失败 fixture 隔离回归，其中 23 项可执行校验、10 项显式阻断；ERP-07 整体仍在进行，ERP-08～ERP-23 尚未开始。
 方案名称：**涵舟 Polaris（北极星）商业 ERP 升级计划（HANZHOU-POLARIS）**  
 工作区：`/Users/tianhanwen/Documents/SHEIN爆单了`  
 修正原因：明确分离历史已执行工作、17 个板块最新产品方案和 ERP-00～ERP-23 未来实施路线。
@@ -19,7 +19,7 @@
 | --- | --- | --- | --- | --- |
 | A | 历史修复与部署记录 | 旧“第 1～20 步”、NEXUS/EVO/SRF、发布/同步/审核中心/复选框等历次修复和 release | 历史上确实执行过许多步骤并有部署记录；当前效果仍需现场核验 | `REBUILD_HANDOFF_MASTER_2026-08-28.md`、`REBUILD_HANDOFF_2026-08-03.md` 等历史交接 |
 | B | 17 个板块最新详细方案 | 账号权限、店铺、商品、建档、发布、回读、素材、AI、合规、经营、履约、售后、财务、价格、增长、协同、BI | **最新产品与架构目标，已讨论并完整记录；尚未作为整体实施完成** | `COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md` |
-| C | ERP-00～ERP-23 | 为落实 17 个板块而新编制的分阶段工程治理与实施路线 | **当前路线：ERP-00～ERP-04 已完成，ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口，ERP-06 正在进行非生产模型、版本冻结实现与验证，ERP-07～ERP-23 尚未开始；前序阻断 Run 保留** | `COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md`、执行台账 |
+| C | ERP-00～ERP-23 | 为落实 17 个板块而新编制的分阶段工程治理与实施路线 | **当前路线：ERP-00～ERP-04 已完成，ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口，ERP-06 仍处于非生产接入前置阶段，ERP-07 正在进行 endpoint schema/fixture 隔离，ERP-08～ERP-23 尚未开始；前序阻断 Run 保留** | `COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md`、执行台账 |
 
 必须牢记：
 
@@ -119,8 +119,8 @@ ERP-00～ERP-23 不是历史已执行步骤；当前已由用户明确启动并�
 - ERP 步骤总数：24。
 - `COMPLETE`：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04。
 - `BLOCKED`：ERP-05（行级关系 Run 已完成允许范围内检查；Run 08～Run 11、Run 13 的 S3/AWS4 兼容列表请求返回 HTTP 403，但 Run 14 的 COS 原生 HMAC-SHA1 列表成功并完成归属对账：633 个对象匹配，187 条历史媒体记录无远端对象且均无引用；目标关系孤儿为 0，但 ProductVersion/PublishAttempt/PlatformProductLink 逐条映射、9 条官方 version 不匹配和 SKU 应用角色可读证据仍缺失；前序阻断记录保留）。
-- `IN_PROGRESS`：ERP-06 整体生产接入门仍为 `NO-GO`；当前活动开发单元为 ERP-07 契约目录 Run：`RUN-20260830-ERP07-ENDPOINT-CONTRACT-01`。
-- `NOT_STARTED`：ERP-08～ERP-23；ERP-07 整体仍未完成。
+- `IN_PROGRESS`：ERP-06 整体生产接入门仍为 `NO-GO`；ERP-07 整体仍在进行，当前活动开发单元为 `RUN-20260830-ERP07-ENDPOINT-SCHEMA-COVERAGE-03`。
+- `NOT_STARTED`：ERP-08～ERP-23；不得因 ERP-07 局部 schema 覆盖完成而提前进入后续步骤。
 - ERP-05 已按用户批准的 COS-first/历史映射冻结豁免完成范围收口；Run 14 的历史证据缺口继续保留为只读 legacy，不阻断 ERP-06 新链路，但不允许历史自动回填。
 
 使用规则：
@@ -500,3 +500,14 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 本地验证：ERP-07 契约与 schema 定向回归 `22/22`；相邻 SHEIN/ERP-06 回归 `80/80`；最终全量 `npm test` 已通过 `1333/1333`；V2 构建通过；`ci:toolchain` 通过（Node `24.16.0`、npm `11.13.0`、lockfile `3`）；密钥扫描 `scannedFiles=642` 且 `findings=[]`；静态 release audit 为 `READY`、14/14 release contracts 通过且 live-write flags 关闭；staging isolation audit `14/14` 通过；未执行真实 SHEIN HTTP、生产/现有 staging 数据库/COS/Redis/队列访问、migration、部署、重启或配置切换。
 - 当前状态：`COMPLETE / PARTIAL SLICE`。本隔离单元已完成，但 ERP-07 整体仍为 `IN_PROGRESS`；33 个契约项中只有 12 个进入首批 schema/fixture slice，剩余逐 endpoint 官方 request/response 完整证据、限制/分页/单位/状态枚举、authorized-store read evidence、staging canary/readback 和统一 adapter 接线仍是后续门禁。
 - 下一执行单元：逐 endpoint 完成官方来源和字段证据，补齐剩余契约项 schema/fixtures，并在不打开生产写入的前提下，把 schema 校验接入唯一 server adapter 的隔离边界；完成前不得评审 ERP-08 或执行生产部署。
+
+## 17. ERP-07 远程构建器状态 fail-closed 加固（2026-08-30）
+
+### RUN-20260830-ERP07-ENDPOINT-SCHEMA-COVERAGE-03 增量修正
+
+- 本地补齐类目树、属性模板、发布字段规范官方必需的 `language` 请求头元数据；库存查询和议价列表虽保留本地 schema 校验，因 `archived_requires_revalidation` 状态仍禁止构建远程请求。
+- 通用 endpoint 构建器对 `archived_frozen`/`archived_requires_revalidation` 返回 `ERP07_ENDPOINT_STATUS_BLOCKED`；`credential_write` 返回 `ERP07_ENDPOINT_CREDENTIAL_EXCHANGE_DISABLED`。凭证字段进入 body 的既有拒绝优先级保持不变。
+- 实际增量文件：[erp07-shein-endpoint-contract.js](../server/cloud/erp07-shein-endpoint-contract.js)、[erp07-shein-endpoint-contract.test.js](../server/cloud/erp07-shein-endpoint-contract.test.js)、[erp07-shein-endpoint-schema.js](../server/cloud/erp07-shein-endpoint-schema.js)、[erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js)。仍未接入生产/现有 staging。
+- 验证结果：ERP-07 定向回归 `27/27`；全量 `npm test` `1338/1338`；V2 构建通过；工具链、密钥扫描（`scannedFiles=644, findings=[]`）、静态 release audit（`READY`，14/14）、staging isolation（14/14）和 `git diff --check` 均通过。
+- 当前状态：`COMPLETE / PARTIAL SLICE`；33 项契约均有 schema，23 项可执行本地校验，10 项显式阻断。ERP-07 整体仍 `IN_PROGRESS`，ERP-06 生产接入仍 `NO-GO`，ERP-08～ERP-23 未开始。
+- 环境边界：未解析或打印真实凭证，未发送 SHEIN HTTP，未访问或写入生产/现有 staging 数据库、COS、Redis、队列，未执行 migration、部署、重启、配置切换或历史回填。

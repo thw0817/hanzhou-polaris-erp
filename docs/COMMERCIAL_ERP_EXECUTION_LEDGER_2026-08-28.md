@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v51
+版本：2026-08-30-v52
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 已开始当前适配器契约目录隔离单元，ERP-08～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 整体仍处于非生产接入前置阶段；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离与状态 fail-closed 增量，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-ENDPOINT-CONTRACT-01
+当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-ENDPOINT-SCHEMA-COVERAGE-03
 
 ## 0. 台账用途
 
@@ -1938,3 +1938,19 @@
 - 当前状态：`COMPLETE / PARTIAL SLICE`。12/33 契约项进入首批 schema/fixture slice，ERP-07 整体仍为 `IN_PROGRESS`；剩余官方来源、完整 request/response schema、分页/单位/状态枚举、authorized-store read evidence、staging canary/readback 和统一 adapter 接线未完成。
 - 环境边界：未解析或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行正式 migration、部署、重启、配置切换、历史回填或自动重发。
 - 下一执行单元：继续逐 endpoint 补齐官方证据和剩余 schema/fixtures，随后仅在隔离测试边界把校验接入唯一 server adapter；完成 ERP-07 门禁前不进入 ERP-08，不执行任何外部写入。
+
+## 41. ERP-07 全量 endpoint schema 覆盖与冻结接口 fail-closed 回归
+
+### RUN-20260830-ERP07-ENDPOINT-SCHEMA-COVERAGE-03
+
+- 类型：ERP-07 第三段本地隔离实现；把 33 个已登记 endpoint 全部纳入显式 schema 注册表，同时为可验证读取接口补齐官方请求边界，为冻结/待复核/凭证接口建立不可执行状态。不接生产、不接现有 staging。
+- 启动依据：第 40 Run 只覆盖 12/33 个接口，剩余接口如果继续依赖“HTTP 方法 + 通用对象”推断，会出现把 POST 读取误判为写入、把冻结路径误当可调用、或对官方字段进行猜测的问题。本 Run 依据 API 来源目录和已归档官方原文逐项补齐。
+- 实际变更：[erp07-shein-endpoint-contract.js](../server/cloud/erp07-shein-endpoint-contract.js)、[erp07-shein-endpoint-contract.test.js](../server/cloud/erp07-shein-endpoint-contract.test.js)、[erp07-shein-endpoint-schema.js](../server/cloud/erp07-shein-endpoint-schema.js)、[erp07-shein-endpoint-schema.test.js](../server/cloud/erp07-shein-endpoint-schema.test.js)。schema 版本仍为 `erp07-shein-endpoint-schemas-v1`，所有 schema 与 `erp07-shein-endpoint-contract-v1` 的 id/method/path/mode 做一致性断言。
+- 新增可执行的官方读取 schema：库存查询、类目树、属性模板、发布字段规范、关联属性规则、合规要求、SKC 实拍图要求、证书填写规则、证书库查询、代理公司列表、警示语规则；严格校验已归档的必填字段、单选约束、枚举、批量上限和分页上限。库存查询保留 `skuCodeList/skcNameList/spuNameList` 必须且只能一组，属性模板限制每次最多 10 个类型，实拍图/证书/代理公司分页限制分别固定为官方文档上限。
+- 显式阻断的 10 项：自定义属性权限（官方独立字段原文未归档）、图片转换（COS-first 冻结旧链路）、证书文件上传、证书创建/编辑、证书绑定、代理公司绑定、警示语更新、议价列表（待复核）、议价处理（冻结）和授权令牌交换（凭证冻结）。阻断发生在 payload 校验前，返回稳定错误码 `ERP07_ENDPOINT_SCHEMA_BLOCKED`，不猜测字段、不解析凭证、不触发远端调用。
+- 远程构建器同步 fail-closed：`archived_frozen`/`archived_requires_revalidation` 的接口不能生成远程请求；`credential_write` 不能由通用 endpoint 构建器执行；类目树、属性模板和发布字段规范的官方必需 `language` 请求头已纳入 schema 元数据。
+- Fixture 与失败边界：33 个接口均具备按读/写模式要求的 success、empty/partial（读取）、business failure、auth failure、rate limit、timeout fixture；可执行接口的 success fixture 必须通过自身 response schema；冻结接口 fixture 仅用于记录边界，不能被当作可执行成功证据。`result_unknown`、缺少回执和发送后不确定性继续沿用 `readback_only`，不自动重发。
+- 本地验证结果：ERP-07 契约+schema 定向回归 `27/27`；项目全量 `npm test` `1338/1338`；可执行 endpoint success fixture `23/23`；33/33 合同项 schema 覆盖一致；`npm run build:v2`、`ci:toolchain`、`ci:secret-scan`（`scannedFiles=644, findings=[]`）、`release:audit:v2`（`READY`，14/14 release contracts）和 `ci:staging-audit`（14/14）均通过；`git diff --check` 通过。最终 release manifest 和候选包须在形成干净提交后执行，不能把当前工作树结果冒充为最终发布证据。
+- 环境边界：只读取本地源码和已归档 API 文档，使用 synthetic fixture；未解析或打印真实凭证，未发送真实 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行正式 migration、部署、重启、配置切换、历史回填或自动重发。
+- 当前状态：`COMPLETE / PARTIAL SLICE`。33 个 endpoint 已有显式登记，23 个进入本地可执行 schema 校验，10 个保持明确阻断；ERP-07 整体仍为 `IN_PROGRESS`，ERP-06 生产接入门仍为 `NO-GO`，ERP-08～ERP-23 未开始。
+- 下一执行单元：继续补齐剩余接口的官方来源版本、真实授权店铺只读 evidence、response 字段完整性和唯一 server adapter 接线；完成 ERP-07 完成门、预发 canary/readback 和单独批准前，不执行任何外部写入。

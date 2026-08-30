@@ -25,7 +25,7 @@ function arrayOf(items, options = {}) {
   return field("array", { items, ...options });
 }
 
-function envelope(info = field("object", { additionalProperties: "preserve" })) {
+function envelope(info = field(["object", "array"], { additionalProperties: "preserve" })) {
   return {
     type: "object",
     required: ["code"],
@@ -193,6 +193,66 @@ const COMMON_REQUEST_HEADERS = Object.freeze([
   "x-lt-timestamp",
   "x-lt-signature",
 ]);
+
+function readEndpoint({
+  path,
+  files,
+  officialUpdatedAt,
+  request,
+  info = {},
+  headers = COMMON_REQUEST_HEADERS,
+  schemaStatus = "fixture_ready",
+  evidenceStatus = "official_source_and_code_tested_request_schema",
+}) {
+  return {
+    mode: "read",
+    method: "POST",
+    path,
+    schemaStatus,
+    source: source({ files, officialUpdatedAt, evidenceStatus }),
+    headers,
+    request,
+    response: envelope(),
+    fixtures: readFixtures(info),
+  };
+}
+
+function blockedEndpoint({
+  path,
+  mode,
+  files,
+  officialUpdatedAt = null,
+  status = "archived_frozen",
+  reason,
+  request = { type: "object", fields: {}, additionalProperties: "fail" },
+  headers = COMMON_REQUEST_HEADERS,
+}) {
+  const successPayload = {
+    code: "0",
+    msg: "OK",
+    traceId: "fixture-blocked-success-never-executable",
+    info: { blocked: true },
+  };
+  return {
+    mode,
+    method: "POST",
+    path,
+    schemaStatus: status,
+    validationStatus: "blocked",
+    blockReason: reason,
+    source: source({
+      files,
+      officialUpdatedAt,
+      evidenceStatus: "official_source_but_not_executable",
+    }),
+    headers,
+    request,
+    response: envelope(),
+    fixtures: mode === "read"
+      ? readFixtures({ blocked: true })
+      : writeFixtures(successPayload),
+  };
+}
 
 const SCHEMAS = {
   "product.search": {
@@ -557,6 +617,343 @@ const SCHEMAS = {
       info: {},
     }),
   },
+  "inventory.stock_query": readEndpoint({
+    path: "/open-api/stock/stock-query",
+    files: ["docs/shein-api-raw/4c50e94e-d6b0-4668-910f-f2b5efbbe478.txt"],
+    officialUpdatedAt: "2026-04-27 20:38:29",
+    schemaStatus: "fixture_ready_archived_revalidation",
+    evidenceStatus: "official_request_and_response_fields_code_tested_archived_revalidation",
+    request: {
+      type: "object",
+      required: ["warehouseType"],
+      requiredExactlyOneOf: ["skuCodeList", "skcNameList", "spuNameList"],
+      fields: {
+        skuCodeList: arrayOf(field("string"), { minItems: 1, maxItems: 100 }),
+        skcNameList: arrayOf(field("string"), { minItems: 1, maxItems: 100 }),
+        spuNameList: arrayOf(field("string"), { minItems: 1, maxItems: 100 }),
+        warehouseType: field("string", { enum: ["1", "2", "3"] }),
+        invType: field("string", { enum: ["PI", "VI", "JI"] }),
+      },
+      additionalProperties: "fail",
+    },
+    info: {
+      goodsInventory: [{
+        spuName: "SPU-FIXTURE",
+        skcName: "SKC-FIXTURE",
+        skuList: [{
+          skuCode: "SKU-FIXTURE",
+          totalInventoryQuantity: 0,
+          totalLockedQuantity: 0,
+          totalTempLockQuantity: 0,
+          totalUsableInventory: 0,
+          warehouseInventoryList: [],
+        }],
+      }],
+    },
+  }),
+  "rules.category_tree": readEndpoint({
+    path: "/open-api/goods/query-category-tree",
+    files: ["docs/shein-api-raw/eab38e01-950a-4687-8c99-0c2456f2fcb0.txt"],
+    officialUpdatedAt: "2026-02-20 11:00:30",
+    headers: ["language", ...COMMON_REQUEST_HEADERS],
+    request: {
+      type: "object",
+      fields: {},
+      additionalProperties: "fail",
+    },
+    info: {
+      data: [{
+        category_id: 1,
+        product_type_id: 2,
+        parent_category_id: 0,
+        category_name: "Fixture",
+        last_category: true,
+        children: [],
+      }],
+    },
+  }),
+  "rules.attribute_template": readEndpoint({
+    path: "/open-api/goods/query-attribute-template",
+    files: ["docs/shein-api-raw/cd73132c-8485-43e0-839b-eaaff57c8087.txt"],
+    officialUpdatedAt: "2026-07-10 10:40:10",
+    headers: ["language", ...COMMON_REQUEST_HEADERS],
+    request: {
+      type: "object",
+      required: ["product_type_id_list"],
+      fields: {
+        product_type_id_list: arrayOf(field("integer"), { minItems: 1, maxItems: 10 }),
+      },
+      additionalProperties: "fail",
+    },
+    info: {
+      data: [{
+        product_type_id: 2,
+        attribute_infos: [{
+          attribute_id: 3,
+          attribute_name: "Fixture",
+          attribute_is_show: 1,
+          attribute_type: 4,
+          attribute_label: 0,
+          attribute_mode: 3,
+          attribute_status: 2,
+          attribute_value_info_list: [],
+          rule_info_list: [],
+        }],
+      }],
+    },
+  }),
+  "rules.publish_fill_in_standard": readEndpoint({
+    path: "/open-api/goods/query-publish-fill-in-standard",
+    files: ["docs/shein-api-raw/db52ff3f-2d55-463d-ba55-b7050a3ecb06.txt"],
+    officialUpdatedAt: "2026-07-02 21:00:12",
+    headers: ["language", ...COMMON_REQUEST_HEADERS],
+    request: {
+      type: "object",
+      fields: {
+        category_id: field(["integer", "string"]),
+        spu_name: field("string"),
+      },
+      additionalProperties: "fail",
+    },
+    info: {
+      fill_in_standard_list: [{
+        field_key: "skc_title",
+        module: "基本信息",
+        required: true,
+        show: true,
+        currency: "CNY",
+        default_language: "zh-cn",
+      }],
+    },
+  }),
+  "rules.associated_attribute": readEndpoint({
+    path: "/open-api/goods/get-associated-attribute-rules",
+    files: ["docs/shein-api-raw/5dc7f766-3173-498a-b76e-5978b652f502.txt"],
+    officialUpdatedAt: "2026-04-21 17:39:13",
+    request: {
+      type: "object",
+      required: ["get_linked_rule_req_list"],
+      fields: {
+        get_linked_rule_req_list: arrayOf(field("object", {
+          required: ["category_id", "product_type_id", "attribute_list"],
+          fields: {
+            group_id: field(["string", "integer"]),
+            category_id: field("integer"),
+            product_type_id: field("integer"),
+            attribute_list: arrayOf(field("object", {
+              required: ["attribute_id"],
+              fields: {
+                attribute_id: field("integer"),
+                attribute_value_id: field("integer"),
+              },
+              additionalProperties: "fail",
+            }), { minItems: 1 }),
+          },
+          additionalProperties: "fail",
+        }), { minItems: 1, maxItems: 10 }),
+      },
+      additionalProperties: "fail",
+    },
+    info: {
+      data: [{ group_id: "1", link_rule_attribute_list: [] }],
+    },
+  }),
+  "rules.custom_attribute_permission": blockedEndpoint({
+    path: "/open-api/goods/get-custom-attribute-permission-config",
+    mode: "read",
+    status: "source_pending",
+    files: [
+      "docs/HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md",
+      "docs/shein-api-raw/5f068191-dd13-485f-b709-b887047e2078.txt:379",
+    ],
+    reason: "官方独立请求/响应字段原文未归档，补齐来源证据前禁止猜测调用",
+  }),
+  "product.transform_image": blockedEndpoint({
+    path: "/open-api/goods/transform-pic",
+    mode: "non_business_write",
+    files: [CAPABILITY_MATRIX, "docs/shein-api-raw/b8f93f3c-ef21-4cf4-a33f-99df4cd7b417.txt"],
+    reason: "COS-first 已冻结旧图片转换链路，禁止从新上传流程旁路调用",
+  }),
+  "compliance.requirements": readEndpoint({
+    path: "/open-api/goods-compliance-requirements/list",
+    files: ["docs/shein-api-raw/ebf508e0-fbaa-4d93-a288-ab9749608417.txt"],
+    officialUpdatedAt: "2026-06-29 19:34:41",
+    request: {
+      type: "object",
+      required: ["pageNum", "pageSize"],
+      fields: {
+        certificateTypeCodes: arrayOf(field("string"), { maxItems: 20 }),
+        pageNum: field("integer", { min: 1 }),
+        pageSize: field("integer", { min: 1, max: 200 }),
+        reviewStates: arrayOf(field("integer", { enum: [0, 1, 2, 3] })),
+        skcNames: arrayOf(field("string"), { maxItems: 200 }),
+      },
+      additionalProperties: "fail",
+    },
+    info: {
+      data: [{
+        certificateTypeCode: "FIXTURE",
+        complianceGroupCode: "ZSZZL",
+        isRequired: 0,
+        reviewState: 0,
+        skcName: "SKC-FIXTURE",
+      }],
+    },
+  }),
+  "compliance.photo_requirements": readEndpoint({
+    path: "/open-api/goods-compliance/skc-label-list",
+    files: ["docs/shein-api-raw/1c4baafc-e545-4a42-9fe6-675a90e88d9c.txt"],
+    officialUpdatedAt: "2025-09-24 19:40:32",
+    request: {
+      type: "object",
+      required: ["pageSize", "pageNum", "skcList"],
+      fields: {
+        pageSize: field("integer", { min: 1, max: 100 }),
+        pageNum: field("integer", { min: 1 }),
+        skcList: arrayOf(field("string"), { minItems: 1 }),
+        skcShelfStatusList: arrayOf(field("integer", { enum: [0, 1, 2, 3] })),
+        reviewStatusList: arrayOf(field("integer", { enum: [1, 2, 3] })),
+        isRequired: field("integer", { enum: [0, 1, 10] }),
+      },
+      additionalProperties: "fail",
+    },
+    info: [{
+      skc: "SKC-FIXTURE",
+      skcShelfStatus: ["1"],
+      skcLabelInfoList: [],
+    }],
+  }),
+  "compliance.certificate_schema": readEndpoint({
+    path: "/open-api/goods-certificate-schemas/detail",
+    files: ["docs/shein-api-raw/6645cacd-1dc3-40ad-9e16-57655f3e6028.txt"],
+    officialUpdatedAt: "2026-06-30 20:30:58",
+    request: {
+      type: "object",
+      fields: {
+        certificateTypeCodes: arrayOf(field("string"), { maxItems: 10 }),
+        certificateTypeIdList: arrayOf(field("integer"), { maxItems: 1000 }),
+      },
+      additionalProperties: "fail",
+    },
+    info: {
+      certificateTypeInfoList: [{
+        certificateTypeId: 1,
+        certificateType: "Fixture",
+        complianceGroupCode: "ZSZZL",
+        isEnabled: 1,
+        presetInfoList: [],
+        otherPresetInfoList: [],
+      }],
+    },
+  }),
+  "compliance.certificate_search": readEndpoint({
+    path: "/open-api/goods-certificates/search",
+    files: ["docs/shein-api-raw/b48b87e0-24e6-4519-9468-a1abf1a9f5c6.txt"],
+    officialUpdatedAt: "2026-07-03 14:20:15",
+    request: {
+      type: "object",
+      required: ["pageNum", "pageSize"],
+      fields: {
+        certificateTypeCodeList: arrayOf(field("string"), { maxItems: 10 }),
+        fileName: field("string"),
+        pageNum: field("integer", { min: 1 }),
+        pageSize: field("integer", { min: 1, max: 100 }),
+        poolSnList: arrayOf(field("string")),
+        statusList: arrayOf(field("integer", { enum: [1, 2, 3, 4, 5, 6] })),
+      },
+      additionalProperties: "fail",
+    },
+    info: { data: [] },
+  }),
+  "compliance.agency_list": readEndpoint({
+    path: "/open-api/goods-compliance/agency-list",
+    files: ["docs/shein-api-raw/8592d2a2-69b3-4aad-a18c-337b0cf88427.txt"],
+    officialUpdatedAt: "2026-06-29 17:39:21",
+    request: {
+      type: "object",
+      required: ["pageNum", "pageSize"],
+      fields: {
+        agencyId: field("integer"),
+        agencyName: field("string"),
+        pageNum: field("integer", { min: 1 }),
+        pageSize: field("integer", { min: 1, max: 100 }),
+      },
+      additionalProperties: "fail",
+    },
+    info: [],
+  }),
+  "compliance.warning_rules": readEndpoint({
+    path: "/open-api/goods-compliance/query-warning-certificate-rules",
+    files: ["docs/shein-api-raw/9f9f5a62-577a-441a-966b-d6e219ec33b9.txt"],
+    officialUpdatedAt: "2026-06-29 19:40:05",
+    request: {
+      type: "object",
+      fields: {},
+      additionalProperties: "fail",
+    },
+    info: [],
+  }),
+  "compliance.certificate_upload": blockedEndpoint({
+    path: "/open-api/goods-certificate-files/upload",
+    mode: "non_business_write",
+    files: ["docs/shein-api-raw/ebf508e0-fbaa-4d93-a288-ab9749608417.txt"],
+    reason: "证书文件上传属于冻结的业务写入链路，必须完成 ERP-07 写入审批和回读契约后才可放行",
+    request: { type: "multipart", fields: {}, additionalProperties: "fail" },
+  }),
+  "compliance.certificate_save": blockedEndpoint({
+    path: "/open-api/goods-certificates/save",
+    mode: "business_write",
+    files: ["docs/shein-api-raw/ebf508e0-fbaa-4d93-a288-ab9749608417.txt"],
+    reason: "证书创建/编辑属于冻结的业务写入链路，禁止在 schema 未完成回读证明前执行",
+  }),
+  "compliance.certificate_bind": blockedEndpoint({
+    path: "/open-api/goods-certificates/bind",
+    mode: "business_write",
+    files: ["docs/shein-api-raw/ebf508e0-fbaa-4d93-a288-ab9749608417.txt"],
+    reason: "证书绑定属于冻结的业务写入链路，禁止在 schema 未完成回读证明前执行",
+  }),
+  "compliance.agency_bind": blockedEndpoint({
+    path: "/open-api/goods-compliance/save-skc-agency",
+    mode: "business_write",
+    files: ["docs/shein-api-raw/ebf508e0-fbaa-4d93-a288-ab9749608417.txt"],
+    reason: "代理公司绑定属于冻结的业务写入链路，禁止在 schema 未完成回读证明前执行",
+  }),
+  "compliance.warning_update": blockedEndpoint({
+    path: "/open-api/goods-compliance/update-skc-warning-certificate",
+    mode: "business_write",
+    files: ["docs/shein-api-raw/ebf508e0-fbaa-4d93-a288-ab9749608417.txt"],
+    reason: "警示语更新属于冻结的业务写入链路，禁止在 schema 未完成回读证明前执行",
+  }),
+  "pricing.discussion_list": blockedEndpoint({
+    path: "/open-api/goods/discuss/query-discuss-list",
+    mode: "read",
+    status: "archived_requires_revalidation",
+    files: ["docs/shein-api-raw/9e0c21e2-f5a6-4fc0-a2ec-ea6d3e009671.txt"],
+    officialUpdatedAt: "2026-07-02 20:35:33",
+    reason: "议价接口已标记待复核，完成当前官方字段与店铺证据复核前禁止继续调用",
+  }),
+  "pricing.discussion_process": blockedEndpoint({
+    path: "/open-api/goods/discuss/process-discuss",
+    mode: "business_write",
+    files: ["docs/shein-api-raw/8b7e05c6-7edf-4c00-ac2c-965fc066939b.txt"],
+    officialUpdatedAt: "2026-07-02 20:35:43",
+    reason: "议价处理属于冻结的业务写入链路，禁止绕过 result_unknown 回读规则执行",
+  }),
+  "auth.token_exchange": blockedEndpoint({
+    path: "/open-api/auth/get-by-token",
+    mode: "credential_write",
+    files: ["docs/shein-api-raw/53477f6a-7a28-4070-9b73-17305c89b241.txt"],
+    officialUpdatedAt: "2025-12-26 14:35:50",
+    status: "credential_exchange_frozen",
+    reason: "授权令牌交换会产生凭证，当前只允许由既有授权流程管理，禁止 schema 层直接执行",
+    headers: ["Content-Type", "x-lt-appid", "x-lt-timestamp", "x-lt-signature"],
+    request: {
+      type: "object",
+      required: ["tempToken"],
+      fields: { tempToken: field("string") },
+      additionalProperties: "fail",
+    },
+  }),
 };
 
 deepFreeze(SCHEMAS);
@@ -668,6 +1065,7 @@ export function getErp07EndpointSchema(endpoint) {
     id,
     contractVersion: ERP07_SHEIN_ENDPOINT_CONTRACT_VERSION,
     schemaVersion: ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION,
+    validationStatus: schema.validationStatus || "executable",
     ...schema,
   });
 }
@@ -677,6 +1075,7 @@ export function listErp07EndpointSchemas() {
     id,
     contractVersion: ERP07_SHEIN_ENDPOINT_CONTRACT_VERSION,
     schemaVersion: ERP07_SHEIN_ENDPOINT_SCHEMA_VERSION,
+    validationStatus: schema.validationStatus || "executable",
     ...schema,
   }));
 }
@@ -700,6 +1099,13 @@ export function validateErp07EndpointPayload({
   fixtureKind = null,
 } = {}) {
   const { id, schema } = resolveSchema(endpoint);
+  if (schema.validationStatus === "blocked") {
+    throw new Erp07EndpointSchemaError(
+      "ERP07_ENDPOINT_SCHEMA_BLOCKED",
+      `endpoint ${id} 当前不可执行: ${schema.blockReason}`,
+      id,
+    );
+  }
   if (fixtureKind && direction !== "response") {
     throw new Erp07EndpointSchemaError(
       "ERP07_ENDPOINT_FIXTURE_DIRECTION_UNSUPPORTED",
