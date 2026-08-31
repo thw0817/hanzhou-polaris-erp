@@ -95,6 +95,16 @@ Asia/Shanghai 03:00–04:00 扫描当前全部有效店铺；日期和时间窗�
 cd /opt/shein-console/current
 ```
 
+### 3.0.1 原子 release 切换的制品与权限门禁
+
+完整 release 包必须在干净 revision 上生成，并先在独立候选目录审计；不要把仅含 `dist-v2` 的前端包当作控制服务升级包。
+
+1. macOS 打包前必须禁用扩展属性：`COPYFILE_DISABLE=1 COPY_EXTENDED_ATTRIBUTES_DISABLE=true tar ...`。Linux 解包后必须确认 `find <candidate> -name '._*' -type f` 没有输出，否则拒绝该候选包。
+2. 候选包不得包含真实 `.env`、`.git`、`node_modules`、数据库数据或运行时缓存；共享配置仍只从 `/opt/shein-console/shared/.env` 以只读方式加载。
+3. 创建 release 根目录时使用 `install -d -m 755 <release>`；切换 `current` 软链接前复核该目录为 `755`。不要递归放宽文件权限，Nginx 只需要穿透 release 根目录并读取已审计的静态制品。
+4. 在宿主机 Node 版本低于项目固定版本时，使用 `node:24.16.0-alpine` 隔离容器执行候选制品审计；不能用旧宿主机 Node 的失败结果绕过或伪造审计。
+5. 只有候选完整 manifest、release audit、`/health`、`/ready`、公网网页 hash 与未登录网页会话边界全部通过后，才能保留切换；任一失败立即恢复旧 `current` 和旧控制服务镜像。
+
 计划切换 V2 前，先按 `deploy/v2-release-readiness.md` 对候选 release、候选 `dist-v2`、目标数据库和
 `shein_runtime` 执行只读门禁。门禁未返回 `READY` 时不得执行迁移或切换静态站点；门禁通过也不代表
 迁移、上线或商品发布已经获得授权。

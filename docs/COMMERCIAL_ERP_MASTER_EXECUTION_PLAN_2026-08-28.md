@@ -1,8 +1,8 @@
 # SHEIN 商业 ERP 主执行计划
 
-版本：2026-08-31-v64
+版本：2026-08-31-v65
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：执行路线；ERP-00～ERP-05 已完成，ERP-06 隔离实现已完成但生产接入门为 BLOCKED/NO-GO，ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界、response evidence 完整性、字段级 provenance 回归、授权店铺只读证据、四项官方 read response 契约、网页单据状态/经营同步/发品预检的受控 adapter 接线、diagnostics 敏感字段、未知 metadata、来源引用完整性及 source-pending 端点 fail-closed 修正；自定义属性权限仍默认锁定。ERP-07 整体仍在进行且是当前唯一 IN_PROGRESS 步骤，ERP-08～ERP-23 尚未开始
+状态：执行路线；ERP-00～ERP-05 已完成，ERP-06 隔离实现已完成但生产接入门为 BLOCKED/NO-GO。ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界、response evidence 完整性、字段级 provenance 回归、授权店铺只读证据、四项官方 read response 契约、网页单据状态/经营同步/发品预检的受控 adapter 接线、完整候选制品、受控云端部署与合格目标的四项只读 canary/readback；自定义属性权限仍默认锁定，所有业务写入仍关闭。ERP-07 已 COMPLETE；因 ERP-06 生产接入仍为 BLOCKED/NO-GO，目前没有可合法启动的活动步骤，ERP-08～ERP-23 尚未开始
 适用项目：SHEIN 超级运营中心 / SHEIN 涵舟工作室  
 执行编号：ERP-00 至 ERP-23
 
@@ -662,6 +662,16 @@
 - 单据状态使用官方嵌套 `spuList[{spuName,version}]` 请求形状；经营同步和发品预检的共享函数在正常运行时只接受 adapter 注入，旧的裸 `request` 仅可由名称明确的离线 synthetic 测试使用。GET 空查询不再附带空 JSON body。
 - 签名失效会将对应店铺标记为需要重新授权；缺少供应商身份、跨租户凭证、未授权店铺和 adapter 失败均在外部传输或本地投影前安全失败。自定义属性权限仍是 source-pending，继续不读取、不写快照。
 - 本 Run 的本地定向回归已经通过；最终候选制品、部署后只读 canary/readback 与 ERP-07 完成门复核仍是后续门禁，不能据此启动 ERP-08 或任何外部写入。
+
+### 14.4 受控部署与线上只读 canary 收口（2026-08-31）
+
+- `RUN-20260831-ERP07-DEPLOYED-CANARY-22` 在干净源码 revision `474d3de165b16a0c81b2e38980be42e02cd5426b` 上完成全量验证：`npm test` 为 `1406/1406`，V2 构建、Node `24.16.0`/npm `11.13.0` 工具链、密钥扫描（`655` 文件、零 findings）、release audit（`15/15`）和 staging isolation（`14/14`）均通过。发布/Outbox 写开关继续为 `false`。
+- 经完整 manifest 审计的云端包为 `shein-cloud-deploy-20260831-erp07-controlled-web-read-v2.tar.gz`，SHA-256 为 `af3fb6536b236668780d4e1864bbabeed70181f82c7195222c9f4139516f80cf`。包内不含真实 `.env`、Git 元数据、依赖目录或数据库数据；发布前后均保留旧 release 与控制服务镜像回退点。
+- 云端只原子替换 `control` 与网页制品，不迁移数据库、不重启 PostgreSQL、Redis、同步 Worker 或 Webhook。`/health`、`/ready`、运行时数据库角色审计（`51` 项）、公网网页 `200`、网页入口 SHA-256 与 release 制品一致、未登录网页会话 `401` 均已复核。
+- 线上只读 canary 使用数据库 `default_transaction_read_only=on`，仅选择本地审核通过且同时具备 supplier、SKC、SPU/version 的既有关联；四项 `product.spu_info`、`sales.sku`、`preflight.publish_quota`、`review.document_state` 均返回 HTTP `200`/业务码 `0`/`read_success`。首次任意历史目标的 SPU 回读返回业务失败并安全跳过 SKU 销量读取，因而没有把“任意历史任务”当作 canary 目标；后续合格目标成功结果见授权店铺只读证据记录。
+- 部署防回归：macOS 打包必须禁用扩展属性，候选目录必须拒绝 `._*` 文件；原子切换前 release 根目录必须为 `755`，以允许 Nginx 用户穿透读取静态制品。两项均在云端候选目录复验通过，不能以“容器构建成功”替代。
+- 完成门逐项复核：关键 endpoint 均有官方来源和自动契约测试；未知字段/状态 fail closed；写请求对业务拒绝和结果未知不自动重试；网络、限流、IP 白名单与平台 `5xx` 不错误触发重授权；签名失效仅定向标记目标店铺。ERP-07 现为 `COMPLETE`。
+- 范围边界：本完成只覆盖 SHEIN adapter 契约与受控只读路径。它不开放商品、合规、证书、图片、价格或其他外部写入；`rules.custom_attribute_permission` 仍为 source-pending，零读取、零快照写入。ERP-06 的生产迁移/发布接入仍 `BLOCKED/NO-GO`，因此 ERP-08 不得启动。
 
 ### 必做清单
 

@@ -40,10 +40,28 @@
 - 后续官方语义审阅已完成：`sales.sku` 与 `review.document_state` 现为 `official_response_contract`，详见 [ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md](./ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md)。本历史摘要仍保持 `pending_manual_acceptance`，不被追溯改写为现场观察；各 endpoint 的 `authorizedStoreRead` 仍为 `not_observed`。
 - 网页服务、旧本地入口和 Worker 不因本轮采集自动放行；远端读取默认关闭，业务写入继续关闭。
 
-## 当前未完成项
+## 部署后合格目标 canary（2026-08-31）
 
-1. 本轮授权店铺回执仍不得仅凭 HTTP 200/code 0 把 `authorizedStoreRead` 升级为现场观察。
-2. ERP-07 完成前仍需受控 adapter 接线、预发 canary/readback 和完成门复核。
-3. ERP-08～ERP-23 尚未开始；ERP-06 生产接入继续为 `BLOCKED/NO-GO`。
+- 运行编号：`RUN-20260831-ERP07-DEPLOYED-CANARY-22`
+- 观测时间：`2026-08-31T04:26:49.059Z`
+- 云端执行结果：`ok=true`、`readOnly=true`、`externalWrite=false`；数据库会话保持 `default_transaction_read_only=on`。
+- 目标选择边界：仅选取已有授权身份、`product_review_states.audit_state=2`、且同时具有 supplier、SKC、SPU 与 version 的现有本地关联。目标原值不保存，只保留以下摘要哈希：supplier `a4c325039ed5949a81dc8551d897952a1e703bf8660bbee88267528ed945d642`、SKC `85c137baee62aba666eaaca271d58efe9bae1cff3ce7f972f91c02f70fa9d988`、SPU/version `8e258bcfaa6954290721ca7168c8a3c7b78b4b0c3b8920b01f7422f6d6890854`。
 
-结论：本轮只读证据采集成功，降低了“没有真实授权店铺回执”的缺口，但没有解除 ERP-07 的 source-pending 阻断，也没有授权任何外部写入或生产切换。
+| endpoint | HTTP/code | 结果 | traceId |
+| --- | --- | --- | --- |
+| `product.spu_info` | `200/0` | `read_success` | `49b70fc6fd9a332d` |
+| `sales.sku` | `200/0` | `read_success` | `f2eb2ca39a63dba3` |
+| `preflight.publish_quota` | `200/0` | `read_success` | `e2d15c5655de89ca` |
+| `review.document_state` | `200/0` | `read_success` | `92d9eac755b6e1bf` |
+
+- 此前一次任意历史目标的 SPU 回读出现平台业务失败，SKU 销量读取被安全跳过；该结果证明目标选择不能靠“最新历史任务”猜测。该失败未写入数据库、未调用任何写 endpoint，也未导致重试或状态改写。
+- 本节同样不保存原始 payload、字段值、request body/query、headers、凭证或真实身份值；不迁移、不投递队列、不写对象存储、不触发 Webhook。
+
+## 当前结论与保留边界
+
+1. ERP-07 的 adapter 契约、受控网页读取、候选制品、云端部署、线上只读 canary 与完成门复核已完成。
+2. 历史证据摘要仍保持 `pending_manual_acceptance`；完成 Run 不会追溯改写 response evidence catalog 或把 `authorizedStoreRead` 自动升级为现场观察。
+3. 所有业务写入仍关闭，`rules.custom_attribute_permission` 仍为 source-pending 且保持零读取/零快照写入。
+4. ERP-06 生产接入继续为 `BLOCKED/NO-GO`；因此 ERP-08～ERP-23 尚未开始。
+
+结论：部署后的只读验证成功，ERP-07 在其受控只读范围内完成；它没有解除 source-pending 端点的保守语义，也没有授权任何外部写入。

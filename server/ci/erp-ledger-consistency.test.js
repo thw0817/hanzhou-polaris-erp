@@ -23,15 +23,25 @@ function parseStepRows(markdown) {
     });
 }
 
-test("execution ledger has one active step and points to its latest ERP run", async () => {
+test("execution ledger has at most one active step and accurately records a blocked gap", async () => {
   const markdown = await fs.readFile(ledgerPath, "utf8");
   const steps = parseStepRows(markdown);
   const activeSteps = steps.filter((step) => step.status === "IN_PROGRESS");
-  assert.equal(activeSteps.length, 1, "exactly one ERP step may be IN_PROGRESS");
+  assert.ok(activeSteps.length <= 1, "at most one ERP step may be IN_PROGRESS");
 
   const currentMatch = markdown.match(
     /当前活动步骤：(?:ERP-\d{2}) \/ IN_PROGRESS \/ (RUN-[A-Z0-9-]+)/,
   );
+  if (activeSteps.length === 0) {
+    assert.equal(currentMatch, null, "a blocked gap must not claim an active ERP run");
+    assert.match(
+      markdown,
+      /当前活动步骤：无 \/ BLOCKED \/ .+/,
+      "a blocked gap must record the concrete reason no ERP step is active",
+    );
+    return;
+  }
+
   assert.ok(currentMatch, "ledger must declare the current active run");
   assert.equal(activeSteps[0].run, currentMatch[1]);
 
