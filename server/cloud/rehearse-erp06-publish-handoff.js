@@ -33,6 +33,19 @@ const draftDirectory = path.join(currentDirectory, "erp06-draft");
 const confirmationValue =
   "REHEARSE_ERP06_PUBLISH_HANDOFF_ON_EMPTY_LOCAL_DATABASE";
 
+export function createErp06HandoffRehearsalTimeline(createdAt = new Date()) {
+  const createdAtMs = new Date(createdAt).getTime();
+  if (!Number.isFinite(createdAtMs)) {
+    throw new TypeError("ERP-06 handoff rehearsal requires a valid creation time");
+  }
+  return {
+    dispatchAt: new Date(createdAtMs + 60_000),
+    workerAt: new Date(createdAtMs + 120_000),
+    repeatDispatchAt: new Date(createdAtMs + 180_000),
+    unknownWorkerAt: new Date(createdAtMs + 240_000),
+  };
+}
+
 function assertHandoffRehearsalConfirmation(value) {
   if (value !== confirmationValue) {
     throw new Error(
@@ -214,6 +227,7 @@ async function runHandoffChecks(pool) {
   assert.equal(first.draftLockVersion, 1);
   assert.equal(first.remoteCallMade, false);
 
+  const timeline = createErp06HandoffRehearsalTimeline();
   const outboxRepository = new PostgresErp06OutboxRepository({ pool });
   const queue = new MemoryJobQueue();
   const dispatch = await dispatchErp06OutboxOnce({
@@ -222,7 +236,7 @@ async function runHandoffChecks(pool) {
     tenantId: ids.tenant,
     storeId: ids.store,
     dispatcherId: "erp06-rehearsal-dispatcher",
-    now: () => new Date("2026-08-30T10:00:00.000Z"),
+    now: () => timeline.dispatchAt,
   });
   assert.deepEqual(dispatch, { claimed: 1, dispatched: 1, failed: 0 });
   assert.equal(queue.jobs.length, 1);
@@ -231,7 +245,7 @@ async function runHandoffChecks(pool) {
     repository: outboxRepository,
     workerId: "erp06-rehearsal-worker",
     randomId: () => "erp06-rehearsal-worker:claim-1",
-    now: () => new Date("2026-08-30T10:01:00.000Z"),
+    now: () => timeline.workerAt,
   });
   assert.equal(workerResult.claimed, true);
   assert.equal(workerResult.remoteCallMade, false);
@@ -242,7 +256,7 @@ async function runHandoffChecks(pool) {
     tenantId: ids.tenant,
     storeId: ids.store,
     dispatcherId: "erp06-rehearsal-dispatcher",
-    now: () => new Date("2026-08-30T10:02:00.000Z"),
+    now: () => timeline.repeatDispatchAt,
   });
   assert.deepEqual(repeatDispatch, { claimed: 0, dispatched: 0, failed: 0 });
   assert.equal(queue.jobs.length, 1);
@@ -362,7 +376,7 @@ async function runHandoffChecks(pool) {
     repository: outboxRepository,
     workerId: "erp06-rehearsal-worker-unknown",
     randomId: () => "erp06-rehearsal-worker-unknown:claim-1",
-    now: () => new Date("2026-08-30T10:03:00.000Z"),
+    now: () => timeline.unknownWorkerAt,
   });
   assert.equal(unknownWorker.claimed, false);
   assert.equal(unknownWorker.remoteCallMade, false);

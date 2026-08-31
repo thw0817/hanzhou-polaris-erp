@@ -33,6 +33,7 @@
     "db:rehearse:erp06-foundation": "node server/cloud/rehearse-erp06-model-foundation.js",
     "db:rehearse:erp06-version": "node server/cloud/rehearse-erp06-product-version.js",
     "db:rehearse:erp06-handoff": "node server/cloud/rehearse-erp06-publish-handoff.js",
+    "db:rehearse:erp06-results": "node server/cloud/rehearse-erp06-result-persistence.js",
     "db:audit:runtime-role": "node --env-file-if-exists=.env server/cloud/audit-runtime-database-role.js",
     "db:audit:v2-readiness": "node --env-file-if-exists=.env server/cloud/audit-v2-release-readiness.js",
     "release:audit:v2": "node server/cloud/audit-v2-release-readiness.js --static-only",

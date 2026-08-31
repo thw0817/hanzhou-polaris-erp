@@ -1,8 +1,8 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-31-v75
+版本：2026-08-31-v76
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05、ERP-07 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 生产接入门为 BLOCKED/NO-GO，隔离实现已完成但生产迁移、真实 SHEIN adapter/发布尚未批准；ERP-07 已完成 33 项 endpoint schema/fixture、授权店铺只读证据、四项官方 read response 契约、受控网页读取接线、完整候选制品、云端原子部署及部署后只读 canary/readback；自定义属性权限和全部业务写入仍 fail-closed。ERP-06 的阻断使 ERP-08～ERP-23 仍不能启动；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05、ERP-07 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 生产接入门为 BLOCKED/NO-GO，2026-08-31 已以云端只读事实与 047/048 全套一次性数据库演练复核，但生产迁移、真实 SHEIN adapter/发布尚未批准；ERP-07 已完成 33 项 endpoint schema/fixture、授权店铺只读证据、四项官方 read response 契约、受控网页读取接线、完整候选制品、云端原子部署及部署后只读 canary/readback；自定义属性权限和全部业务写入仍 fail-closed。ERP-06 的阻断使 ERP-08～ERP-23 仍不能启动；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
 当前活动步骤：无 / BLOCKED / ERP-06 生产接入门仍为 NO-GO，ERP-08 不得启动
@@ -31,7 +31,7 @@
 | ERP-03 | CI、预发与发布门禁 | COMPLETE | RUN-20260829-ERP03-GITHUB-ACTIONS-02 | ERP-02 | GitHub Actions `805a43d` 远端 runner 成功；两 job 全绿、2 artifacts；无生产/SHEIN 写入 |
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
-| ERP-06 | 规范数据模型与事件账本 | BLOCKED | RUN-20260830-ERP06-RELEASE-READINESS-16 | ERP-05 | 隔离 foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账、单阶段编排和发布-回读组合验证均已完成；生产接入前置审查为 NO-GO，生产迁移、真实 SHEIN adapter/发布等待单独批准 |
+| ERP-06 | 规范数据模型与事件账本 | BLOCKED | RUN-20260831-ERP06-READMISSION-AUDIT-23 | ERP-05 | 隔离 foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账、单阶段编排和发布-回读组合验证均已完成；本次复核确认云端仍只有 046、047/048 未迁移且发布相关开关关闭；[重新准入审计](./ERP06_PRODUCTION_READMISSION_AUDIT_2026-08-31.md) 结论仍为 NO-GO，生产迁移、真实 SHEIN adapter/发布等待单独批准 |
 | ERP-07 | SHEIN 适配器契约硬化 | COMPLETE | RUN-20260831-ERP07-DEPLOYED-CANARY-22 | ERP-06（隔离基础完成；生产接入仍 NO-GO） | 33 项 endpoint schema、四项官方只读契约、授权店铺摘要证据、网页单据状态/经营同步/发品预检唯一 adapter、全量 `1406/1406` 回归、候选完整包、原子云端部署、四项合格目标只读 canary/readback 与完成门复核通过；自定义属性权限和所有业务写入继续关闭 |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
@@ -75,6 +75,7 @@
 | BUG-PUB-015 | P1 | 合规照片提交与主商品 executor 同步耦合，附属写失败可能延长或污染主发布结论 | CONFIRMED | ERP-09、16、18、21 | 独立 Command/Workflow 状态；主 accepted 回执先落库且不可被附属失败覆盖 |
 | BUG-PUB-016 | P1 | accepted 后本地额度临时投影的 exactly-once 恢复与重复回执处理缺少故障证据 | OPEN_REVERIFY | ERP-06、09、17、19、21 | 重复/乱序回执和落库崩溃测试证明额度只投影一次，未知不扣成确定值 |
 | BUG-PUB-017 | P1 | 发布调度缺少明确的每店共享限流、公平队列和全局资源预算，批量大店可能饿死其他店 | CONFIRMED | ERP-08、09、18、19、21 | 每店默认单在飞、跨店公平、全局有界并发和 1/15/50/100 压测指标达标 |
+| BUG-PUB-018 | P1 | 048 发布结果持久化草案此前只有静态/内存 fake-pool 验证，缺少一次性 PostgreSQL 的应用、回滚与重放演练 | RESOLVED | ERP-06 | `db:rehearse:erp06-results` 强制本机 disposable 数据库和精确确认值；001–046+047+048 应用、verify、空库回滚与重放均通过 |
 | BUG-REV-005 | P0 | Review Center Snapshot v1 在一次请求内并发拼接草稿、批次、审核和逐批回读，不是同一数据库一致性快照 | CONFIRMED | ERP-03、10、11、19、21 | Snapshot v2 只读规范投影，同事务返回 counts/rows/eligibility/freshness/revision，测试逐项对账 |
 | BUG-REV-006 | P0 | 前端继续从 Draft、Batch、Readback、Review 和核价数据执行第二套分类、计数与选择归并 | CONFIRMED | ERP-04、10、11、13、23 | 页面只消费 Snapshot 稳定 code/allowedActions，删除运行时二次 reducer，契约与 E2E 证明一致 |
 | BUG-REV-007 | P0 | 当前审核尝试仍可能按 job 更新时间、最新 version 或最新一行启发式选择 | CONFIRMED | ERP-04、06、10、20、21 | 显式 CurrentReviewPointer 和 parent/supersedes 驱动；歧义进入 conflict，旧尝试只在 timeline |
@@ -2191,3 +2192,15 @@
 - 线上只读 canary：数据库会话 `default_transaction_read_only=on`，只选取审核通过且有完整 supplier/SKC/SPU/version 本地关联的目标。`product.spu_info`、`sales.sku`、`preflight.publish_quota`、`review.document_state` 四项均为 HTTP `200`/业务码 `0`/`read_success`，`ok=true`、`readOnly=true`、`externalWrite=false`。首次任意历史目标的 SPU 业务失败没有被重试或当成成功，SKU 销量读取被安全跳过；因此本 Run 明确使用合格目标边界。详细脱敏记录见 [ERP07_AUTHORIZED_STORE_READ_EVIDENCE_2026-08-31.md](./ERP07_AUTHORIZED_STORE_READ_EVIDENCE_2026-08-31.md)。
 - 完成门复核：官方来源与自动契约测试齐全；未知字段/状态 fail closed；业务拒绝和结果未知写请求不会自动重试；网络、限流、IP 白名单、平台 `5xx` 不触发错误重授权；签名失效仅标记匹配店铺。所有范围内门均通过。
 - 当前状态：`COMPLETE / ERP-07 CONTROLLED READ CONTRACT`。自定义属性权限保持 source-pending、零读取/零快照写入；所有外部业务写入仍关闭。ERP-06 的生产迁移/发布接入仍 `BLOCKED/NO-GO`，因此当前活动步骤为空，ERP-08～ERP-23 未开始。
+
+## 59. ERP-06 生产重新准入只读审计与演练补全
+
+### RUN-20260831-ERP06-READMISSION-AUDIT-23
+
+- 类型：ERP-06 生产重新准入审计与非生产演练补全；云端只读查询和本机一次性 PostgreSQL 验证，不执行生产迁移、权限变更、发布或 SHEIN 写入。
+- 失败基线：旧 `RUN-20260830-ERP06-RELEASE-READINESS-16` 的线上结论已过期，无法仅凭历史截图判断当前 release、开关、正式 schema 或隔离草案是否已变化；048 结果持久化草案也未有真实一次性数据库的回滚/重放演练入口。
+- 云端只读事实：当前 `control` healthy；运行中的服务中没有 `product-publish-worker` 或 `outbox-dispatcher`。迁移连接的 `BEGIN READ ONLY` 元数据查询只发现 `046_publish_outbox_events.sql` 与 `publish_outbox_events`；`047_erp06_model_foundation.sql`、`048_erp06_publish_result_persistence.sql` 和 ERP-06 目标表均不存在。Control 的发布执行、ERP-06 dispatcher、Webhook ingress、合规写入开关均为 `false`，活动迁移目录也不存在 047/048。
+- 非生产验证：以独立且自动删除的本机 PostgreSQL 容器完成 foundation/rollback、ProductVersion、PublishAttempt/Command/Outbox handoff，以及新增 048 结果持久化的应用、verify、空时间戳 rollback、重新应用。所有容器只使用 `*.invalid` 演练数据、内存队列与关闭的远端边界；未接触现有 staging、云端数据库、Redis、COS 或 SHEIN。
+- 修正：首次 handoff 演练发现固定 2026-08-30 调度时钟早于真实 Outbox 创建时间，导致合法记录未被领取。新增相对时间线回归并改为交接完成后递增的本机演练时间点；不是生产 Dispatcher 或业务数据故障。新增 `db:rehearse:erp06-results`，使 048 不再只依赖 fake-pool。
+- 验证：三项既有演练与新增 048 演练均通过；项目全量 `npm test` `1408/1408`、`npm run build:v2`、静态 `release:audit:v2` 和 `git diff --check` 通过。完整非敏感证据见 [ERP06_PRODUCTION_READMISSION_AUDIT_2026-08-31.md](./ERP06_PRODUCTION_READMISSION_AUDIT_2026-08-31.md)。
+- 门禁结论：`BLOCKED / NO-GO`。代码和隔离数据库证据已补强，但尚无正式生产变更记录、已验证备份/回滚点、生产等价预发 047/048 演练、未来 schema 的 migration/runtime 最小权限验收及观察窗口；这些不能由本 Run 自行声明通过。ERP-08～ERP-23 继续不得启动。

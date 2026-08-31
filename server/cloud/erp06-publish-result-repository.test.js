@@ -13,6 +13,7 @@ import {
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const draftDirectory = path.join(currentDirectory, "erp06-draft");
 const activeMigrationDirectory = path.join(currentDirectory, "migrations");
+const packageJsonPath = path.resolve(currentDirectory, "../../package.json");
 
 const tenantId = "11111111-1111-4111-8111-111111111111";
 const storeId = "22222222-2222-4222-8222-222222222222";
@@ -140,6 +141,19 @@ test("ERP-06 result persistence draft is additive and stays outside active migra
   assert.match(verify, /result_recorded_timing_constraint/);
   assert.match(rollback, /ERP06_048_ROLLBACK_REQUIRES_DISPOSABLE_DATABASE/);
   assert.ok(rollback.indexOf("DROP INDEX publish_commands_result_recorded_idx") < rollback.indexOf("ALTER TABLE publish_commands"));
+});
+
+test("ERP-06 result persistence has an explicit disposable-database rehearsal entrypoint", async () => {
+  const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf8"));
+  assert.equal(
+    packageJson.scripts["db:rehearse:erp06-results"],
+    "node server/cloud/rehearse-erp06-result-persistence.js",
+  );
+  const rehearsal = await import("./rehearse-erp06-result-persistence.js");
+  assert.equal(
+    rehearsal.confirmationValue,
+    "REHEARSE_ERP06_RESULT_PERSISTENCE_ON_EMPTY_LOCAL_DATABASE",
+  );
 });
 
 test("send_started atomically records a sanitized append-only event and command timestamp", async () => {
