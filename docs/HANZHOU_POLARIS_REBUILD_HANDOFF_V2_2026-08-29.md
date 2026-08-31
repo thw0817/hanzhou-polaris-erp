@@ -673,3 +673,14 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 云端网页服务的经营同步与发品预检在凭据读取和网络传输前无条件返回 `409 ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED`，不提供构造器或配置放行开关。共享函数也默认在任何请求前拒绝，使旧本地直连入口同步锁定；发布规则读取保留已核验字段、忽略当前与历史快照中的待核验权限并返回空自定义属性权限与受控诊断，绝不请求待核验接口或写入权限快照。仅测试文件显式使用 `allowSourcePendingSyntheticReadForTest=true` 运行离线 fixture。
 - 新增网页服务零凭据/零传输回归、共享经营同步零请求回归、共享预检零请求回归和发布规则零待核验请求回归；定向 `49/49`、全量 `1381/1381` 测试、V2 构建（1953 modules）、固定工具链、密钥扫描（651 文件、零 findings）、静态 release audit（15/15）和 staging isolation（14/14）均通过。发布执行仍为关闭状态。没有真实 SHEIN HTTP、凭据、生产/预发数据库、COS、Redis、队列、migration、部署或配置变更。
 - 该修正不会补造销量、额度、发布结果或审核结果；未来若部署，网页会如实显示受控锁定。ERP-07 仍为唯一 `IN_PROGRESS`；下一步继续审计 remaining source-pending 端点是否存在同类非 adapter 旁路。
+
+## 32. ERP-07 真实授权店铺只读证据采集（2026-08-31）
+
+### RUN-20260831-ERP07-AUTHORIZED-STORE-READ-19
+
+- 在云端控制容器内执行一次受控真实授权店铺只读采集，运行器返回 `ok=true`、`readOnly=true`、`externalWrite=false`；数据库连接启用 `default_transaction_read_only=on`。
+- `product.spu_info`、`sales.sku`、`preflight.publish_quota`、`review.document_state` 四项读取均返回 HTTP `200`、业务码 `0`、`read_success`。销量内部消费者字段覆盖 `6/6`；单据状态实际嵌套字段覆盖 `7/7`，没有把 SKC 直接当作 SKU 请求销量接口。
+- 结果只保留脱敏的 method/path、状态、traceId、字段路径/类型、覆盖统计和摘要哈希；原始 payload、字段值、请求体/query、headers、凭证、原始店铺或商品身份均未保存。详细证据见 [ERP07_AUTHORIZED_STORE_READ_EVIDENCE_2026-08-31.md](./ERP07_AUTHORIZED_STORE_READ_EVIDENCE_2026-08-31.md)。
+- 这轮结果确认了授权店铺的实际读取和结构轮廓，但不证明官方 response 字段语义、审核枚举、额度业务结论或商品状态。摘要仍固定为 `pending_manual_acceptance` / `blocked_source_pending` / `eligible=false`，不升级 catalog 或 `authorizedStoreRead`。
+- 生产网页、旧本地入口、Worker 和线上 adapter 仍保持 source-pending fail closed；没有执行发布、编辑、迁移、队列投递、COS 写入、网页投影、配置切换或部署。
+- 当前状态：ERP-07 仍为唯一 `IN_PROGRESS`；ERP-06 为 `BLOCKED/NO-GO`；ERP-08～ERP-23 尚未开始。下一执行单元是完成官方字段/版本/语义复核和授权回执独立接受，再进行受控 adapter 接线与预发 canary/readback。

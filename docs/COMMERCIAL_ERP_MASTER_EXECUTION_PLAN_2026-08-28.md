@@ -642,6 +642,14 @@
 - release/readiness 静态门禁已把 `server/cloud/erp07-shein-adapter.js` 纳入必要契约；缺少该文件或关键 fail-closed 标记时阻断候选包。该 adapter 目前只完成隔离实现与门禁接入，尚未接入现有线上路由、Worker、生产配置或真实 SHEIN HTTP。
 - 本进度不等于 ERP-07 完成门：尚缺每项完整官方来源版本、真实授权店铺只读 evidence、6 项接口的官方完整 response 字段/状态映射、现有线上业务路径的受控 adapter 接线、预发 canary/readback 和完成门审查；ERP-08～ERP-23 不得提前启动。
 
+### 14.1 真实授权店铺只读证据采集（2026-08-31）
+
+- `RUN-20260831-ERP07-AUTHORIZED-STORE-READ-19` 已在云端控制容器内完成一次受控真实授权店铺只读采集：`ok=true`、`readOnly=true`、`externalWrite=false`，数据库启用 `default_transaction_read_only=on`。
+- `product.spu_info`、`sales.sku`、官方商家发品额度和 `review.document_state` 四项读取均为 HTTP `200`/业务码 `0`/`read_success`；销量字段覆盖 `6/6`，单据状态实际嵌套字段覆盖 `7/7`。本轮没有发布、编辑、迁移、投递、回填或配置切换。
+- 只保存脱敏的 method/path、状态、traceId、字段结构和摘要哈希；原始 payload、字段值、请求体/query、headers、凭证和原始身份值不落盘。详细记录见 [ERP07_AUTHORIZED_STORE_READ_EVIDENCE_2026-08-31.md](./ERP07_AUTHORIZED_STORE_READ_EVIDENCE_2026-08-31.md)。
+- 这是“已采集、待人工接受”的真实回执，不是官方完整 response contract。`sales.sku`、`review.document_state` 仍为 `internal_consumer_contract`，`authorizedStoreRead` 仍为 `not_observed`，source-pending 读取继续 fail closed；不接入普通线上 adapter，不启动 ERP-08。
+- ERP-07 当前新增的剩余门是官方字段/版本/语义复核、授权回执独立接受、受控 adapter 接线、预发 canary/readback 和完成门审查；ERP-06 仍 `BLOCKED/NO-GO`，ERP-08～ERP-23 尚未开始。
+
 ### 必做清单
 
 1. 为每个已用 endpoint 建立官方原文来源、method、path、headers、request/response schema。

@@ -102,6 +102,21 @@ source-pending 字段目录因此显示 `0/8`，本地后续修复已将它对�
 fail closed，不能伪造额度或放行发布。以上均为脱敏结构和状态证据，不代表商品通过/驳回，不写数据库，不触碰生产，也不解除
 `blocked_source_pending`。
 
+## 2026-08-31 真实授权店铺只读证据采集
+
+本轮在云端控制容器内执行 `erp07-read-only-evidence-runner-v1`，显式设置只读确认和 source-pending 证据采集确认，结果为
+`ok=true`、`readOnly=true`、`externalWrite=false`。数据库连接启用 `default_transaction_read_only=on`；本轮没有执行 migration、数据库写入、队列投递、COS 写入、网页投影或 SHEIN 业务写入。
+
+四项只读调用均返回 HTTP `200`、业务码 `0`、`read_success`：`product.spu_info`、`sales.sku`、官方商家发品额度
+`preflight.publish_quota` 以及 `review.document_state`。销量读取先从 SPU 详情的唯一 SKC 关系解析 SKU，再调用销量接口；没有把 SKC 直接当作 SKU。销量内部消费者字段覆盖为 `6/6`，单据状态实际嵌套字段覆盖为 `7/7`，均无缺失。
+
+本轮只保留脱敏的 method/path、状态、traceId、字段路径/类型覆盖和范围摘要哈希，原始 payload、字段值、请求体/查询、headers、凭证和原始身份值均未保存；完整摘要见
+[ERP07_AUTHORIZED_STORE_READ_EVIDENCE_2026-08-31.md](./ERP07_AUTHORIZED_STORE_READ_EVIDENCE_2026-08-31.md)。
+
+该结果只能证明当前授权店铺的读取链路和响应结构已被实际观察，不能证明官方字段语义、审核状态枚举、额度业务结论或商品可发布性。故仍保持
+`reviewStatus=pending_manual_acceptance`、`catalogUpgrade.status=blocked_source_pending`、`eligible=false`，不升级
+`authorizedStoreRead`，不接入普通网页/Worker adapter，不启动 ERP-08。
+
 ## 结论
 
 ERP-07 仍在进行。此文档与本地代码只降低“错误来源被误审为正确接口”的风险；它不形成真实授权店铺读取、不会解除 ERP-06 `BLOCKED/NO-GO`，也不授权 staging 或生产部署。
