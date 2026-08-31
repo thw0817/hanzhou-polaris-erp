@@ -1,6 +1,6 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-31-v76
+版本：2026-08-31-v77
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05、ERP-07 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 生产接入门为 BLOCKED/NO-GO，2026-08-31 已以云端只读事实与 047/048 全套一次性数据库演练复核，但生产迁移、真实 SHEIN adapter/发布尚未批准；ERP-07 已完成 33 项 endpoint schema/fixture、授权店铺只读证据、四项官方 read response 契约、受控网页读取接线、完整候选制品、云端原子部署及部署后只读 canary/readback；自定义属性权限和全部业务写入仍 fail-closed。ERP-06 的阻断使 ERP-08～ERP-23 仍不能启动；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
@@ -2204,3 +2204,13 @@
 - 修正：首次 handoff 演练发现固定 2026-08-30 调度时钟早于真实 Outbox 创建时间，导致合法记录未被领取。新增相对时间线回归并改为交接完成后递增的本机演练时间点；不是生产 Dispatcher 或业务数据故障。新增 `db:rehearse:erp06-results`，使 048 不再只依赖 fake-pool。
 - 验证：三项既有演练与新增 048 演练均通过；项目全量 `npm test` `1408/1408`、`npm run build:v2`、静态 `release:audit:v2` 和 `git diff --check` 通过。完整非敏感证据见 [ERP06_PRODUCTION_READMISSION_AUDIT_2026-08-31.md](./ERP06_PRODUCTION_READMISSION_AUDIT_2026-08-31.md)。
 - 门禁结论：`BLOCKED / NO-GO`。代码和隔离数据库证据已补强，但尚无正式生产变更记录、已验证备份/回滚点、生产等价预发 047/048 演练、未来 schema 的 migration/runtime 最小权限验收及观察窗口；这些不能由本 Run 自行声明通过。ERP-08～ERP-23 继续不得启动。
+
+## 60. ERP-06 生产等价预发准入包
+
+### RUN-20260831-ERP06-PREPRODUCTION-PACKET-24
+
+- 类型：ERP-06 `NO-GO` 状态下的无写入准入准备；只盘点仓库资料与现有 staging 服务状态，不创建环境、不连接数据库、不迁移、不授权、不部署、不修改配置或调用 SHEIN。
+- 发现：现有 `deploy/docker-compose.staging.yml` 与运行中的 staging 只提供 PostgreSQL、Redis、MinIO；没有候选 Control/Worker，也没有获准恢复点。因此它不能被直接写入或称为 ERP-06 生产等价演练环境。
+- 产物：新增 [ERP06_PRODUCTION_EQUIVALENT_PREPRODUCTION_ADMISSION_2026-08-31.md](./ERP06_PRODUCTION_EQUIVALENT_PREPRODUCTION_ADMISSION_2026-08-31.md)，固定变更单、候选 SHA/校验和、备份恢复、047/048 进入活动迁移目录前的评审、runtime 最小权限、全部写开关关闭、观察与回滚记录要求。
+- 关键边界：047/048 当前不在正式活动迁移目录；准入包不提供手工 SQL、`GRANT`/`REVOKE`、启动命令或跳过审批的替代路径。静态 release audit、容器健康或本机演练通过均不构成生产/预发执行授权。
+- 当前状态：`PREPARATION COMPLETE / BLOCKED / NO-GO`；没有活动 ERP 步骤，ERP-08～ERP-23 继续未开始。

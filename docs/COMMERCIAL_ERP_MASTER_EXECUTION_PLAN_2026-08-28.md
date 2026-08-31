@@ -1,6 +1,6 @@
 # SHEIN 商业 ERP 主执行计划
 
-版本：2026-08-31-v66
+版本：2026-08-31-v67
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
 状态：执行路线；ERP-00～ERP-05 已完成，ERP-06 隔离实现已完成但生产接入门为 BLOCKED/NO-GO。ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界、response evidence 完整性、字段级 provenance 回归、授权店铺只读证据、四项官方 read response 契约、网页单据状态/经营同步/发品预检的受控 adapter 接线、完整候选制品、受控云端部署与合格目标的四项只读 canary/readback；自定义属性权限仍默认锁定，所有业务写入仍关闭。ERP-07 已 COMPLETE；因 ERP-06 生产接入仍为 BLOCKED/NO-GO，目前没有可合法启动的活动步骤，ERP-08～ERP-23 尚未开始
 适用项目：SHEIN 超级运营中心 / SHEIN 涵舟工作室  
@@ -548,6 +548,10 @@
 ### 13.1 重新准入现状（2026-08-31）
 
 `RUN-20260831-ERP06-READMISSION-AUDIT-23` 已重新核对云端实际 schema、长期服务和关闭态开关，并补齐 048 发布结果持久化的真实一次性 PostgreSQL 演练。结论仍为 `BLOCKED/NO-GO`：正式库只有 046，047/048 与 ERP-06 目标表未迁移，发布/dispatcher/Webhook/合规写入均关闭。下一步只能在正式变更记录、备份/回滚、生产等价预发演练和最小权限验收齐备后重新评审；不得把本机验证当作生产授权，也不得提前启动 ERP-08。详见 [ERP06_PRODUCTION_READMISSION_AUDIT_2026-08-31.md](./ERP06_PRODUCTION_READMISSION_AUDIT_2026-08-31.md)。
+
+### 13.2 生产等价预发准入包（2026-08-31）
+
+`RUN-20260831-ERP06-PREPRODUCTION-PACKET-24` 已把后续预发所需的变更记录、候选制品、备份恢复、047/048 专属检查、最小权限、关闭开关、观察和回滚证据收敛为单一无敏感模板。它不创建预发环境、不迁移、不授权、不启动 Worker，也不解除 `BLOCKED/NO-GO`。现有 staging 只有基础依赖而没有获准候选 Control/Worker 或恢复点，不能直接复用；047/048 在进入经评审的活动 migration 目录前更不得执行。详见 [ERP06_PRODUCTION_EQUIVALENT_PREPRODUCTION_ADMISSION_2026-08-31.md](./ERP06_PRODUCTION_EQUIVALENT_PREPRODUCTION_ADMISSION_2026-08-31.md)。
 
 ### 原则
 
