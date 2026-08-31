@@ -286,8 +286,10 @@ export function buildErp06DocumentStateReadbackRequest({ job, version, spuNames 
     method: "POST",
     path: ERP06_DOCUMENT_STATE_READBACK_ENDPOINT,
     body: {
-      version: normalizedVersion,
-      spuList: normalizedSpuNames.map((spuName) => ({ spuName })),
+      spuList: normalizedSpuNames.map((spuName) => ({
+        spuName,
+        version: normalizedVersion,
+      })),
     },
   };
 }
@@ -397,13 +399,14 @@ export class Erp06SheinRemoteBoundary {
     assertAuthorization(authorization, expected, "readback");
     if (!this.readbackEnabled) return disabledReadback({ request, stage: "document_state" });
     const response = await this.#requestRemote(request, authorization, expected, "readback");
+    const requestedVersion = request.body.spuList[0]?.version || "";
     const projection = normalizeProductDocumentState(
       response.payload?.info ?? response.payload,
-      { requestedVersion: request.body.version },
+      { requestedVersion },
     );
     const resolvesResultUnknown = documentEvidenceResolves(
       projection,
-      request.body.version,
+      requestedVersion,
       request.body.spuList.map((item) => item.spuName),
     );
     return {

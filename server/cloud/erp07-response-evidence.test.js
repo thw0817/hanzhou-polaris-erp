@@ -88,12 +88,12 @@ test("ERP-07 response evidence snapshot does not mutate the catalog or claim liv
     }),
   });
   const after = getErp07EndpointSchema("sales.sku").source.responseEvidence;
-  assert.equal(after.status, "internal_consumer_contract");
+  assert.equal(after.status, "official_response_contract");
   assert.equal(after.authorizedStoreRead, "not_observed");
   assert.deepEqual(after, before);
 });
 
-test("ERP-07 source-pending read dossier fixes endpoint identity and stays fail-closed", () => {
+test("ERP-07 official response contracts reject obsolete source-pending dossiers", () => {
   const snapshot = buildErp07ResponseEvidenceSnapshot({
     endpoint: "sales.sku",
     scope,
@@ -115,56 +115,35 @@ test("ERP-07 source-pending read dossier fixes endpoint identity and stays fail-
     }),
   });
 
-  const dossier = buildErp07ResponseEvidenceReviewDossier({ snapshot });
-
-  assert.equal(dossier.endpoint, "sales.sku");
-  assert.equal(dossier.method, "POST");
-  assert.equal(dossier.path, "/open-api/goods/query-sku-sales");
-  assert.equal(dossier.sourceEvidenceStatus, "internal_consumer_contract");
-  assert.equal(dossier.catalogUpgrade.status, "blocked_source_pending");
-  assert.equal(dossier.catalogUpgrade.eligible, false);
-  assert.deepEqual(dossier.catalogUpgrade.reasons, [
-    "official_response_fields_not_captured",
-    "authorized_store_read_requires_independent_review",
-  ]);
-  assert.deepEqual(dossier.fieldCoverage, {
-    expected: 6,
-    observed: 6,
-    missing: [],
-  });
-  assert.doesNotMatch(
-    JSON.stringify(dossier),
-    /SKU-1|tenant-1|store-1|supplier-1|erp07-sales-20260830-dossier|payload|headers|secret/i,
+  assert.throws(
+    () => buildErp07ResponseEvidenceReviewDossier({ snapshot }),
+    (error) => error.code === "ERP07_RESPONSE_EVIDENCE_DOSSIER_INVALID",
   );
-  assert.throws(() => {
-    dossier.catalogUpgrade.eligible = true;
-  }, TypeError);
 });
 
-test("ERP-07 source-pending dossier coverage includes sales and document state", () => {
+test("ERP-07 official response snapshots preserve exact endpoint identity", () => {
   const cases = [
     {
       endpoint: "sales.sku",
-      method: "POST",
-      path: "/open-api/goods/query-sku-sales",
       sourceRef: "authorized-store-read:erp07-sales-20260830-coverage",
       info: { dataList: [] },
     },
     {
       endpoint: "review.document_state",
-      method: "POST",
-      path: "/open-api/goods/query-document-state",
       sourceRef: "authorized-store-read:erp07-document-20260830-coverage",
-      info: [{
-        spu_name: "SPU-1",
-        skc_name: "SKC-1",
-        sku_list: [{ sku_code: "SKU-1" }],
-        document_sn: "DOC-1",
-        version: "1",
-        audit_time: "2026-08-30T03:02:00.000Z",
-        audit_state: 1,
-        failed_reason: [],
-      }],
+      info: {
+        data: [{
+          spuName: "SPU-1",
+          version: "1",
+          skcList: [{
+            skcName: "SKC-1",
+            documentSn: "DOC-1",
+            documentState: 1,
+            failedReason: [],
+          }],
+        }],
+        meta: { count: 1, customObj: null },
+      },
     },
   ];
 
@@ -176,15 +155,16 @@ test("ERP-07 source-pending dossier coverage includes sales and document state",
       observedAt: "2026-08-30T03:02:00.000Z",
       response: response({ code: "0", traceId: `trace-${item.endpoint}`, info: item.info }),
     });
-    const dossier = buildErp07ResponseEvidenceReviewDossier({ snapshot });
-    assert.equal(dossier.method, item.method, item.endpoint);
-    assert.equal(dossier.path, item.path, item.endpoint);
-    assert.equal(dossier.catalogUpgrade.eligible, false, item.endpoint);
-    assert.equal(dossier.catalogUpgrade.status, "blocked_source_pending", item.endpoint);
+    assert.equal(snapshot.endpoint, item.endpoint, item.endpoint);
+    assert.throws(
+      () => buildErp07ResponseEvidenceReviewDossier({ snapshot }),
+      (error) => error.code === "ERP07_RESPONSE_EVIDENCE_DOSSIER_INVALID",
+      item.endpoint,
+    );
   }
 });
 
-test("ERP-07 document-state dossier records safe response shape when expected fields are absent", () => {
+test("ERP-07 document-state snapshots reject obsolete source-pending dossiers", () => {
   const snapshot = buildErp07ResponseEvidenceSnapshot({
     endpoint: "review.document_state",
     scope,
@@ -195,51 +175,19 @@ test("ERP-07 document-state dossier records safe response shape when expected fi
       msg: "OK",
       traceId: "trace-document-shape",
       info: {
-        data: [{
-          documentNo: "DOC-PRIVATE",
-          status: "PENDING",
-          metadata: { source: "platform" },
-        }],
+        data: [],
+        meta: { count: 0, customObj: null },
       },
     }),
   });
 
-  const dossier = buildErp07ResponseEvidenceReviewDossier({ snapshot });
-
-  assert.deepEqual(dossier.fieldCoverage, {
-    expected: 7,
-    observed: 0,
-    missing: [
-      "info.data[].spuName",
-      "info.data[].version",
-      "info.data[].skcList[].skcName",
-      "info.data[].skcList[].documentSn",
-      "info.data[].skcList[].documentState",
-      "info.data[].skcList[].failedReason",
-      "info.meta.count",
-    ],
-  });
-  assert.deepEqual(dossier.responseShape, {
-    fields: [
-      { path: "code", valueTypes: ["string"] },
-      { path: "info", valueTypes: ["object"] },
-      { path: "info.data", valueTypes: ["array"] },
-      { path: "info.data[]", valueTypes: ["object"] },
-      { path: "info.data[].documentNo", valueTypes: ["string"] },
-      { path: "info.data[].metadata", valueTypes: ["object"] },
-      { path: "info.data[].metadata.source", valueTypes: ["string"] },
-      { path: "info.data[].status", valueTypes: ["string"] },
-      { path: "msg", valueTypes: ["string"] },
-      { path: "traceId", valueTypes: ["string"] },
-    ],
-    truncated: false,
-  });
-  assert.equal(dossier.catalogUpgrade.status, "blocked_source_pending");
-  assert.equal(dossier.catalogUpgrade.eligible, false);
-  assert.doesNotMatch(JSON.stringify(dossier), /DOC-PRIVATE|PENDING|platform/);
+  assert.throws(
+    () => buildErp07ResponseEvidenceReviewDossier({ snapshot }),
+    (error) => error.code === "ERP07_RESPONSE_EVIDENCE_DOSSIER_INVALID",
+  );
 });
 
-test("ERP-07 document-state dossier follows the authorized store's nested response shape", () => {
+test("ERP-07 document-state snapshot retains no raw nested product data", () => {
   const snapshot = buildErp07ResponseEvidenceSnapshot({
     endpoint: "review.document_state",
     scope,
@@ -265,16 +213,12 @@ test("ERP-07 document-state dossier follows the authorized store's nested respon
     }),
   });
 
-  const dossier = buildErp07ResponseEvidenceReviewDossier({ snapshot });
-
-  assert.deepEqual(dossier.fieldCoverage, {
-    expected: 7,
-    observed: 7,
-    missing: [],
-  });
-  assert.equal(dossier.catalogUpgrade.status, "blocked_source_pending");
-  assert.equal(dossier.catalogUpgrade.eligible, false);
-  assert.doesNotMatch(JSON.stringify(dossier), /SPU-OBSERVED|VERSION-OBSERVED|SKC-OBSERVED|DOC-OBSERVED/);
+  assert.equal(snapshot.endpoint, "review.document_state");
+  assert.doesNotMatch(JSON.stringify(snapshot), /SPU-OBSERVED|VERSION-OBSERVED|SKC-OBSERVED|DOC-OBSERVED/);
+  assert.throws(
+    () => buildErp07ResponseEvidenceReviewDossier({ snapshot }),
+    (error) => error.code === "ERP07_RESPONSE_EVIDENCE_DOSSIER_INVALID",
+  );
 });
 
 test("ERP-07 source-pending review dossier rejects altered snapshot endpoint identity", () => {

@@ -267,7 +267,41 @@ test("official preflight query and supplier SKU limits match the current request
   );
 });
 
-test("source-pending endpoints expose honest response evidence and reject malformed consumer fields", () => {
+test("official SKU-sales and document-state requests reject the legacy shapes", () => {
+  assert.equal(validateErp07EndpointPayload({
+    endpoint: "sales.sku",
+    direction: "request",
+    payload: { skuCodeList: ["SKU-FIXTURE"] },
+  }).valid, true);
+  assert.throws(
+    () => validateErp07EndpointPayload({
+      endpoint: "sales.sku",
+      direction: "request",
+      payload: { skcNameList: ["SKC-LEGACY"] },
+    }),
+    /缺少必填字段|未识别字段/,
+  );
+  assert.equal(validateErp07EndpointPayload({
+    endpoint: "review.document_state",
+    direction: "request",
+    payload: {
+      spuList: [{ spuName: "SPU-FIXTURE", version: "VERSION-FIXTURE" }],
+    },
+  }).valid, true);
+  assert.throws(
+    () => validateErp07EndpointPayload({
+      endpoint: "review.document_state",
+      direction: "request",
+      payload: {
+        version: "VERSION-LEGACY",
+        spuList: [{ spuName: "SPU-FIXTURE" }],
+      },
+    }),
+    /缺少必填字段|未识别字段/,
+  );
+});
+
+test("official sales and document-state contracts reject malformed response fields", () => {
   const expected = {
     "sales.sku": [
       "info.dataList[].skuCode",
@@ -288,11 +322,13 @@ test("source-pending endpoints expose honest response evidence and reject malfor
     ],
   };
   for (const [endpoint, fields] of Object.entries(expected)) {
-    const evidence = getErp07EndpointSchema(endpoint).source.responseEvidence;
-    assert.equal(evidence.status, "internal_consumer_contract", endpoint);
+    const schema = getErp07EndpointSchema(endpoint);
+    const evidence = schema.source.responseEvidence;
+    assert.equal(evidence.status, "official_response_contract", endpoint);
     assert.deepEqual(evidence.fields, fields, endpoint);
-    assert.ok(evidence.gaps.includes("official_response_fields_not_captured"), endpoint);
+    assert.deepEqual(evidence.gaps, [], endpoint);
     assert.equal(evidence.authorizedStoreRead, "not_observed", endpoint);
+    assert.ok(schema.source.officialSourceUrls[0]?.includes("/documents/apidoc/detail/"), endpoint);
   }
 
   assert.equal(validateErp07EndpointPayload({
@@ -356,9 +392,18 @@ test("source-pending endpoints expose honest response evidence and reject malfor
   assert.throws(
     () => validateErp07EndpointPayload({
       endpoint: "review.document_state",
-      payload: { code: "0", info: [{ spu_name: "SPU-FIXTURE", audit_state: {} }] },
+      payload: {
+        code: "0",
+        info: {
+          data: [{
+            spuName: "SPU-FIXTURE",
+            version: "VERSION-FIXTURE",
+            skcList: [{ documentState: 0 }],
+          }],
+        },
+      },
     }),
-    /类型不符合 schema/,
+    /未识别的枚举值/,
   );
   assert.throws(
     () => validateErp07EndpointPayload({
@@ -417,7 +462,7 @@ test("official response evidence keeps source URLs, fields and live-read status 
   }
 });
 
-test("source-pending response fields carry field-level provenance and cannot claim live evidence", () => {
+test("official response fields carry document provenance without claiming live evidence", () => {
   const expected = {
     "sales.sku": {
       fields: [
@@ -428,7 +473,8 @@ test("source-pending response fields carry field-level provenance and cannot cla
         "info.dataList[].c30dSaleCnt",
         "info.dataList[].dt",
       ],
-      sourceFiles: ["server/store-data-sync.js", "server/store-data-sync.test.js"],
+      sourceFiles: ["docs/ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md"],
+      status: "official_response_field",
     },
     "preflight.publish_permission": {
       fields: [
@@ -475,10 +521,8 @@ test("source-pending response fields carry field-level provenance and cannot cla
         "info.data[].skcList[].failedReason",
         "info.meta.count",
       ],
-      sourceFiles: [
-        "server/cloud/document-state-projections.js",
-        "server/cloud/erp06-shein-publish-adapter-contract.js",
-      ],
+      sourceFiles: ["docs/ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md"],
+      status: "official_response_field",
     },
     "pricing.proof_upload": {
       fields: [

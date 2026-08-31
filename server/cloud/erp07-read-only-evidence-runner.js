@@ -14,6 +14,9 @@ import {
   ERP07_SHEIN_ADAPTER_CONTRACT_VERSION,
   Erp07SheinAdapter,
 } from "./erp07-shein-adapter.js";
+import {
+  buildErp07ResponseEvidenceSnapshot,
+} from "./erp07-response-evidence.js";
 
 const { Pool } = pg;
 
@@ -60,8 +63,10 @@ const EVIDENCE_ENDPOINTS = Object.freeze([
     method: "POST",
     path: "/open-api/goods/query-document-state",
     body: ({ documentStateIdentity }) => ({
-      version: documentStateIdentity.version,
-      spuList: [{ spuName: documentStateIdentity.spuName }],
+      spuList: [{
+        spuName: documentStateIdentity.spuName,
+        version: documentStateIdentity.version,
+      }],
     }),
     sourceKey: "document",
   }),
@@ -346,7 +351,31 @@ function safeDossier(dossier) {
   };
 }
 
-function safeEndpointResult(definition, result) {
+function safeResponseEvidenceSnapshot(snapshot) {
+  const source = object(snapshot);
+  if (!source || !Array.isArray(source.fieldObservations)) return null;
+  const observed = source.fieldObservations.filter((entry) => entry?.observed === true);
+  return {
+    endpoint: text(source.endpoint, 120),
+    sourceRefDigestSha256: safeDigest(sha256(source.sourceRef)),
+    scopeDigestSha256: safeDigest(sha256(JSON.stringify(source.scope))),
+    observedAt: text(source.observedAt, 80),
+    traceId: text(source.traceId, 200),
+    responseDigestSha256: safeDigest(source.payloadSha256),
+    responseShape: safeResponseShape(source.responseShape),
+    fieldCoverage: {
+      expected: source.fieldObservations.length,
+      observed: observed.length,
+      missing: source.fieldObservations
+        .filter((entry) => entry?.observed !== true)
+        .map((entry) => text(entry?.field, 160))
+        .filter(Boolean),
+    },
+    reviewStatus: text(source.reviewStatus, 80),
+  };
+}
+
+function safeEndpointResult(definition, result, responseEvidence = null) {
   return {
     endpoint: definition.endpoint,
     method: definition.method,
@@ -354,6 +383,7 @@ function safeEndpointResult(definition, result) {
     outcome: text(result?.outcome, 80) || "unknown",
     retryClass: text(result?.retryClass, 80) || null,
     diagnostics: safeDiagnostics(result),
+    responseEvidence: safeResponseEvidenceSnapshot(responseEvidence),
     responseEvidenceDossier: safeDossier(result?.responseEvidenceDossier),
   };
 }
@@ -560,6 +590,7 @@ export async function runErp07ReadOnlyEvidence({
       }
     }
     const traceId = `erp07-evidence-${definition.sourceKey}-${Date.parse(observedAt)}`;
+    const sourceRef = sourceRefFor(definition.sourceKey, normalizedSupplierId);
     const result = await adapter.execute({
       endpoint: definition.endpoint,
       body: definition.body({
@@ -571,11 +602,25 @@ export async function runErp07ReadOnlyEvidence({
       traceId,
       sendBoundary: "before_send",
       sourcePendingEvidenceCapture: {
-        sourceRef: sourceRefFor(definition.sourceKey, normalizedSupplierId),
+        sourceRef,
         observedAt,
       },
     });
-    endpoints.push(safeEndpointResult(definition, result));
+    let responseEvidence = null;
+    if (result.outcome === "read_success" && result.payload) {
+      responseEvidence = buildErp07ResponseEvidenceSnapshot({
+        endpoint: definition.endpoint,
+        scope: authorization.scope,
+        sourceRef,
+        observedAt,
+        response: {
+          status: result.diagnostics?.status,
+          payload: result.payload,
+          diagnostics: result.diagnostics,
+        },
+      });
+    }
+    endpoints.push(safeEndpointResult(definition, result, responseEvidence));
     if (definition.endpoint === "product.spu_info") {
       if (result.outcome !== "read_success") {
         skuResolutionFailure = "ERP07_EVIDENCE_SKU_LOOKUP_FAILED";

@@ -27,8 +27,8 @@
 
 脱敏结构覆盖结果：
 
-- `sales.sku`：内部消费者字段 `6/6`，缺失 `[]`；本轮先通过 `product.spu_info` 解析唯一 SKC 下的 SKU，再调用销量接口，未把 SKC 当作 SKU 发送。
-- `review.document_state`：当前实际嵌套字段 `7/7`，缺失 `[]`；观测到 `info.data[].skcList[]` 包装层和 `spuName`、`version`、`skcName`、`documentSn`、`documentState`、`failedReason`、`info.meta.count` 的类型轮廓。
+- `sales.sku`：官方字段 `6/6`，缺失 `[]`；本轮先通过 `product.spu_info` 解析唯一 SKC 下的 SKU，再调用销量接口，未把 SKC 当作 SKU 发送。
+- `review.document_state`：官方字段 `7/7`，缺失 `[]`；观测到 `info.data[].skcList[]` 包装层和 `spuName`、`version`、`skcName`、`documentSn`、`documentState`、`failedReason`、`info.meta.count` 的类型轮廓。
 - `preflight.publish_quota`：官方额度路径读取成功；本记录不保存额度值，也不据此放开发品写入。
 
 ## 接受边界
@@ -37,14 +37,13 @@
 
 - 原始 payload、字段值、request body/query、headers、凭证、原始店铺/supplier/SKC/SPU/version、图片和对象存储信息均未保存。
 - 证据摘要保持 `reviewStatus=pending_manual_acceptance`、`eligibleForCatalogUpgrade=false`。
-- 现有 evidence catalog 不变：`sales.sku` 与 `review.document_state` 仍为 `internal_consumer_contract`；`preflight.publish_quota` 仍按已核验官方响应契约处理；各 endpoint 的 `authorizedStoreRead` 仍为 `not_observed`，因为本轮只完成了采集，尚未完成独立语义审阅和 catalog 接受。
-- 网页服务、旧本地入口、Worker 和线上 adapter 不因本轮采集自动放行；source-pending 读取继续 fail closed。
+- 后续官方语义审阅已完成：`sales.sku` 与 `review.document_state` 现为 `official_response_contract`，详见 [ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md](./ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md)。本历史摘要仍保持 `pending_manual_acceptance`，不被追溯改写为现场观察；各 endpoint 的 `authorizedStoreRead` 仍为 `not_observed`。
+- 网页服务、旧本地入口和 Worker 不因本轮采集自动放行；远端读取默认关闭，业务写入继续关闭。
 
 ## 当前未完成项
 
-1. `sales.sku`、`review.document_state` 的官方完整 response 字段、版本和业务枚举语义仍需独立来源核验。
-2. 本轮授权店铺回执仍需按完整 scope、身份绑定和字段语义做人工接受；不得仅凭 HTTP 200/code 0 升级 catalog。
-3. ERP-07 完成前仍需受控 adapter 接线、预发 canary/readback 和完成门复核。
-4. ERP-08～ERP-23 尚未开始；ERP-06 生产接入继续为 `BLOCKED/NO-GO`。
+1. 本轮授权店铺回执仍不得仅凭 HTTP 200/code 0 把 `authorizedStoreRead` 升级为现场观察。
+2. ERP-07 完成前仍需受控 adapter 接线、预发 canary/readback 和完成门复核。
+3. ERP-08～ERP-23 尚未开始；ERP-06 生产接入继续为 `BLOCKED/NO-GO`。
 
 结论：本轮只读证据采集成功，降低了“没有真实授权店铺回执”的缺口，但没有解除 ERP-07 的 source-pending 阻断，也没有授权任何外部写入或生产切换。

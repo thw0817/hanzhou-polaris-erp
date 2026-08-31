@@ -78,16 +78,19 @@ function successfulPayload(path) {
     code: "0",
     msg: "OK",
     traceId: "trace-document",
-    info: [{
-      spu_name: "SPU-PRIVATE",
-      skc_name: "SKC-PRIVATE",
-      sku_list: [{ sku_code: "SKU-PRIVATE" }],
-      document_sn: "DOC-PRIVATE",
-      version: "1",
-      audit_time: "2026-08-30T00:00:00Z",
-      audit_state: 1,
-      failed_reason: [],
-    }],
+    info: {
+      data: [{
+        spuName: "SPU-PRIVATE",
+        version: "VERSION-PRIVATE",
+        skcList: [{
+          skcName: "SKC-PRIVATE",
+          documentSn: "DOC-PRIVATE",
+          documentState: 1,
+          failedReason: [],
+        }],
+      }],
+      meta: { count: 1, customObj: null },
+    },
   };
 }
 
@@ -152,8 +155,10 @@ test("ERP-07 evidence runner resolves target SKC SKU codes before sales read", a
         method: "POST",
         path: "/open-api/goods/query-document-state",
         body: {
-          version: "VERSION-PRIVATE",
-          spuList: [{ spuName: "SPU-PRIVATE" }],
+          spuList: [{
+            spuName: "SPU-PRIVATE",
+            version: "VERSION-PRIVATE",
+          }],
         },
       },
     ],
@@ -195,8 +200,10 @@ test("ERP-07 evidence runner performs scoped SKU, quota, and document reads", as
         method: "POST",
         path: "/open-api/goods/query-document-state",
         body: {
-          version: "VERSION-PRIVATE",
-          spuList: [{ spuName: "SPU-PRIVATE" }],
+          spuList: [{
+            spuName: "SPU-PRIVATE",
+            version: "VERSION-PRIVATE",
+          }],
         },
       },
     ],

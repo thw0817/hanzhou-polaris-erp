@@ -112,6 +112,40 @@ test("normalizes the current SHEIN spuList document-state response", () => {
   });
 });
 
+test("preserves the official failed-acceptance and appeal-in-progress states", () => {
+  const failedAcceptance = normalizeProductDocumentState({
+    info: {
+      data: [{
+        spuName: "SPU-FAILED-ACCEPTANCE",
+        version: "VERSION-FAILED-ACCEPTANCE",
+        skcList: [{
+          skcName: "SKC-FAILED-ACCEPTANCE",
+          documentSn: "DOC-FAILED-ACCEPTANCE",
+          documentState: -1,
+          failedReason: [],
+        }],
+      }],
+    },
+  });
+  const appeal = normalizeProductDocumentState({
+    info: {
+      data: [{
+        spuName: "SPU-APPEAL",
+        version: "VERSION-APPEAL",
+        skcList: [{
+          skcName: "SKC-APPEAL",
+          documentSn: "DOC-APPEAL",
+          documentState: 5,
+          failedReason: [],
+        }],
+      }],
+    },
+  });
+
+  assert.equal(failedAcceptance.projection.records[0].status, "acceptance_failed");
+  assert.equal(appeal.projection.records[0].status, "appeal_in_progress");
+});
+
 test("treats an official empty document-state result as an honest empty readback", () => {
   const result = normalizeProductDocumentState(
     { info: { data: [] } },

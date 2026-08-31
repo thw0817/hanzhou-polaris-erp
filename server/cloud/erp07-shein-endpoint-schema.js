@@ -10,6 +10,8 @@ const SOURCE_CATALOG =
 const CAPABILITY_MATRIX = "docs/V2_SHEIN_API_CAPABILITY_MATRIX.md";
 const OFFICIAL_RESPONSE_SOURCE_AUDIT =
   "docs/ERP07_OFFICIAL_RESPONSE_SOURCE_AUDIT_2026-08-30.md";
+const OFFICIAL_RESPONSE_DOCUMENT_CAPTURE =
+  "docs/ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md";
 const OFFICIAL_SHEIN_API_HOST = "open.sheincorp.com";
 const FIELD_EVIDENCE_STATUSES = Object.freeze([
   "not_captured",
@@ -271,10 +273,10 @@ function readEndpoint({
 const SALES_RESPONSE_ROW = field("object", {
   fields: {
     skuCode: field("string"),
-    realTimeSaleCnt: field(["integer", "string"]),
-    cydSaleCnt: field(["integer", "string"]),
-    c7dSaleCnt: field(["integer", "string"]),
-    c30dSaleCnt: field(["integer", "string"]),
+    realTimeSaleCnt: field("integer"),
+    cydSaleCnt: field("integer"),
+    c7dSaleCnt: field("integer"),
+    c30dSaleCnt: field("integer"),
     dt: field("string"),
   },
   additionalProperties: "preserve",
@@ -322,45 +324,54 @@ const SUPPLIER_SKU_RESPONSE_INFO = field(["object", "array"], {
   additionalProperties: "preserve",
 });
 
-const DOCUMENT_STATE_SKU = field("object", {
+const DOCUMENT_STATE_FAILED_REASON = field("object", {
   fields: {
-    sku_code: field("string"),
-    skuCode: field("string"),
+    content: field("string"),
+    language: field("string"),
+  },
+  additionalProperties: "preserve",
+});
+
+const DOCUMENT_STATE_SKC = field("object", {
+  fields: {
+    skcName: field("string"),
+    documentSn: field("string"),
+    documentState: field("integer", { enum: [-1, 1, 2, 3, 4, 5] }),
+    failedReason: field(["array", "null"], { items: DOCUMENT_STATE_FAILED_REASON }),
   },
   additionalProperties: "preserve",
 });
 
 const DOCUMENT_STATE_RECORD = field("object", {
   fields: {
-    spu_name: field(["string", "number"]),
-    spuName: field(["string", "number"]),
-    skc_name: field(["string", "number"]),
-    skcName: field(["string", "number"]),
-    sku_list: arrayOf(DOCUMENT_STATE_SKU),
-    skuList: arrayOf(DOCUMENT_STATE_SKU),
-    document_sn: field(["string", "number"]),
-    documentSn: field(["string", "number"]),
-    version: field(["string", "number"]),
-    audit_time: field(["string", "number"]),
-    auditTime: field(["string", "number"]),
-    audit_state: field(["integer", "string"]),
-    documentState: field(["integer", "string"]),
-    failed_reason: arrayOf(field("object", { additionalProperties: "preserve" })),
-    failedReason: arrayOf(field("object", { additionalProperties: "preserve" })),
-    workflow_stage: field("string"),
-    workflowStage: field("string"),
-    stage: field("string"),
+    spuName: field("string"),
+    version: field("string"),
+    skcList: arrayOf(DOCUMENT_STATE_SKC),
   },
   additionalProperties: "preserve",
 });
 
-const DOCUMENT_STATE_RESPONSE_INFO = field(["object", "array", "string"], {
+const DOCUMENT_STATE_RESPONSE_INFO = field("object", {
   fields: {
     data: arrayOf(DOCUMENT_STATE_RECORD),
-    skcList: arrayOf(DOCUMENT_STATE_RECORD),
+    meta: field("object", {
+      fields: {
+        count: field("integer"),
+        customObj: field(["object", "null"]),
+      },
+      additionalProperties: "preserve",
+    }),
   },
-  items: DOCUMENT_STATE_RECORD,
   additionalProperties: "preserve",
+});
+
+const DOCUMENT_STATE_REQUEST_ITEM = field("object", {
+  required: ["spuName"],
+  fields: {
+    spuName: field("string"),
+    version: field("string"),
+  },
+  additionalProperties: "fail",
 });
 
 function blockedEndpoint({
@@ -476,16 +487,19 @@ const SCHEMAS = {
     mode: "read",
     method: "POST",
     path: "/open-api/goods/query-sku-sales",
-    schemaStatus: "fixture_ready_source_pending",
+    schemaStatus: "fixture_ready_official_response",
     source: source({
       files: [
         CAPABILITY_MATRIX,
-        "docs/shein-api-raw/5e17972e-7544-4139-b348-e9e08037aaaf.txt:276",
-        "server/store-data-sync.js",
+        OFFICIAL_RESPONSE_DOCUMENT_CAPTURE,
       ],
-      evidenceStatus: "code_tested_official_method_only",
+      officialUpdatedAt: "2025-07-21 11:33:00",
+      officialSourceUrls: [
+        "https://open.sheincorp.com/zh/documents/apidoc/detail/3001305",
+      ],
+      evidenceStatus: "official_request_and_response_fields_code_tested",
       responseEvidence: {
-        status: "internal_consumer_contract",
+        status: "official_response_contract",
         fields: [
           "info.dataList[].skuCode",
           "info.dataList[].realTimeSaleCnt",
@@ -494,18 +508,15 @@ const SCHEMAS = {
           "info.dataList[].c30dSaleCnt",
           "info.dataList[].dt",
         ],
-        sourceFiles: ["server/store-data-sync.js", "server/store-data-sync.test.js"],
-        gaps: ["official_response_fields_not_captured"],
+        sourceFiles: [OFFICIAL_RESPONSE_DOCUMENT_CAPTURE],
       },
     }),
     headers: COMMON_REQUEST_HEADERS,
     request: {
       type: "object",
-      requiredExactlyOneOf: ["skuCodeList", "skcNameList", "spuNameList"],
+      required: ["skuCodeList"],
       fields: {
         skuCodeList: arrayOf(field("string"), { minItems: 1, maxItems: 100 }),
-        skcNameList: arrayOf(field("string"), { minItems: 1, maxItems: 100 }),
-        spuNameList: arrayOf(field("string"), { minItems: 1, maxItems: 100 }),
       },
       additionalProperties: "fail",
     },
@@ -724,12 +735,16 @@ const SCHEMAS = {
     mode: "read",
     method: "POST",
     path: "/open-api/goods/query-document-state",
-    schemaStatus: "fixture_ready_source_pending",
+    schemaStatus: "fixture_ready_official_response",
     source: source({
-      files: [CAPABILITY_MATRIX, "server/cloud/erp06-shein-publish-adapter-contract.js"],
-      evidenceStatus: "adapter_tested_official_method_only",
+      files: [CAPABILITY_MATRIX, OFFICIAL_RESPONSE_DOCUMENT_CAPTURE],
+      officialUpdatedAt: "2025-08-15 14:49:04",
+      officialSourceUrls: [
+        "https://open.sheincorp.com/zh/documents/apidoc/detail/3001368",
+      ],
+      evidenceStatus: "official_request_and_response_fields_code_tested",
       responseEvidence: {
-        status: "internal_consumer_contract",
+        status: "official_response_contract",
         fields: [
           "info.data[].spuName",
           "info.data[].version",
@@ -739,34 +754,29 @@ const SCHEMAS = {
           "info.data[].skcList[].failedReason",
           "info.meta.count",
         ],
-        sourceFiles: [
-          "server/cloud/document-state-projections.js",
-          "server/cloud/erp06-shein-publish-adapter-contract.js",
-        ],
-        gaps: ["official_response_fields_not_captured"],
+        sourceFiles: [OFFICIAL_RESPONSE_DOCUMENT_CAPTURE],
       },
     }),
     headers: COMMON_REQUEST_HEADERS,
     request: {
       type: "object",
+      required: ["spuList"],
       fields: {
-        spu_name: field("string"),
-        skc_name: field("string"),
-        document_no: field("string"),
+        spuList: arrayOf(DOCUMENT_STATE_REQUEST_ITEM, { minItems: 1, maxItems: 10 }),
       },
-      additionalProperties: "preserve",
+      additionalProperties: "fail",
     },
     response: envelope(DOCUMENT_STATE_RESPONSE_INFO),
     fixtures: readFixtures({
       data: [{
-        spu_name: "SPU-FIXTURE",
-        skc_name: "SKC-FIXTURE",
-        sku_list: [{ sku_code: "SKU-FIXTURE" }],
-        document_sn: "DOC-FIXTURE",
-        version: "1",
-        audit_time: "2026-08-30T00:00:00Z",
-        audit_state: 1,
-        failed_reason: [],
+        spuName: "SPU-FIXTURE",
+        version: "VERSION-FIXTURE",
+        skcList: [{
+          skcName: "SKC-FIXTURE",
+          documentSn: "DOC-FIXTURE",
+          documentState: 1,
+          failedReason: [],
+        }],
       }],
     }),
   },

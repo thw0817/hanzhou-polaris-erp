@@ -684,3 +684,12 @@ API 总入口：`HANZHOU_POLARIS_API_SOURCE_CATALOG_2026-08-29.md`。
 - 这轮结果确认了授权店铺的实际读取和结构轮廓，但不证明官方 response 字段语义、审核枚举、额度业务结论或商品状态。摘要仍固定为 `pending_manual_acceptance` / `blocked_source_pending` / `eligible=false`，不升级 catalog 或 `authorizedStoreRead`。
 - 生产网页、旧本地入口、Worker 和线上 adapter 仍保持 source-pending fail closed；没有执行发布、编辑、迁移、队列投递、COS 写入、网页投影、配置切换或部署。
 - 当前状态：ERP-07 仍为唯一 `IN_PROGRESS`；ERP-06 为 `BLOCKED/NO-GO`；ERP-08～ERP-23 尚未开始。下一执行单元是完成官方字段/版本/语义复核和授权回执独立接受，再进行受控 adapter 接线与预发 canary/readback。
+
+## 33. ERP-07 官方销量与单据状态契约复核（2026-08-31）
+
+### RUN-20260831-ERP07-OFFICIAL-SEMANTICS-20
+
+- 已独立捕获公开官方文档 `3001305`（SKU 销量）和 `3001368`（商品审核状态），无凭证、无店铺数据；详情见 [ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md](./ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md)。两项 schema 从 `internal_consumer_contract` 升级为 `official_response_contract`，但 `authorizedStoreRead` 保持 `not_observed`。
+- 修正了 `query-document-state` 请求形状：`version` 必须在每一项 `spuList[]` 内；ERP-06 受控回读与 ERP-07 证据运行器同步修正。审核状态投影补齐 `-1=acceptance_failed` 和 `5=appeal_in_progress`，未知枚举继续 fail closed。
+- 证据运行器仍仅输出哈希、字段覆盖和类型轮廓，不输出 payload、body、scope、身份或凭证；官方契约升级不打开网页、Worker 或 adapter 的默认远端读取，也不改变任何写开关。
+- 定向回归 `79/79` 通过。ERP-07 仍是唯一 `IN_PROGRESS`；ERP-06 仍为 `BLOCKED/NO-GO`，ERP-08～ERP-23 尚未开始。剩余门为受控 adapter 接线、预发 canary/readback、release 完成门；不得执行 SHEIN 写入。

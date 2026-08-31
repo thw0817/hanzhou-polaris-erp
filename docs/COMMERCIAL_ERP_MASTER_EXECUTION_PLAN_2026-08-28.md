@@ -647,8 +647,14 @@
 - `RUN-20260831-ERP07-AUTHORIZED-STORE-READ-19` 已在云端控制容器内完成一次受控真实授权店铺只读采集：`ok=true`、`readOnly=true`、`externalWrite=false`，数据库启用 `default_transaction_read_only=on`。
 - `product.spu_info`、`sales.sku`、官方商家发品额度和 `review.document_state` 四项读取均为 HTTP `200`/业务码 `0`/`read_success`；销量字段覆盖 `6/6`，单据状态实际嵌套字段覆盖 `7/7`。本轮没有发布、编辑、迁移、投递、回填或配置切换。
 - 只保存脱敏的 method/path、状态、traceId、字段结构和摘要哈希；原始 payload、字段值、请求体/query、headers、凭证和原始身份值不落盘。详细记录见 [ERP07_AUTHORIZED_STORE_READ_EVIDENCE_2026-08-31.md](./ERP07_AUTHORIZED_STORE_READ_EVIDENCE_2026-08-31.md)。
-- 这是“已采集、待人工接受”的真实回执，不是官方完整 response contract。`sales.sku`、`review.document_state` 仍为 `internal_consumer_contract`，`authorizedStoreRead` 仍为 `not_observed`，source-pending 读取继续 fail closed；不接入普通线上 adapter，不启动 ERP-08。
-- ERP-07 当前新增的剩余门是官方字段/版本/语义复核、授权回执独立接受、受控 adapter 接线、预发 canary/readback 和完成门审查；ERP-06 仍 `BLOCKED/NO-GO`，ERP-08～ERP-23 尚未开始。
+- 该回执本身仍保持“已采集、待人工接受”的历史状态，`authorizedStoreRead` 仍为 `not_observed`；后续的独立公开文档复核不会追溯改写该摘要。网页、Worker 和 adapter 的默认远端读取继续关闭，不启动 ERP-08。
+- ERP-07 当前剩余门是受控 adapter 接线、预发 canary/readback 和完成门审查；ERP-06 仍 `BLOCKED/NO-GO`，ERP-08～ERP-23 尚未开始。
+
+### 14.2 官方销量与单据状态语义复核（2026-08-31）
+
+- `RUN-20260831-ERP07-OFFICIAL-SEMANTICS-20` 独立复核公开官方文档 `3001305` 和 `3001368`，使 `sales.sku`、`review.document_state` 升级为 `official_response_contract`；来源、字段、枚举和请求形状见 [ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md](./ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md)。
+- `query-document-state` 的 `version` 从错误的顶层迁入每一条 `spuList[]`；ERP-06 受控回读和 ERP-07 只读证据运行器都用同一官方 body。状态投影补齐 `-1`（验收失败）和 `5`（申诉中），其余未知值仍拒绝。
+- 这一修正不改变网页/Worker 的远端开关，也不放开业务写入。脱敏运行器继续仅输出摘要哈希、字段覆盖和类型轮廓。ERP-07 为唯一 `IN_PROGRESS`，ERP-08～ERP-23 不得提前启动。
 
 ### 必做清单
 

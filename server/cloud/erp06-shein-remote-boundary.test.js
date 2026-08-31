@@ -308,7 +308,9 @@ test("ERP-06 document-state readback uses the official body and returns a safe p
     baseUrl: "https://openapi.example",
     method: "POST",
     path: "/open-api/goods/query-document-state",
-    body: { version: "VERSION-1", spuList: [{ spuName: "SPU-1" }] },
+    body: {
+      spuList: [{ spuName: "SPU-1", version: "VERSION-1" }],
+    },
     openKeyId: "OPEN-1",
     secretKey: "SECRET-1",
     language: "zh-cn",
@@ -432,8 +434,10 @@ test("ERP-06 readback request builders preserve exact scope and official request
     method: "POST",
     path: "/open-api/goods/query-document-state",
     body: {
-      version: "VERSION-1",
-      spuList: [{ spuName: "SPU-1" }, { spuName: "SPU-2" }],
+      spuList: [
+        { spuName: "SPU-1", version: "VERSION-1" },
+        { spuName: "SPU-2", version: "VERSION-1" },
+      ],
     },
   });
 

@@ -1,10 +1,12 @@
 import { WebhookProcessingError } from "./webhook-event-processor.js";
 
 const AUDIT_STATE_LABELS = new Map([
+  [-1, "acceptance_failed"],
   [1, "pending"],
   [2, "passed"],
   [3, "failed"],
   [4, "withdrawn"],
+  [5, "appeal_in_progress"],
 ]);
 
 function asText(value, fieldName) {

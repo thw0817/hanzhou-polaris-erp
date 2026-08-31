@@ -3,6 +3,8 @@
 日期：2026-08-30
 范围：仅本地、仅脱敏摘要、仅 ERP-07；普通 adapter 读取一律拒绝，未来单独授权的读取只能走双重显式证据采集模式；不接入网页、不改变生产配置。
 
+> **当前状态（2026-08-31）：** 本文是历史 `source-pending` 机制说明。`sales.sku` 与 `review.document_state` 已取得公开官方详情并升级为 `official_response_contract`，因此不再适用本摘要的 `blocked_source_pending` 规则；其旧摘要仍保留为不可追溯改写的历史证据。当前官方请求与状态语义见 [ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md](./ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md)。
+
 ## 目的
 
 为仍处于 `internal_consumer_contract` 的接口建立一份可复核的审阅摘要。摘要把 endpoint 的固定 `method + path`、当前 contract/schema 版本、响应字段覆盖情况和脱敏响应指纹绑定在一起，避免将另一个接口的成功响应误作本接口证据。
@@ -13,9 +15,9 @@
 
 | endpoint | 方法 | 固定路径 | 当前字段证据状态 | 目录升级 |
 | --- | --- | --- | --- | --- |
-| `sales.sku` | `POST` | `/open-api/goods/query-sku-sales` | `internal_consumer_contract` | 禁止 |
+| `sales.sku` | `POST` | `/open-api/goods/query-sku-sales` | `official_response_contract` | 历史摘要不再适用；远端读取默认关闭 |
 | `preflight.publish_quota` | `POST` | `/open-api/goods-publish-quotas/detail` | `official_response_contract` | 需当前商家发品额度授权只读回执 |
-| `review.document_state` | `POST` | `/open-api/goods/query-document-state` | `internal_consumer_contract` | 禁止 |
+| `review.document_state` | `POST` | `/open-api/goods/query-document-state` | `official_response_contract` | 历史摘要不再适用；远端读取默认关闭 |
 
 ## 审阅规则
 
@@ -28,12 +30,11 @@
 
 ## 单据状态请求前置条件
 
-`review.document_state` 的目标可以由 SKC 指定，但官方回读请求不是 SKC-only 请求；当前冻结的请求契约是：
+`review.document_state` 的目标可以由 SKC 指定，但官方回读请求不是 SKC-only 请求；当前官方请求契约是：
 
 ```json
 {
-  "version": "<SHEIN version>",
-  "spuList": [{ "spuName": "<SHEIN SPU>" }]
+  "spuList": [{ "spuName": "<SHEIN SPU>", "version": "<SHEIN version>" }]
 }
 ```
 
