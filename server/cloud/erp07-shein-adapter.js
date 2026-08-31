@@ -324,7 +324,9 @@ export class Erp07SheinAdapter {
       baseUrl: credentials.baseUrl,
       method: request.method,
       path: request.path,
-      body: request.body,
+      ...(request.method === "GET" && Object.keys(request.body).length === 0
+        ? {}
+        : { body: request.body }),
       ...(request.query ? { query: request.query } : {}),
       openKeyId: credentials.openKeyId,
       secretKey: credentials.secretKey,

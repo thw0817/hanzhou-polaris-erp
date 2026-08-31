@@ -68,27 +68,15 @@ test("web product reads use encrypted store credentials without returning them",
   assert.equal(JSON.stringify(result).includes("OPEN-1"), false);
 });
 
-test("document state source-pending reads are locked before credentials or transport", async () => {
+test("document state reads require an authorized supplier identity before transport", async () => {
   let credentialReads = 0;
   let transportCalls = 0;
-  let receiptWrites = 0;
-  let reviewWrites = 0;
   const service = new SheinWebReadService({
     apiBaseUrl: "https://openapi.example",
     storeRepository: {
       async getCredential() {
         credentialReads += 1;
         return null;
-      },
-    },
-    publishExecutionRepository: {
-      async appendDocumentStateReceipts() {
-        receiptWrites += 1;
-      },
-    },
-    productReviewRepository: {
-      async saveDocumentStates() {
-        reviewWrites += 1;
       },
     },
     fetchImpl: async () => {
@@ -104,15 +92,46 @@ test("document state source-pending reads are locked before credentials or trans
       version: "VERSION-1",
       spuNames: ["SPU-1"],
     }),
-    (error) => error.code === "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED" && error.status === 409,
+    (error) => error.code === "STORE_UNAVAILABLE" && error.status === 409,
   );
-  assert.equal(credentialReads, 0);
+  assert.equal(credentialReads, 1);
   assert.equal(transportCalls, 0);
-  assert.equal(receiptWrites, 0);
-  assert.equal(reviewWrites, 0);
 });
 
-test("business sync and publish preflight lock source-pending reads before credentials or transport", async () => {
+test("ERP-07 read adapter rejects a store without supplier identity before transport", async () => {
+  let transportCalls = 0;
+  const service = new SheinWebReadService({
+    apiBaseUrl: "https://openapi.example",
+    storeRepository: {
+      async getCredential() {
+        return {
+          storeId: "store-1",
+          tenantId: "tenant-1",
+          status: "active",
+          openKeyId: "OPEN-1",
+          secretKey: "SECRET-1",
+        };
+      },
+    },
+    fetchImpl: async () => {
+      transportCalls += 1;
+      return response({ code: "0", info: {} });
+    },
+  });
+
+  await assert.rejects(
+    service.queryDocumentState({
+      context: { tenantId: "tenant-1" },
+      storeId: "store-1",
+      version: "VERSION-1",
+      spuNames: ["SPU-1"],
+    }),
+    (error) => error.code === "STORE_IDENTITY_REQUIRED" && error.status === 409,
+  );
+  assert.equal(transportCalls, 0);
+});
+
+test("business sync and publish preflight reject unavailable stores before transport", async () => {
   let credentialReads = 0;
   let transportCalls = 0;
   const service = new SheinWebReadService({
@@ -134,7 +153,7 @@ test("business sync and publish preflight lock source-pending reads before crede
       context: { tenantId: "tenant-1" },
       storeId: "store-1",
     }),
-    (error) => error.code === "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED" && error.status === 409,
+    (error) => error.code === "STORE_UNAVAILABLE" && error.status === 409,
   );
   await assert.rejects(
     service.preflightPublish({
@@ -142,10 +161,145 @@ test("business sync and publish preflight lock source-pending reads before crede
       storeId: "store-1",
       supplierSkuList: [],
     }),
-    (error) => error.code === "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED" && error.status === 409,
+    (error) => error.code === "STORE_UNAVAILABLE" && error.status === 409,
   );
-  assert.equal(credentialReads, 0);
+  assert.equal(credentialReads, 2);
   assert.equal(transportCalls, 0);
+});
+
+test("publish preflight uses the ERP-07 adapter for the official merchant quota contract", async () => {
+  const calls = [];
+  const service = new SheinWebReadService({
+    apiBaseUrl: "https://openapi.example",
+    storeRepository: {
+      async getCredential() {
+        return {
+          storeId: "store-1",
+          tenantId: "tenant-1",
+          supplierId: "supplier-1",
+          status: "active",
+          openKeyId: "OPEN-1",
+          secretKey: "SECRET-1",
+        };
+      },
+    },
+    fetchImpl: async (url, options) => {
+      const parsed = new URL(url);
+      const body = options.body ? JSON.parse(options.body) : null;
+      calls.push({ path: parsed.pathname, query: parsed.search, method: options.method, body });
+      if (parsed.pathname.endsWith("check-publish-permission")) {
+        return response({ code: "0", msg: "OK", traceId: "permission-trace", info: { canPublishProduct: true, reason: null } });
+      }
+      if (parsed.pathname.endsWith("goods-publish-quotas/detail")) {
+        return response({ code: "0", msg: "OK", traceId: "quota-trace", info: { isControlled: true, totalQuota: 10, availableQuota: 10, usedCount: 0 } });
+      }
+      return response({ code: "0", msg: "OK", traceId: "duplicate-trace", info: [{ supplierSku: "RUG-1", repeated: false }] });
+    },
+  });
+
+  const result = await service.preflightPublish({
+    context: { tenantId: "tenant-1" },
+    storeId: "store-1",
+    supplierSkuList: ["RUG-1"],
+    brandCode: "2tgt1",
+  });
+
+  assert.equal(result.passed, true);
+  assert.equal(result.publishQuota.availableQuota, 10);
+  assert.deepEqual(calls, [
+    {
+      path: "/open-api/goods/product/check-publish-permission",
+      query: "?brandCode=2tgt1",
+      method: "GET",
+      body: null,
+    },
+    {
+      path: "/open-api/goods-publish-quotas/detail",
+      query: "",
+      method: "POST",
+      body: {},
+    },
+    {
+      path: "/open-api/goods/product/check-supplierSku-repeated",
+      query: "",
+      method: "POST",
+      body: { supplierSkuList: ["RUG-1"] },
+    },
+  ]);
+  assert.equal(JSON.stringify(result).includes("OPEN-1"), false);
+  assert.equal(JSON.stringify(result).includes("SECRET-1"), false);
+});
+
+test("business sync routes supported reads through the ERP-07 adapter and leaves blocked optional data unknown", async () => {
+  const paths = [];
+  const service = new SheinWebReadService({
+    apiBaseUrl: "https://openapi.example",
+    storeRepository: {
+      async getCredential() {
+        return {
+          storeId: "store-1",
+          tenantId: "tenant-1",
+          supplierId: "supplier-1",
+          status: "active",
+          openKeyId: "OPEN-1",
+          secretKey: "SECRET-1",
+        };
+      },
+    },
+    fetchImpl: async (url) => {
+      const path = new URL(url).pathname;
+      paths.push(path);
+      if (path.endsWith("searchProduct")) {
+        return response({
+          code: "0",
+          msg: "OK",
+          info: {
+            meta: { count: 1 },
+            data: [{
+              spuName: "SPU-1",
+              categoryId: "3155",
+              skcList: [{
+                skcName: "SKC-1",
+                skcShelfStatus: 1,
+                skcTitle: [{ language: "zh-cn", title: "地毯" }],
+                skuList: [{ skuCode: "SKU-1", supplierSku: "RUG-1" }],
+              }],
+            }],
+          },
+        });
+      }
+      if (path.endsWith("query-sku-sales")) {
+        return response({
+          code: "0",
+          msg: "OK",
+          info: { dataList: [{ skuCode: "SKU-1", realTimeSaleCnt: 1, cydSaleCnt: 1, c7dSaleCnt: 2, c30dSaleCnt: 3, dt: "20260831" }] },
+        });
+      }
+      if (path.endsWith("spu-info")) {
+        return response({
+          code: "0",
+          msg: "OK",
+          info: { data: [{ spuName: "SPU-1", skcList: [{ skcName: "SKC-1", skuList: [{ skuCode: "SKU-1", saleAttributeList: [] }] }] }] },
+        });
+      }
+      throw new Error(`unexpected direct request: ${path}`);
+    },
+  });
+
+  const snapshot = await service.syncStoreBusiness({
+    context: { tenantId: "tenant-1" },
+    storeId: "store-1",
+  });
+
+  assert.equal(snapshot.productCount, 1);
+  assert.equal(snapshot.totals.sales7, 2);
+  assert.equal(snapshot.products[0].actualInventory, null);
+  assert.deepEqual(paths, [
+    "/open-api/goods/searchProduct",
+    "/open-api/goods/query-sku-sales",
+    "/open-api/goods-compliance/skc-label-list",
+    "/open-api/goods/spu-info",
+  ]);
 });
 
 test("document state reads send the official version and spuList fields and persist normalized receipts", async () => {
@@ -154,12 +308,12 @@ test("document state reads send the official version and spuList fields and pers
   let reviewState = null;
   const service = new SheinWebReadService({
     apiBaseUrl: "https://openapi.example",
-    sourcePendingDocumentStateReadEnabled: true,
     storeRepository: {
       async getCredential() {
         return {
           storeId: "store-1",
           tenantId: "tenant-1",
+          supplierId: "supplier-1",
           status: "active",
           openKeyId: "OPEN-1",
           secretKey: "SECRET-1",
@@ -216,8 +370,7 @@ test("document state reads send the official version and spuList fields and pers
   });
 
   assert.deepEqual(requestBody, {
-    version: "VERSION-1",
-    spuList: [{ spuName: "SPU-1" }],
+    spuList: [{ spuName: "SPU-1", version: "VERSION-1" }],
   });
   assert.equal(persisted.tenantId, "tenant-1");
   assert.equal(persisted.storeId, "store-1");
@@ -234,12 +387,12 @@ test("document state reads send the official version and spuList fields and pers
 test("document state reads keep the official result when one local projection fails", async () => {
   const service = new SheinWebReadService({
     apiBaseUrl: "https://openapi.example",
-    sourcePendingDocumentStateReadEnabled: true,
     storeRepository: {
       async getCredential() {
         return {
           storeId: "store-1",
           tenantId: "tenant-1",
+          supplierId: "supplier-1",
           status: "active",
           openKeyId: "OPEN-1",
           secretKey: "SECRET-1",
@@ -292,12 +445,12 @@ test("document state reads keep an official empty result non-fatal and do not pe
   let reviewed = false;
   const service = new SheinWebReadService({
     apiBaseUrl: "https://openapi.example",
-    sourcePendingDocumentStateReadEnabled: true,
     storeRepository: {
       async getCredential() {
         return {
           storeId: "store-1",
           tenantId: "tenant-1",
+          supplierId: "supplier-1",
           status: "active",
           openKeyId: "OPEN-1",
           secretKey: "SECRET-1",
@@ -340,7 +493,6 @@ test("document state reads reject a credential from another tenant before callin
   let fetches = 0;
   const service = new SheinWebReadService({
     apiBaseUrl: "https://openapi.example",
-    sourcePendingDocumentStateReadEnabled: true,
     storeRepository: {
       async getCredential() {
         return {
@@ -437,6 +589,53 @@ test("SHEIN signature rejection marks the store for reauthorization and hides th
     service.listProducts({
       context: { tenantId: "tenant-1" },
       storeId: "store-1",
+    }),
+    (error) =>
+      error.code === "STORE_REAUTHORIZATION_REQUIRED" &&
+      error.status === 409 &&
+      error.message.includes("重新授权"),
+  );
+  assert.equal(markedStoreId, "store-1");
+});
+
+test("ERP-07 adapter signature rejection marks the document-state store for reauthorization", async () => {
+  let markedStoreId = null;
+  const service = new SheinWebReadService({
+    apiBaseUrl: "https://openapi.example",
+    storeRepository: {
+      async getCredential() {
+        return {
+          storeId: "store-1",
+          tenantId: "tenant-1",
+          supplierId: "supplier-1",
+          status: "active",
+          openKeyId: "OPEN-1",
+          secretKey: "SECRET-1",
+        };
+      },
+      async requireReauthorizationByStoreId(storeId) {
+        markedStoreId = storeId;
+      },
+    },
+    fetchImpl: async () => ({
+      ok: false,
+      status: 401,
+      async text() {
+        return JSON.stringify({
+          code: "openapi00001",
+          msg: "签名错误:生成的签名不正确，请检查",
+          traceId: "adapter-signature-trace",
+        });
+      },
+    }),
+  });
+
+  await assert.rejects(
+    service.queryDocumentState({
+      context: { tenantId: "tenant-1" },
+      storeId: "store-1",
+      version: "VERSION-1",
+      spuNames: ["SPU-1"],
     }),
     (error) =>
       error.code === "STORE_REAUTHORIZATION_REQUIRED" &&

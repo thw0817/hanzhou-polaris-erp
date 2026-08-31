@@ -86,7 +86,7 @@ export class PostgresStoreRepository {
 
   async getCredential(storeId) {
     const result = await this.pool.query(
-      `SELECT s.id, s.tenant_id, s.open_key_id, s.status,
+      `SELECT s.id, s.tenant_id, s.supplier_id, s.open_key_id, s.status,
               c.ciphertext, c.iv, c.auth_tag, c.key_version
        FROM stores s
        JOIN store_credentials c ON c.store_id = s.id
@@ -98,6 +98,7 @@ export class PostgresStoreRepository {
     return {
       storeId: row.id,
       tenantId: row.tenant_id,
+      supplierId: row.supplier_id,
       openKeyId: row.open_key_id,
       status: row.status,
       secretKey: this.credentialCipher.decrypt(

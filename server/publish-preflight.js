@@ -58,12 +58,16 @@ export async function runPublishPreflight({
   supplierSkuList,
   brandCode = "",
   request,
+  adapterRequest = null,
   allowSourcePendingSyntheticReadForTest = false,
 } = {}) {
-  if (typeof request !== "function") {
+  const remoteRequest = typeof adapterRequest === "function"
+    ? adapterRequest
+    : request;
+  if (typeof remoteRequest !== "function") {
     throw new TypeError("request is required");
   }
-  if (!allowSourcePendingSyntheticReadForTest) {
+  if (!allowSourcePendingSyntheticReadForTest && typeof adapterRequest !== "function") {
     const error = new Error(
       "发品预检的官方响应字段待核验，远端预检已安全锁定",
     );
@@ -79,11 +83,11 @@ export async function runPublishPreflight({
       ? { query: { brandCode: String(brandCode).trim() } }
       : {}),
   };
-  const permissionResult = await request(permissionRequest);
+  const permissionResult = await remoteRequest(permissionRequest);
   let quotaResult;
   let publishQuotaUnavailableReason = "";
   try {
-    quotaResult = await request({
+    quotaResult = await remoteRequest({
       method: "POST",
       path: PUBLISH_QUOTA_PATH,
       body: {},
@@ -102,7 +106,7 @@ export async function runPublishPreflight({
   const repeatedResults = [];
   if (normalizedSkuList.length) {
     for (const skuBatch of chunk(normalizedSkuList, SUPPLIER_SKU_BATCH_SIZE)) {
-      repeatedResults.push(await request({
+      repeatedResults.push(await remoteRequest({
         method: "POST",
         path: SUPPLIER_SKU_REPEATED_PATH,
         body: { supplierSkuList: skuBatch },

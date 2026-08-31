@@ -1,8 +1,8 @@
 # SHEIN 商业 ERP 主执行计划
 
-版本：2026-08-30-v63
+版本：2026-08-31-v64
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：执行路线；ERP-00～ERP-05 已完成，ERP-06 隔离实现已完成但生产接入门为 BLOCKED/NO-GO，ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界、response evidence 完整性、字段级 provenance 回归、只读响应证据脱敏捕获边界、source-pending method/path 审阅摘要与双重显式 adapter 证据采集门禁、网页单据状态/经营同步/发品预检/自定义属性权限默认锁定、diagnostics 敏感字段、未知 metadata、response evidence 状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正以及 3 项官方响应来源核验（23 项可执行、10 项阻断），ERP-07 整体仍在进行且是当前唯一 IN_PROGRESS 步骤，ERP-08～ERP-23 尚未开始
+状态：执行路线；ERP-00～ERP-05 已完成，ERP-06 隔离实现已完成但生产接入门为 BLOCKED/NO-GO，ERP-07 已完成 33 项 endpoint 显式 schema 覆盖、失败 fixture、状态 fail-closed、唯一 server adapter 隔离边界、response evidence 完整性、字段级 provenance 回归、授权店铺只读证据、四项官方 read response 契约、网页单据状态/经营同步/发品预检的受控 adapter 接线、diagnostics 敏感字段、未知 metadata、来源引用完整性及 source-pending 端点 fail-closed 修正；自定义属性权限仍默认锁定。ERP-07 整体仍在进行且是当前唯一 IN_PROGRESS 步骤，ERP-08～ERP-23 尚未开始
 适用项目：SHEIN 超级运营中心 / SHEIN 涵舟工作室  
 执行编号：ERP-00 至 ERP-23
 
@@ -639,8 +639,8 @@
 - 上述 Run 的定向回归 `49/49` 与全量 `1381/1381` 测试均通过；V2 构建（1953 modules）、固定 Node/npm 工具链、密钥扫描（651 文件、零 findings）、静态 release audit（15/15）和 staging isolation（14/14）通过。发布执行仍静态确认关闭，未部署。
 - 本 Run 同步修正请求/响应侧契约漂移：可选 `brandCode` 查询转发并纳入签名路径，商家 SKU 查重单次上限统一为官方 200 项，权限成功响应允许 `info.reason=null`；新增 query schema、响应类型和 200/201 边界回归，未打开远端或生产写入。
 - 最新台账一致性修正：ERP-06 的生产接入前置审查为 `BLOCKED/NO-GO`，ERP-07 是唯一 `IN_PROGRESS` 步骤；不得把两个步骤同时标为 `IN_PROGRESS`。对应一致性回归固定“恰好一个活动步骤，且顶层 current run、步骤行和最新 Run 标题一致”。
-- release/readiness 静态门禁已把 `server/cloud/erp07-shein-adapter.js` 纳入必要契约；缺少该文件或关键 fail-closed 标记时阻断候选包。该 adapter 目前只完成隔离实现与门禁接入，尚未接入现有线上路由、Worker、生产配置或真实 SHEIN HTTP。
-- 本进度不等于 ERP-07 完成门：尚缺每项完整官方来源版本、真实授权店铺只读 evidence、6 项接口的官方完整 response 字段/状态映射、现有线上业务路径的受控 adapter 接线、预发 canary/readback 和完成门审查；ERP-08～ERP-23 不得提前启动。
+- release/readiness 静态门禁已把 `server/cloud/erp07-shein-adapter.js` 纳入必要契约；缺少该文件或关键 fail-closed 标记时阻断候选包。`review.document_state`、`sales.sku` 与发品预检的官方读取现在只经该 adapter 从网页服务进入，禁止回退到共享函数或控制器直连；`rules.custom_attribute_permission` 仍保持 fail-closed，未进入运行时读取。
+- 本进度不等于 ERP-07 完成门：尚缺最终候选制品全量验证、受控部署后的预发 canary/readback 与完成门审查；ERP-08～ERP-23 不得提前启动。
 
 ### 14.1 真实授权店铺只读证据采集（2026-08-31）
 
@@ -655,6 +655,13 @@
 - `RUN-20260831-ERP07-OFFICIAL-SEMANTICS-20` 独立复核公开官方文档 `3001305` 和 `3001368`，使 `sales.sku`、`review.document_state` 升级为 `official_response_contract`；来源、字段、枚举和请求形状见 [ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md](./ERP07_OFFICIAL_RESPONSE_DOCUMENT_CAPTURE_2026-08-31.md)。
 - `query-document-state` 的 `version` 从错误的顶层迁入每一条 `spuList[]`；ERP-06 受控回读和 ERP-07 只读证据运行器都用同一官方 body。状态投影补齐 `-1`（验收失败）和 `5`（申诉中），其余未知值仍拒绝。
 - 这一修正不改变网页/Worker 的远端开关，也不放开业务写入。脱敏运行器继续仅输出摘要哈希、字段覆盖和类型轮廓。ERP-07 为唯一 `IN_PROGRESS`，ERP-08～ERP-23 不得提前启动。
+
+### 14.3 网页受控 adapter 接线（2026-08-31）
+
+- `RUN-20260831-ERP07-CONTROLLED-WEB-READ-21` 将网页单据状态、经营同步和发品预检改为唯一的 `Erp07SheinAdapter` 读取路径。每次调用先完成租户、店铺状态和 `supplierId` 身份范围校验，再按已注册的 method/path/schema 构造请求；业务写入继续固定关闭。
+- 单据状态使用官方嵌套 `spuList[{spuName,version}]` 请求形状；经营同步和发品预检的共享函数在正常运行时只接受 adapter 注入，旧的裸 `request` 仅可由名称明确的离线 synthetic 测试使用。GET 空查询不再附带空 JSON body。
+- 签名失效会将对应店铺标记为需要重新授权；缺少供应商身份、跨租户凭证、未授权店铺和 adapter 失败均在外部传输或本地投影前安全失败。自定义属性权限仍是 source-pending，继续不读取、不写快照。
+- 本 Run 的本地定向回归已经通过；最终候选制品、部署后只读 canary/readback 与 ERP-07 完成门复核仍是后续门禁，不能据此启动 ERP-08 或任何外部写入。
 
 ### 必做清单
 

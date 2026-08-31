@@ -1,11 +1,11 @@
 # SHEIN 商业 ERP 执行台账
 
-版本：2026-08-30-v73
+版本：2026-08-31-v74
 方案名称：**涵舟 Polaris（北极星）商业 ERP 重构计划（HANZHOU-POLARIS）**  
-状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 生产接入门为 BLOCKED/NO-GO，隔离实现已完成但生产迁移、真实 SHEIN adapter/发布尚未批准；ERP-07 当前已完成 33 项 endpoint schema/fixture 隔离、状态 fail-closed、唯一 server adapter 边界、字段级 response evidence 回归、只读响应证据脱敏捕获边界、diagnostics 敏感字段、未知 metadata、状态一致性、来源引用完整性、证据捕获入口/范围未知字段 fail-closed 修正、3 项官方响应来源核验、剩余 source-pending 接口的脱敏 method/path 审阅摘要及 adapter 双重显式证据采集门禁，并已默认锁定网页单据状态、经营同步、发品预检和自定义属性权限的绕过路径，但整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
+状态：ERP-00、ERP-01、ERP-02、ERP-03、ERP-04、ERP-05 已完成；ERP-05 的历史映射按用户批准冻结为只读 legacy；ERP-06 生产接入门为 BLOCKED/NO-GO，隔离实现已完成但生产迁移、真实 SHEIN adapter/发布尚未批准；ERP-07 已完成 33 项 endpoint schema/fixture、授权店铺只读证据、四项官方 read response 契约及网页单据状态、经营同步、发品预检的受控 adapter 接线；自定义属性权限和全部业务写入仍 fail-closed。ERP-07 整体仍在进行；ERP-08～ERP-23 尚未开始；历史修复记录另行保存
 主计划：[COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md](./COMMERCIAL_ERP_MASTER_EXECUTION_PLAN_2026-08-28.md)  
 分板块架构：[COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md](./COMMERCIAL_ERP_MODULE_ARCHITECTURE_2026-08-28.md)  
-当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260830-ERP07-SOURCE-PENDING-WEB-AND-LEGACY-GUARD-18
+当前活动步骤：ERP-07 / IN_PROGRESS / RUN-20260831-ERP07-CONTROLLED-WEB-READ-21
 
 ## 0. 台账用途
 
@@ -32,7 +32,7 @@
 | ERP-04 | 商品生命周期与状态字典定稿 | COMPLETE | RUN-20260829-ERP04-LIFECYCLE-DICTIONARY-01 | ERP-03 | 状态设计、转换矩阵、兼容策略完成；用户已批准；无代码/数据库改动 |
 | ERP-05 | 历史数据证据盘点 | COMPLETE | RUN-20260829-ERP05-SCOPE-DISPOSITION-15 | ERP-04 | Run 14 完成 COS 原生 HMAC-SHA1 列表与媒体归属只读对账；用户批准历史映射冻结为只读 legacy，未安全映射旧记录不迁移/不恢复/不删除，不阻断新链路 |
 | ERP-06 | 规范数据模型与事件账本 | BLOCKED | RUN-20260830-ERP06-RELEASE-READINESS-16 | ERP-05 | 隔离 foundation、版本冻结、原子 handoff、PublishBatch/BatchItem、legacy read-only adapter、Outbox claim/lease、adapter boundary、结果持久化、sender/readback 边界、回读事实落账、单阶段编排和发布-回读组合验证均已完成；生产接入前置审查为 NO-GO，生产迁移、真实 SHEIN adapter/发布等待单独批准 |
-| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260830-ERP07-SOURCE-PENDING-WEB-AND-LEGACY-GUARD-18 | ERP-06 | 33 项 endpoint 显式 schema、状态 fail-closed、唯一 server adapter、字段级 response evidence、脱敏只读响应摘要、source-pending method/path 审阅摘要与 adapter 双重显式证据采集门禁，以及网页单据状态、经营同步、发品预检、自定义属性权限和旧本地直连入口的绕过锁定；剩余官方字段/店铺 evidence、canary/readback 和生产接入仍未完成 |
+| ERP-07 | SHEIN 适配器契约硬化 | IN_PROGRESS | RUN-20260831-ERP07-CONTROLLED-WEB-READ-21 | ERP-06 | 33 项 endpoint schema、四项官方只读契约与授权店铺摘要证据；网页单据状态、经营同步与发品预检已通过唯一 adapter 读取，身份/租户/签名失效 fail-closed；自定义属性权限与所有业务写入仍关闭。最终候选制品、受控 canary/readback 和完成门审查仍未完成 |
 | ERP-08 | Control、Worker 与 release 一致性 | NOT_STARTED | — | ERP-07 | — |
 | ERP-09 | 可靠发布命令管线 | NOT_STARTED | — | ERP-08 | — |
 | ERP-10 | 官方审核回读与状态投影 | NOT_STARTED | — | ERP-09 | — |
@@ -2166,3 +2166,15 @@
 - 环境边界：仅使用本地 fake credential reader、fake transport 与 synthetic fixture；未解析或打印真实凭据，未发送 SHEIN HTTP，未访问或写入生产/现有 staging PostgreSQL、COS、Redis、队列，未执行 migration、部署、重启、配置切换、历史回填或自动重发。
 - 当前状态：`COMPLETE / LOCAL SOURCE-PENDING WEB AND LEGACY GUARD`；ERP-07 仍为唯一 `IN_PROGRESS`，ERP-06 为 `BLOCKED/NO-GO`，ERP-08～ERP-23 未开始。
 - 下一执行单元：继续核验 remaining source-pending 端点是否仍有非 adapter 旁路；在取得完整官方 response 字段、真实授权店铺只读 evidence、预发 canary/readback 与单独部署批准前，不解除默认锁定，不执行外部读取或写入。
+
+## 57. ERP-07 网页官方只读路径受控 adapter 接线
+
+### RUN-20260831-ERP07-CONTROLLED-WEB-READ-21
+
+- 类型：ERP-07 受控只读接线；将已具备官方响应契约和脱敏授权店铺证据的网页单据状态、经营同步、发品预检接入唯一 `Erp07SheinAdapter`，不创建外部写入能力。
+- 失败基线：历史 `source-pending` 保护将三个网页入口一律返回 `409`；在官方来源与真实只读摘要补齐后，若直接解除锁定会重新引入网页服务、共享函数或控制器绕过 schema/scope/失败分类边界的风险。
+- 实际修正：`SheinWebReadService` 现在为三个入口创建受控会话：先复用店铺状态/租户校验，再要求 `supplierId` 形成 `tenantId/storeId/supplierId` scope，随后仅以注册 endpoint 名称执行 adapter。`queryDocumentState()` 使用官方 `spuList[{spuName,version}]`；经营同步和预检共享函数在正常运行时只接受 adapter request。adapter 的 GET 空查询不再发送空 JSON body。
+- 安全语义：业务写入固定关闭；缺店铺、跨租户、缺供应商身份、未受支持 endpoint 和 schema 不匹配在传输前拒绝。SHEIN 签名失效会定向标记店铺需要重新授权；其他读取失败只返回脱敏稳定错误。`rules.custom_attribute_permission` 仍为 source-pending，保持零读取、零快照写入。
+- 验证：adapter/网页服务/经营同步/预检 `68/68`，控制面、队列、readiness 与 ERP-07 schema/evidence runner `121/121`，全量 `npm test` `1406/1406` 通过；V2 构建为 `1953 modules transformed`，固定工具链与密钥扫描（`655` 文件、`findings=[]`）通过，静态 release audit 为 `READY`、contracts `15/15`，且继续确认 `executionEnabled=false`、`authorizesPublishing=false`。
+- 环境边界：上述验证均为 fake transport 或本地静态检查，未解析或输出真实凭证，未发送 SHEIN HTTP，未进行迁移、配置切换或外部写入。
+- 当前状态：`IN_PROGRESS / CONTROLLED WEB READ WIRING`；干净 revision manifest、候选制品审计、受控部署后的只读 canary/readback 和 ERP-07 完成门审查尚未完成。ERP-06 仍为 `BLOCKED/NO-GO`，ERP-08～ERP-23 不得启动。

@@ -356,14 +356,18 @@ export function summarizeStoreBusinessData(snapshot) {
 
 export async function syncStoreBusinessData({
   request,
+  adapterRequest = null,
   previousSnapshot = null,
   now = () => new Date(),
   allowSourcePendingSyntheticReadForTest = false,
 } = {}) {
-  if (typeof request !== "function") {
+  const remoteRequest = typeof adapterRequest === "function"
+    ? adapterRequest
+    : request;
+  if (typeof remoteRequest !== "function") {
     throw new TypeError("request is required");
   }
-  if (!allowSourcePendingSyntheticReadForTest) {
+  if (!allowSourcePendingSyntheticReadForTest && typeof adapterRequest !== "function") {
     const error = new Error(
       "SKU销量的官方响应字段待核验，远端经营同步已安全锁定",
     );
@@ -372,7 +376,7 @@ export async function syncStoreBusinessData({
     throw error;
   }
 
-  const rateLimitedRequest = createRateLimitedRequest(request);
+  const rateLimitedRequest = createRateLimitedRequest(remoteRequest);
 
   const pageSize = 10;
   const spuRows = [];

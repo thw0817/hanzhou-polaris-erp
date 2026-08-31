@@ -15,9 +15,11 @@ import {
   buildComplianceRevalidation,
 } from "./compliance-revalidation-projections.js";
 import { buildPublishSchemaCoverage } from "../publish-schema-coverage.js";
+import { runPublishPreflight } from "../publish-preflight.js";
+import { syncStoreBusinessData } from "../store-data-sync.js";
+import { Erp07SheinAdapter } from "./erp07-shein-adapter.js";
 
 const PRODUCT_SEARCH_PATH = "/open-api/goods/searchProduct";
-const DOCUMENT_STATE_PATH = "/open-api/goods/query-document-state";
 const SPU_INFO_PATH = "/open-api/goods/spu-info";
 const MAX_PRODUCT_PAGE_SIZE = 10;
 const MAX_COMPLIANCE_SKCS = 20;
@@ -196,7 +198,6 @@ export class SheinWebReadService {
     now = () => new Date(),
     publishExecutionRepository = null,
     productReviewRepository = null,
-    sourcePendingDocumentStateReadEnabled = false,
   } = {}) {
     if (!storeRepository) {
       throw new Error("SheinWebReadService 缺少 storeRepository");
@@ -209,7 +210,7 @@ export class SheinWebReadService {
     this.now = now;
     this.publishExecutionRepository = publishExecutionRepository;
     this.productReviewRepository = productReviewRepository;
-    this.sourcePendingDocumentStateReadEnabled = sourcePendingDocumentStateReadEnabled === true;
+    this.erp07TraceSequence = 0;
     this.publishRuleCache = new Map();
   }
 
@@ -367,6 +368,91 @@ export class SheinWebReadService {
     }
   }
 
+  async #createErp07ReadSession(context, storeId) {
+    const credential = await this.#credential(context, storeId);
+    const supplierId = String(credential.supplierId || "").trim();
+    if (!supplierId) {
+      throw new WebAuthError(
+        "STORE_IDENTITY_REQUIRED",
+        "店铺缺少供应商身份，无法执行受控 SHEIN 只读请求",
+        409,
+      );
+    }
+    const scope = Object.freeze({
+      tenantId: String(context.tenantId),
+      storeId: String(storeId),
+      supplierId,
+    });
+    return Object.freeze({
+      scope,
+      adapter: new Erp07SheinAdapter({
+        apiBaseUrl: this.apiBaseUrl,
+        readEnabled: true,
+        writeEnabled: false,
+        timeoutMs: 60_000,
+        resolveCredentials: async () => credential,
+        request: (input) => requestShein({
+          ...input,
+          fetchImpl: this.fetchImpl,
+        }),
+      }),
+    });
+  }
+
+  #nextErp07TraceId(endpoint) {
+    this.erp07TraceSequence += 1;
+    const stableEndpoint = String(endpoint || "read")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 80) || "read";
+    return `web-erp07-${stableEndpoint}-${this.now().getTime()}-${this.erp07TraceSequence}`;
+  }
+
+  async #executeErp07Read(session, {
+    endpoint,
+    body = {},
+    query,
+  } = {}) {
+    const result = await session.adapter.execute({
+      endpoint,
+      body,
+      ...(query ? { query } : {}),
+      scope: session.scope,
+      traceId: this.#nextErp07TraceId(endpoint),
+      sendBoundary: "before_send",
+    });
+    if (result.outcome === "read_success") {
+      return {
+        payload: result.payload,
+        diagnostics: result.diagnostics,
+      };
+    }
+    if (result.requiresReauthorization) {
+      await this.storeRepository.requireReauthorizationByStoreId?.(session.scope.storeId);
+      throw new WebAuthError(
+        "STORE_REAUTHORIZATION_REQUIRED",
+        "SHEIN店铺授权凭证已失效（签名校验失败），请重新授权该店铺后重试",
+        409,
+      );
+    }
+    const status = Number(result.status);
+    throw new WebAuthError(
+      "SHEIN_READ_FAILED",
+      String(result.message || "SHEIN 只读请求失败").slice(0, 500),
+      Number.isInteger(status) && status >= 400 && status <= 599 ? status : 502,
+    );
+  }
+
+  async #executeErp07ReadRequest(session, request = {}) {
+    const method = String(request.method || "POST").trim().toUpperCase();
+    const path = String(request.path || "").trim();
+    return this.#executeErp07Read(session, {
+      endpoint: `${method} ${path}`,
+      body: request.body || {},
+      ...(request.query ? { query: request.query } : {}),
+    });
+  }
+
   async listProducts({
     context,
     storeId,
@@ -434,26 +520,15 @@ export class SheinWebReadService {
         400,
       );
     }
-    if (!this.sourcePendingDocumentStateReadEnabled) {
-      throw new WebAuthError(
-        "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED",
-        "商品文档状态的官方响应字段待核验，远端回读已安全锁定",
-        409,
-      );
-    }
-    const credential = await this.#credential(context, storeId);
-    const result = await this.#requestShein(storeId, {
-      baseUrl: this.apiBaseUrl,
-      method: "POST",
-      path: DOCUMENT_STATE_PATH,
+    const session = await this.#createErp07ReadSession(context, storeId);
+    const result = await this.#executeErp07Read(session, {
+      endpoint: "review.document_state",
       body: {
-        version: normalizedVersion,
-        spuList: normalizedSpuNames.map((value) => ({ spuName: value })),
+        spuList: normalizedSpuNames.map((value) => ({
+          spuName: value,
+          version: normalizedVersion,
+        })),
       },
-      openKeyId: credential.openKeyId,
-      secretKey: credential.secretKey,
-      timeoutMs: 60_000,
-      fetchImpl: this.fetchImpl,
     });
     const normalized = normalizeProductDocumentState(result.payload.info, {
       requestedVersion: normalizedVersion,
@@ -731,11 +806,11 @@ export class SheinWebReadService {
   }
 
   async syncStoreBusiness({ context, storeId, previousSnapshot = null } = {}) {
-    throw new WebAuthError(
-      "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED",
-      "SKU销量的官方响应字段待核验，远端经营同步已安全锁定",
-      409,
-    );
+    const session = await this.#createErp07ReadSession(context, storeId);
+    return syncStoreBusinessData({
+      previousSnapshot,
+      adapterRequest: (request) => this.#executeErp07ReadRequest(session, request),
+    });
   }
 
   async syncCompliance({
@@ -1370,11 +1445,12 @@ export class SheinWebReadService {
     supplierSkuList,
     brandCode = "",
   } = {}) {
-    throw new WebAuthError(
-      "ERP07_ADAPTER_SOURCE_PENDING_READ_DISABLED",
-      "发品预检的官方响应字段待核验，远端预检已安全锁定",
-      409,
-    );
+    const session = await this.#createErp07ReadSession(context, storeId);
+    return runPublishPreflight({
+      supplierSkuList,
+      brandCode,
+      adapterRequest: (request) => this.#executeErp07ReadRequest(session, request),
+    });
   }
 
   async uploadProductImage({
